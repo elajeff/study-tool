@@ -20,6 +20,8 @@ export function NotesImporter({ notes }: { notes: Note[] }) {
     setBusy(true); setMessage("");
     try {
       const candidates: Imported[] = [];
+      const plainFiles = Array.from(files).filter((file) => !file.name.toLowerCase().endsWith(".zip"));
+      const sharedRoot = vaultRoot(plainFiles.map((file) => file.webkitRelativePath || file.name));
       let totalBytes = 0;
       for (const file of Array.from(files)) {
         if (file.name.toLowerCase().endsWith(".zip")) {
@@ -43,9 +45,7 @@ export function NotesImporter({ notes }: { notes: Note[] }) {
           }
         } else {
           const rawPath = file.webkitRelativePath || file.name;
-          const root = vaultRoot(Array.from(files).filter((f) => !f.name.toLowerCase().endsWith(".zip"))
-            .map((f) => f.webkitRelativePath || f.name));
-          const path = cleanNotePath(root ? rawPath.slice(root.length + 1) : rawPath);
+          const path = cleanNotePath(sharedRoot ? rawPath.slice(sharedRoot.length + 1) : rawPath);
           if (!path || !shouldImportNote(path) || file.size > MAX_NOTE_BYTES) continue;
           totalBytes += file.size;
           if (totalBytes > MAX_TOTAL_BYTES) throw new Error("The selected notes exceed 35 MB.");

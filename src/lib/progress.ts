@@ -1,20 +1,49 @@
-export type Progress = {
-  lesson_id: string;
-  status: "not_started" | "studying" | "completed";
-  mastery: number;
-  reflection: string;
-  updated_at: string;
+import type { Lesson } from "./curriculum.ts";
+import { topicPath } from "./curriculum.ts";
+
+export const REVIEW_DAYS = [1, 1, 3, 7, 14, 30] as const;
+
+export type Assessment = {
+  id: string;
+  topic: string;
+  date: string;
+  level: number;
+  task: string;
+  evidence: string;
+  independent: boolean;
+  hints: "none" | "minor" | "major" | "solution";
+  artifact: string;
+  next_step: string;
+  status: "pending" | "approved" | "rejected";
+  submitted_at: string;
+  reviewed_at: string | null;
 };
 
-export function progressStats(lessonIds: string[], progress: Progress[]) {
-  const relevant = progress.filter((row) => lessonIds.includes(row.lesson_id));
-  const completed = relevant.filter((row) => row.status === "completed").length;
-  const studying = relevant.filter((row) => row.status === "studying").length;
-  return { completed, studying, total: lessonIds.length, percent: Math.round(completed / Math.max(1, lessonIds.length) * 100) };
+export function latestApproved(records: Assessment[]) {
+  const latest = new Map<string, Assessment>();
+  for (const record of [...records].filter((record) => record.status === "approved")
+    .sort((a, b) => a.date.localeCompare(b.date)
+      || (a.reviewed_at ?? "").localeCompare(b.reviewed_at ?? "")
+      || a.id.localeCompare(b.id))) latest.set(record.topic, record);
+  return latest;
 }
 
-export function isDueForReview(record: Progress, now = new Date()) {
-  if (record.status === "not_started") return false;
-  const elapsedDays = (now.valueOf() - new Date(record.updated_at).valueOf()) / 86_400_000;
-  return elapsedDays >= (record.mastery >= 4 ? 14 : 7);
+export function demonstratedLessons(lessons: Lesson[], latest: Map<string, Assessment>) {
+  return new Set(lessons.filter((lesson) => (latest.get(topicPath(lesson.sourcePath))?.level ?? -1) >= 3).map((lesson) => lesson.id));
+}
+
+export function progressStats(lessons: Lesson[], latest: Map<string, Assessment>) {
+  const assessed = lessons.filter((lesson) => latest.has(topicPath(lesson.sourcePath))).length;
+  const demonstrated = demonstratedLessons(lessons, latest).size;
+  return { assessed, demonstrated, total: lessons.length };
+}
+
+export function reviewDate(record: Assessment) {
+  const next = new Date(`${record.date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + REVIEW_DAYS[record.level]);
+  return next.toISOString().slice(0, 10);
+}
+
+export function isDueForReview(record: Assessment, today = new Date()) {
+  return reviewDate(record) <= today.toISOString().slice(0, 10);
 }

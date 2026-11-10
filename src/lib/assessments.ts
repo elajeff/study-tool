@@ -1,0 +1,63 @@
+import { createHash } from "node:crypto";
+
+export type Evidence = {
+  topic: string;
+  date: string;
+  level: number;
+  task: string;
+  evidence: string;
+  independent: boolean;
+  hints: "none" | "minor" | "major" | "solution";
+  artifact: string;
+  next_step: string;
+};
+
+const blocks = /^```study-evidence\s*\r?\n([\s\S]*?)^```\s*$/gm;
+
+function isDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const time = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
+}
+
+export function validateEvidence(value: unknown): Evidence {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Receipt must be a JSON object.");
+  const item = value as Record<string, unknown>;
+  if (typeof item.topic !== "string" || !item.topic.trim() || item.topic.length > 240)
+    throw new Error("Choose a topic using its vault path, without .md.");
+  if (!isDate(item.date)) throw new Error("The assessment date must use YYYY-MM-DD.");
+  if (!Number.isInteger(item.level) || (item.level as number) < 0 || (item.level as number) > 5)
+    throw new Error("Mastery must be between 0 and 5.");
+  const fields = ["task", "evidence", "artifact", "next_step"] as const;
+  for (const field of fields) {
+    if (typeof item[field] !== "string" || item[field].length > 3000)
+      throw new Error(`Invalid ${field} field.`);
+  }
+  if (!(item.task as string).trim() || (item.evidence as string).trim().length < 15)
+    throw new Error("Describe the task and the work you actually demonstrated.");
+  if (typeof item.independent !== "boolean" || !["none", "minor", "major", "solution"].includes(String(item.hints)))
+    throw new Error("Specify whether the work was independent and which hints were used.");
+  if ((item.level as number) >= 3 && (!item.independent || !["none", "minor"].includes(item.hints as string)))
+    throw new Error("Level 3 requires independent work without a supplied solution.");
+  if ((item.level as number) >= 4 && (item.hints !== "none" || !(item.artifact as string).trim()))
+    throw new Error("Level 4 or 5 requires an artifact and no hints.");
+  return Object.fromEntries(["topic", "date", "level", ...fields, "independent", "hints"].map((key) => [key, item[key]])) as Evidence;
+}
+
+export function parseEvidence(text: string) {
+  if (text.length > 300_000) throw new Error("Assessment text is too large.");
+  const found = [...text.matchAll(blocks)].map((match) => match[1]);
+  if (!found.length) {
+    try { return [validateEvidence(JSON.parse(text))]; }
+    catch { throw new Error("Paste a study-evidence JSON block or a valid receipt object."); }
+  }
+  if (found.length > 20) throw new Error("Import no more than 20 receipts at once.");
+  return found.map((raw) => {
+    try { return validateEvidence(JSON.parse(raw)); }
+    catch (error) { throw new Error(error instanceof Error ? error.message : "Invalid assessment receipt."); }
+  });
+}
+
+export function evidenceFingerprint(item: Evidence) {
+  return createHash("sha256").update(JSON.stringify(item)).digest("hex");
+}

@@ -1,13 +1,15 @@
 # Study Tool
 
-Study Tool organizes personal Markdown notes into a study roadmap. It supports Obsidian imports, practice topics, progress tracking, and handoffs to ChatGPT Web or Codex.
+Study Tool turns Markdown notes into a study roadmap. It supports Obsidian vault imports, practice topics, reviewed assessments, and handoffs to ChatGPT Web or Codex.
+
+The roadmap follows the material each person imports. No standard course is assigned to every account.
 
 ## Features
 
-- Email sign-in and private user workspaces through Supabase.
-- A roadmap derived from imported notes and learning goals.
+- Email sign-in and private workspaces using Supabase Auth and row-level security.
 - Markdown import, editing, and export.
-- Self-reported lesson progress and scheduled review reminders.
+- Study topics and prerequisite links drawn from source notes.
+- Progress and review reminders based on approved assessments.
 - ChatGPT Web as the default tutor, with an optional Codex handoff. Both open in their official sites.
 
 ## Setup
@@ -15,10 +17,10 @@ Study Tool organizes personal Markdown notes into a study roadmap. It supports O
 Requires Node.js 22+ and a Supabase project.
 
 1. Run `npm install`.
-2. Copy `.env.example` to `.env.local`. Enter the Supabase project URL and publishable/anon key. Never use the service-role key in this app.
-3. Run `supabase/schema.sql` in the Supabase SQL Editor.
-4. Enable email sign-in in Supabase Authentication. For development set the Site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/confirm` as a redirect.
-5. Configure the email magic-link template for the PKCE callback:
+2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
+3. Run `supabase/schema.sql` in the Supabase SQL Editor. For installations upgrading from v0.1, also run `supabase/002_assessments.sql` after updating the application code.
+4. Enable email sign-in in Supabase Authentication. Set the Site URL to `http://localhost:3000` for development and allow `http://localhost:3000/auth/confirm` as a redirect.
+5. For the magic-link PKCE callback, use this link in the Supabase email template:
 
    ```html
    <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Sign in to Study Tool</a>
@@ -26,15 +28,30 @@ Requires Node.js 22+ and a Supabase project.
 
 6. Run `npm run dev` and open `http://localhost:3000`.
 
-For deployment, configure the production site URL, allowed redirect URLs, and the same public environment variables on the Next.js host. Set up production SMTP, backups, rate limits and a privacy notice before opening registration.
+For deployment, configure the production site URL and redirect URL in Supabase, and set the same public environment variables on the Next.js host. Configure production SMTP, backups, rate limits, and a privacy notice before opening registration.
 
-## Using the app
+## Obsidian
 
-Set your goals and experience, then import `.md` files or a ZIP of Markdown notes. Topics come from `Concepts/` if that folder exists, or from ordinary notes otherwise. Links from named prerequisite sections are used to order study topics. The roadmap does not write complete lessons automatically.
+Import `.md` files or a ZIP containing Markdown. The app uses these folders when present:
 
-Open a topic to see its source note and exercise. Select ChatGPT Web or Codex to copy study context and open the official site. You can record lesson progress back in Study Tool afterward.
+- `Lessons/Java/`, `DSA/`, and `Foundations/` for the main study tracks.
+- `Concepts/` for technical reference topics.
+- `Learning Projects/` for project practice.
+- `Walkthroughs/` for implementation traces.
 
-Import and export are manual. The app does not read a local vault directly or synchronize ChatGPT conversations.
+Other Markdown collections can be used too. Obsidian configuration, chat archives, and generated progress reports are skipped during import. Prerequisites are read from explicitly named sections, not from every wikilink.
+
+Import and export are manual; this version does not synchronize with the local Obsidian directory or read ChatGPT conversations automatically.
+
+## Assessments
+
+At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.
+
+Levels run from 0 (unfamiliar) to 5 (able to transfer the skill to a new problem). Level 3 or higher requires independent work. An assessment can lower an earlier score; the most recent approved assessment is used.
+
+## Tutor modes
+
+The ChatGPT Web and Codex buttons copy a prepared study prompt and open the corresponding official site. They are handoffs, not an embedded AI API. Study Tool does not ask for ChatGPT login credentials or make AI API calls.
 
 ## Development
 
@@ -45,7 +62,7 @@ npm test
 npm run build
 ```
 
-App routes and server actions are in `src/app/`; curriculum and note logic is in `src/lib/`; the database schema is under `supabase/`.
+The database schema is under `supabase/`, page routes and server actions under `src/app/`, and the curriculum, note, and assessment logic under `src/lib/`.
 
 ## License
 

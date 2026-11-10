@@ -29,3 +29,27 @@ test("different vaults yield different lessons and stable IDs", () => {
   assert.notEqual(one[0].id, two[0].id);
   assert.deepEqual(one.map((l) => l.id), buildCurriculum(vault, profile).lessons.map((l) => l.id));
 });
+
+test("Obsidian Java, DSA, foundations, projects, concepts and walkthroughs remain separate", () => {
+  const notes = [
+    { path: "Lessons/Java/05 Loops.md", title: "Loops", body: "# Loops\n\nRepeat code." },
+    { path: "Lessons/Java/06 Methods.md", title: "Methods", body: "# Methods\n\nMethods return values.\n\n## Before you start\n[[Lessons/Java/05 Loops|Loops]]" },
+    { path: "DSA/04 Sliding window.md", title: "Sliding window", body: "# Sliding window\n\n## Preparation\n[[Lessons/Java/06 Methods|Methods]]" },
+    { path: "Foundations/03 HTTP and JSON.md", title: "HTTP", body: "# HTTP\n\nA request and response." },
+    { path: "Learning Projects/Request Tracker.md", title: "Request Tracker", body: "# Request Tracker\n\nWrite a service." },
+    { path: "Concepts/Java.md", title: "Java", body: "# Java\n\nA language." },
+    { path: "Walkthroughs/Request flow.md", title: "Request flow", body: "# Request flow\n\nTrace code." },
+    { path: "Progress/Dashboard.md", title: "Dashboard", body: "# Dashboard\n\nIgnored." },
+    { path: "AI Chats/transcript.md", title: "Chat", body: "# Chat\n\nIgnored." },
+    { path: "Learning Paths/00 Start here.md", title: "Map", body: "# Map\n\nIgnored." },
+  ];
+  const { lessons, tracks } = buildCurriculum(notes, profile);
+  assert.equal(lessons.length, 7);
+  assert.deepEqual(tracks.map((t) => t.title), ["Java", "Algorithms", "Foundations", "Projects", "Concepts", "Walkthroughs"]);
+  const loops = lessons.find((l) => l.title === "Loops")!;
+  const methods = lessons.find((l) => l.title === "Methods")!;
+  const sliding = lessons.find((l) => l.title === "Sliding window")!;
+  assert.deepEqual(methods.prerequisites, [loops.id]);
+  assert.deepEqual(sliding.prerequisites, []);
+  assert.deepEqual(sliding.recommendations, [methods.id]);
+});

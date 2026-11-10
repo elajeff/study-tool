@@ -224,3 +224,27 @@ textarea.input { resize: vertical; }
 @media(max-width:1120px){ .content { width: min(100% - 50px, 1120px); } .feature-grid { grid-template-columns: repeat(2, 1fr); } .dashboard-grid { grid-template-columns: 1fr; } }
 @media(max-width:900px){ .sidebar { width: 210px; flex-basis: 210px; } .lesson-layout { grid-template-columns: 1fr; } .lesson-aside { grid-template-columns: repeat(2,minmax(0,1fr)); } .notes-grid { grid-template-columns: 1fr; } }
 @media(max-width:650px){ .wrap { padding: 0 20px; } .landing-nav { height: 78px; } .hero { padding: 73px 0 95px; } .hero h1 { letter-spacing: -2.9px; } .hero > p { font-size: 17px; } .feature-grid { grid-template-columns: 1fr; } .feature-card { min-height: 0; } .cta-banner { flex-direction: column; align-items: flex-start; padding: 28px; } .landing-footer { gap: 15px; flex-wrap: wrap; } .sidebar { display: none; } .mobile-header { display: flex; padding: 15px 18px; align-items: center; justify-content: space-between; background: white; border-bottom: 1px solid var(--line); gap: 10px; } .mobile-header .logo { font-size: 17px; } .mobile-header .logo-mark { width: 30px; height: 30px; } .mobile-actions { display: flex; gap: 9px; font-size: 12px; } .content { width: calc(100% - 32px); padding: 33px 0 85px; } .page-heading h1 { letter-spacing: -1px; } .stat-grid { gap: 8px; } .stat { padding: 17px 10px; min-height: 110px; } .stat > span { font-size: 11px; } .stat strong { font-size: 27px; } .stat strong small { font-size: 11px; } .panel { padding: 20px; } .track-section { padding: 0; } .track-header { padding: 20px 15px; gap: 9px; } .track-number { padding: 6px; } .lesson-row { padding: 14px 12px; gap: 9px; } .lesson-row small { font-size: 11px; } .lesson-state { display: none; } .lesson-aside, .quick-grid { grid-template-columns: 1fr; } .lesson-section, .tutor-panel { padding: 20px; } .mode-choice { grid-template-columns: 1fr; } .auth-card { margin-top: 50px; padding: 27px; } .import-strip { padding: 20px; } }
+.assessment-import, .assessment-list { margin-bottom: 24px; }
+.assessment-record { padding: 22px 0; border-top: 1px solid var(--line); }
+.assessment-heading, .assessment-history { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
+.assessment-heading span, .assessment-history span:last-child { color: var(--muted); font-size: 13px; }
+.assessment-record p { margin: 8px 0; overflow-wrap: anywhere; }
+.review-actions { display: flex; gap: 9px; margin-top: 18px; }
+.assessment-history { padding: 12px 0; border-top: 1px solid var(--line); }
+.assessment-import, .assessment-list { margin-bottom: 24px; }
+.assessment-record { padding: 22px 0; border-top: 1px solid var(--line); }
+.assessment-heading, .assessment-history { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
+.assessment-heading span, .assessment-history span:last-child { color: var(--muted); font-size: 13px; }
+.assessment-record p { margin: 8px 0; overflow-wrap: anywhere; }
+.review-actions { display: flex; gap: 9px; margin-top: 18px; }
+.assessment-history { padding: 12px 0; border-top: 1px solid var(--line); }
+.markdown-body { overflow-wrap: anywhere; }
+.markdown-body h1 { font-size: 27px; margin: 14px 0; }
+.markdown-body h2 { font-size: 21px; margin-top: 28px; }
+.markdown-body h3 { font-size: 17px; margin-top: 22px; }
+.markdown-body ul, .markdown-body ol { padding-left: 22px; }
+.markdown-body li { margin: 6px 0; }
+.markdown-body pre { overflow-x: auto; background: #102e33; color: #f1f7f4; padding: 16px; border-radius: 10px; }
+.markdown-body code { overflow-wrap: anywhere; }
+.markdown-body blockquote { border-left: 3px solid var(--line); padding-left: 18px; margin-left: 0; }
+.markdown-body a { text-decoration: underline; }

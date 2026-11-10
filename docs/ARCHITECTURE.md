@@ -1,11 +1,24 @@
 # Architecture
 
-Study Tool runs as a Next.js application with Supabase Auth and a Postgres database. Each account has its own profile, notes, and self-reported progress records. Supabase row-level security restricts database access to the owning user.
+Study Tool is a Next.js application backed by Supabase. Each account has its own profile, imported notes, and assessment receipts. Supabase Auth handles sign-in; row-level security limits database access to the owning account.
 
-The roadmap is computed from imported Markdown and the user's profile. Prerequisite links come from specific note sections. Topic IDs are based on source paths, so editing note content does not reset progress. Renaming a note changes its ID.
+## Data
 
-ChatGPT Web and Codex open in separate tabs. The user decides when to copy the prepared context; the app does not access those conversations.
+- `study_profiles` stores learning goals and starting knowledge.
+- `notes` stores Markdown files and their original vault paths.
+- `lesson_progress` stores legacy v0.1 self-ratings. It is retained during the upgrade but no longer determines mastery.
+- `assessment_receipts` stores pending, approved, and rejected evidence. The current score for a topic comes from its most recent approved receipt.
 
-Imports are size-limited and paths are checked for traversal or hidden files. Markdown is displayed without enabling raw HTML. The application uses public Supabase keys and the signed-in account, not a service-role key.
+The curriculum is computed from notes rather than stored separately. Identifiers depend on the original path, so edits do not reset progress. Renaming a note changes that identifier.
 
-There is no live Obsidian sync, automated grading, or embedded AI chat in this version.
+## Tutor handoff
+
+The browser copies context when someone opens ChatGPT Web or Codex. Neither service is embedded and neither shares its conversation history with Study Tool.
+
+## Import boundaries
+
+Imported Markdown is treated as data, not instructions. Files from `.obsidian/`, chat archives, and generated progress folders are skipped. Raw HTML in Markdown is not executed. Imports and exported notes are scoped to the signed-in user.
+
+## Known limits
+
+There is no live Obsidian sync or automated model grading. Evidence is reviewed by the account owner. External AI models and hosted authentication would need their own supported integration and permission checks.

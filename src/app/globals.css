@@ -70,8 +70,8 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .button { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 36px; padding: 8px 13px; border: 1px solid transparent; border-radius: 6px; font-size: 13px; font-weight: 550; white-space: nowrap; }
 .button-dark { background: var(--accent-fill); color: var(--primary-text); border-color: var(--accent-fill); }
 .button-dark:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-.button-light, .button-white { color: var(--text); background: var(--surface); border-color: var(--input-border); }
-.button-light:hover, .button-white:hover { background: var(--hover); }
+.button-light { color: var(--text); background: var(--surface); border-color: var(--input-border); }
+.button-light:hover { background: var(--hover); }
 .button-danger { color: var(--error); background: var(--surface); border-color: var(--error-border); }
 .button-danger:hover { background: var(--error-bg); }
 .button-wide { width: 100%; }
@@ -96,14 +96,12 @@ textarea.input { resize: vertical; }
 .hero-foot { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; margin-top: 20px; }
 .feature-section { border-top: 1px solid var(--border); padding: 32px 0 48px; }
 .feature-section > div:first-child { max-width: 640px; }
-.feature-section h2, .cta-banner h2 { font-size: 24px; font-weight: 600; letter-spacing: -.6px; margin: 0 0 12px; }
+.feature-section h2 { font-size: 24px; font-weight: 600; letter-spacing: -.6px; margin: 0 0 12px; }
 .feature-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
 .feature-card { border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 .feature-icon { color: var(--icon); }
 .feature-card h3 { font-size: 15px; font-weight: 600; margin: 14px 0 8px; }
 .feature-card p { color: var(--muted); font-size: 13px; margin: 0; }
-.cta-banner { display: flex; justify-content: space-between; align-items: center; gap: 28px; border: 1px solid var(--border); border-radius: 8px; padding: 26px; }
-.cta-banner p { color: var(--muted); margin: 0; }
 .landing-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; width: 100%; border-top: 1px solid var(--border); margin-top: 48px; padding-top: 20px; padding-bottom: 20px; color: var(--muted); font-size: 12px; }
 .auth-page { min-height: 100vh; background: var(--page); }
 .auth-top { max-width: 1050px; margin: 0 auto; padding: 27px 32px; display: flex; align-items: center; justify-content: space-between; }
@@ -300,7 +298,6 @@ textarea.input { resize: vertical; }
   .stat strong { font-size: 22px; }
   .hero { padding: 60px 0; }
   .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cta-banner { align-items: flex-start; flex-direction: column; }
   .landing-footer { align-items: flex-start; flex-direction: column; }
   .auth-card { margin-top: 50px; }
   .wrap { padding-left: 20px; padding-right: 20px; }

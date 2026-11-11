@@ -14,7 +14,7 @@ The roadmap follows the material each person imports. No standard course is assi
 
 ## Setup
 
-Requires Node.js 22.13+ and a Supabase project. The baseline is verified with Node.js 24.22.0 and npm 11.19.1. The committed lockfile records the resolved dependency versions.
+Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+, and a Supabase project. The baseline is verified with Node.js 24.22.0 and npm 11.19.1. The committed lockfile records the resolved dependency versions.
 
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.

@@ -1,16 +1,22 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2, FileText, MessageSquare, Sparkles } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LandingHeader } from "@/components/LandingHeader";
+import { createClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  // Session presence only changes this link; protected routes verify the user.
+  const { data: { session } } = await supabase.auth.getSession();
+  const href = session ? "/dashboard" : "/login";
+  const label = session ? "Dashboard" : "Sign in";
   return <div className="landing">
-    <header className="landing-nav wrap"><Logo href="/" /><div className="header-actions"><ThemeToggle /><Link href="/login" className="button button-dark">Sign in <ArrowRight size={16} /></Link></div></header>
+    <LandingHeader href={href} label={label} />
     <main className="wrap">
       <div className="hero">
         <h1>Study Tool</h1>
         <p>Import Markdown notes, organize study topics, and track progress through approved assessments.</p>
-        <div className="hero-actions"><Link className="button button-dark button-large" href="/login">Sign in <ArrowRight size={18} /></Link><a className="button button-light button-large" href="#how">Features</a></div>
+        <div className="hero-actions"><Link id="landing-primary-action" className="button button-dark button-large" href={href}>{label} <ArrowRight size={18} /></Link><a className="button button-light button-large" href="#how">Features</a></div>
         <div className="hero-foot"><CheckCircle2 size={16} /> No AI API key required.</div>
       </div>
       <section className="feature-section" id="how">

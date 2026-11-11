@@ -24,7 +24,6 @@ export default function HomePage() {
           ].map(({ icon: Icon, title, description }) => <article key={title} className="feature-card"><span className="feature-icon"><Icon size={22} /></span><h3>{title}</h3><p>{description}</p></article>)}
         </div>
       </section>
-      <section className="cta-banner"><div><h2>Email sign-in</h2><p>Sign in with an email link. An account is created on first sign-in.</p></div><Link className="button button-white" href="/login">Sign in <ArrowRight size={17} /></Link></section>
     </main>
     <footer className="wrap landing-footer"><Logo href="/" /><span>Open-source programming study tool</span></footer>
   </div>;

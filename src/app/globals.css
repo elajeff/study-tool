@@ -87,7 +87,8 @@ textarea.input { resize: vertical; }
 /* Public pages */
 .wrap { max-width: 1050px; margin: 0 auto; padding: 0 32px; }
 .landing { min-height: 100vh; background: var(--surface); display: flex; flex-direction: column; }
-.landing-nav { width: 100%; min-height: 78px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+.landing-nav { position: sticky; top: 0; z-index: 10; width: 100%; min-height: 78px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border-bottom: 1px solid var(--border); }
+.landing-action-hidden { visibility: hidden; }
 .landing > main { width: 100%; flex: 1; }
 .hero { padding: 100px 0 80px; max-width: 760px; }
 .hero h1 { margin: 18px 0; font-size: clamp(36px, 5vw, 54px); letter-spacing: -2.3px; line-height: 1.1; font-weight: 650; }

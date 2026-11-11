@@ -34,11 +34,11 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           <p>{lesson.completion}</p>
           <p className="muted small">The note is reference material. Demonstrate the skill with a new exercise before approving an assessment.</p>
         </section>
-        <TutorHandoff lesson={lesson} profile={profile!}
+        <TutorHandoff lesson={lesson} topic={topicPath(lesson.sourcePath)} profile={profile!}
           prerequisiteNames={lesson.prerequisites.map((id) => getLesson(lessons, id)?.title ?? id)} />
       </article>
       <aside className="lesson-aside">
-        <LessonControls lesson={lesson} assessment={assessment} />
+        <LessonControls assessment={assessment} />
         <section className="panel prerequisites"><h3>Required foundations</h3>
           {lesson.prerequisites.length ? <ul>{lesson.prerequisites.map((id) => {
             const related = getLesson(lessons, id);

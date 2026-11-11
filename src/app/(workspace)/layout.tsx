@@ -14,7 +14,6 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
         <Link href="/curriculum"><BookOpen size={19} /> Curriculum</Link>
         <Link href="/notes"><FileText size={19} /> My notes</Link>
         <Link href="/assessments"><ClipboardCheck size={19} /> Assessments</Link>
-        <Link href="/assessments"><ClipboardCheck size={19} /> Assessments</Link>
         <Link href="/settings"><Settings size={19} /> Settings</Link>
       </nav>
       <div className="sidebar-bottom"><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open ChatGPT</a><p className="account-email" title={user.email}>{user.email}</p><form action={signOut}><button type="submit"><LogOut size={16} /> Sign out</button></form></div>

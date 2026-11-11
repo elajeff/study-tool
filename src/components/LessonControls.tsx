@@ -1,9 +1,8 @@
 import Link from "next/link";
-import type { Lesson } from "@/lib/curriculum";
 import type { Assessment } from "@/lib/progress";
 import { reviewDate } from "@/lib/progress";
 
-export function LessonControls({ lesson, assessment }: { lesson: Lesson; assessment?: Assessment }) {
+export function LessonControls({ assessment }: { assessment?: Assessment }) {
   return <section className="panel progress-panel">
     <h3>Mastery</h3>
     <p className="muted small">Only approved assessments count toward your score.</p>

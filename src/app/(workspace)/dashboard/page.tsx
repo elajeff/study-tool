@@ -3,16 +3,17 @@ import { ArrowRight, BookOpen, CheckCircle2, ChevronRight, NotebookPen, RotateCc
 import { loadStudy } from "@/lib/study";
 import { nextLesson, topicPath } from "@/lib/curriculum";
 import { ProgressExport } from "@/components/ProgressExport";
-import { latestApproved, demonstratedLessons, progressStats, isDueForReview, type Assessment } from "@/lib/progress";
+import { latestApproved, demonstratedLessons, progressStats, isDueForReview } from "@/lib/progress";
+
+import { loadAssessments } from "@/lib/assessment-queries";
 
 export default async function DashboardPage() {
-  const { supabase, user, profile, lessons, tracks } = await loadStudy();
-  const [{ data: receipts, error }, { count: noteCount }] = await Promise.all([
-    supabase.from("assessment_receipts").select("*").eq("status", "approved").order("date", { ascending: false }).limit(1000),
+  const { supabase, user, profile, lessons, tracks, issues } = await loadStudy();
+  const [receipts, { count: noteCount }] = await Promise.all([
+    loadAssessments(supabase, "approved"),
     supabase.from("notes").select("id", { head: true, count: "exact" }),
   ]);
-  if (error) throw new Error("Could not load assessments. Apply the database migration first.");
-  const latest = latestApproved((receipts ?? []) as Assessment[]);
+  const latest = latestApproved(receipts);
   const demonstrated = demonstratedLessons(lessons, latest);
   const stats = progressStats(lessons, latest);
   const next = nextLesson(lessons, demonstrated);
@@ -28,8 +29,10 @@ export default async function DashboardPage() {
         return { title: lesson.title, path: topicPath(lesson.sourcePath), level: record?.level ?? null, date: record?.date ?? null };
       })} /></div>}
     </div>
+    {issues.length > 0 && <section className="panel" role="alert"><h2>Check your source notes</h2>
+      {issues.map((issue) => <p key={issue}>{issue}</p>)}<Link href="/notes" className="text-link">Open My notes</Link></section>}
     {!profile ? <section className="panel next-panel"><h2>What do you want to learn?</h2><p>Add your starting knowledge and goals to build a personal study path.</p><Link className="button button-dark" href="/settings">Set learning goals <ArrowRight size={16} /></Link></section>
-      : !lessons.length ? <section className="panel next-panel"><h2>Bring in your notes.</h2><p>Import Markdown from Obsidian or create notes here.</p><Link className="button button-dark" href="/notes">Import notes <ArrowRight size={16} /></Link></section>
+      : !lessons.length && !issues.length ? <section className="panel next-panel"><h2>Bring in your notes.</h2><p>Import Markdown from Obsidian or create notes here.</p><Link className="button button-dark" href="/notes">Import notes <ArrowRight size={16} /></Link></section>
       : <>
         <div className="stat-grid">
           <div className="stat"><span>Topics assessed</span><strong>{stats.assessed}<small> / {stats.total}</small></strong></div>
@@ -41,7 +44,7 @@ export default async function DashboardPage() {
             {next ? <><h2>{next.title}</h2><p>{next.summary}</p>
               <div className="lesson-meta">{tracks.find((t) => t.id === next.track)?.title} · {next.prerequisites.length} prerequisite{next.prerequisites.length === 1 ? "" : "s"}</div>
               <Link className="button button-dark" href={`/curriculum/${next.id}`}>Start studying <ArrowRight size={16} /></Link></>
-              : <><h2>Roadmap reviewed</h2><p>Choose a new challenge or import more material.</p>
+              : <><h2>{demonstrated.size === lessons.length && !issues.length ? "Roadmap reviewed" : "Prerequisites need attention"}</h2><p>{demonstrated.size === lessons.length && !issues.length ? "Choose a new challenge or import more material." : "Check the roadmap and source notes before choosing the next topic."}</p>
                 <Link href="/curriculum" className="button button-dark">Open roadmap</Link></>}
           </section>
           <section className="panel"><div className="panel-head"><h2>Your roadmap</h2><Link href="/curriculum" className="subtle-link">See all <ArrowRight size={15} /></Link></div>

@@ -4,20 +4,18 @@ import ReactMarkdown from "react-markdown";
 import { ArrowLeft, BookOpen, Lightbulb } from "lucide-react";
 import { loadStudy } from "@/lib/study";
 import { getLesson, topicPath } from "@/lib/curriculum";
-import { latestApproved, type Assessment } from "@/lib/progress";
+import { latestApproved } from "@/lib/progress";
 import { LessonControls } from "@/components/LessonControls";
 import { TutorHandoff } from "@/components/TutorHandoff";
+
+import { loadAssessments } from "@/lib/assessment-queries";
 
 export default async function LessonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { supabase, profile, lessons, tracks } = await loadStudy();
   const lesson = getLesson(lessons, slug);
   if (!lesson) notFound();
-  const { data, error } = await supabase.from("assessment_receipts")
-    .select("*").eq("topic", topicPath(lesson.sourcePath)).eq("status", "approved")
-    .order("date", { ascending: false }).limit(100);
-  if (error) throw new Error("Could not load assessments.");
-  const assessment = latestApproved((data ?? []) as Assessment[]).get(topicPath(lesson.sourcePath));
+  const assessment = latestApproved(await loadAssessments(supabase, "approved", topicPath(lesson.sourcePath))).get(topicPath(lesson.sourcePath));
   const track = tracks.find((item) => item.id === lesson.track);
 
   return <div className="lesson-page">

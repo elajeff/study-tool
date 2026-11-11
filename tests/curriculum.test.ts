@@ -7,13 +7,15 @@ const vault = [
   { path: "Concepts/Java.md", title: "Java", body: "# Java\n\nProgramming language.\n\n## Required foundations\nNone" },
   { path: "Concepts/Spring Boot.md", title: "Spring Boot", body: "# Spring Boot\n\nBackend framework.\n\n## Required foundations\n[[Concepts/Java|Java]]\n\n## Recommended preparation\n[[Concepts/Database|Database]]" },
   { path: "Concepts/Database.md", title: "Database", body: "# Database\n\nOrganized data storage." },
+  { path: "My course/Transactions.md", title: "Transactions", body: "# Transactions" },
   { path: "Learning Paths/01 Backend.md", title: "01 Backend", body: "# Backend\n\n1. [[Concepts/Java]]\n2. [[Concepts/Spring Boot]]" },
 ];
 
 test("roadmap is based on imported notes, not fixed global lessons", () => {
   assert.equal(buildCurriculum([], profile).lessons.length, 0);
   const { lessons, tracks } = buildCurriculum(vault, profile);
-  assert.equal(lessons.length, 3);
+  assert.equal(lessons.length, 4);
+  assert.ok(lessons.some((lesson) => lesson.sourcePath === "My course/Transactions.md"));
   assert.ok(tracks.some((t) => t.title === "Backend"));
   const java = lessons.find((l) => l.title === "Java")!;
   const spring = lessons.find((l) => l.title === "Spring Boot")!;
@@ -52,4 +54,18 @@ test("Obsidian Java, DSA, foundations, projects, concepts and walkthroughs remai
   assert.deepEqual(methods.prerequisites, [loops.id]);
   assert.deepEqual(sliding.prerequisites, []);
   assert.deepEqual(sliding.recommendations, [methods.id]);
+});
+
+test("source conflicts and cycles are reported without recommending an invalid starting topic", () => {
+  const note = (path: string, body = "") => ({ path, title: path, body });
+  const conflict = buildCurriculum([note("Topic.md"), note("topic.md")], profile);
+  assert.match(conflict.issues.join(" "), /Topic.md.*topic.md/);
+  assert.equal(nextLesson(conflict.lessons, new Set()), undefined);
+  const cycle = buildCurriculum([
+    note("A.md", "## Prerequisites\n[[B]]"),
+    note("B.md", "## Prerequisites\n[[A]]"),
+  ], profile);
+  assert.match(cycle.issues.join(" "), /Circular prerequisites/);
+  assert.equal(cycle.lessons.reduce((count, lesson) => count + lesson.prerequisites.length, 0), 2);
+  assert.equal(nextLesson(cycle.lessons, new Set()), undefined);
 });

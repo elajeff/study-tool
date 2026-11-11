@@ -14,3 +14,18 @@ test("wikilinks find referenced notes, without creating duplicate targets", () =
   const note = findLinkedNote("Java", [{ path: "Concepts/Java.md" }]);
   assert.equal(note?.path, "Concepts/Java.md");
 });
+
+test("generated vault data and chat transcripts are excluded from import", async () => {
+  const { shouldImportNote } = await import("../src/lib/notes.ts");
+  assert.equal(shouldImportNote("AI Chats/conversation.md"), false);
+  assert.equal(shouldImportNote("Progress/Dashboard.md"), false);
+  assert.equal(shouldImportNote("Tools/README.md"), false);
+  assert.equal(shouldImportNote("Lessons/Java/06 Methods.md"), true);
+});
+
+test("vault ZIPs can have one surrounding directory without losing their note paths", async () => {
+  const { vaultRoot } = await import("../src/lib/notes.ts");
+  assert.equal(vaultRoot(["nothingburger/Concepts/Java.md", "nothingburger/AI Chats/log.md"]), "nothingburger");
+  assert.equal(vaultRoot(["Concepts/Java.md", "DSA/Arrays.md"]), null);
+  assert.equal(vaultRoot(["Notes/Java.md", "Notes/C.md"]), null);
+});

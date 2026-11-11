@@ -5,31 +5,45 @@ import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadStudy } from "@/lib/study";
 import { cleanNotePath, titleFromPath } from "@/lib/notes";
+import { topicPath } from "@/lib/curriculum";
+import { parseEvidence, evidenceFingerprint } from "@/lib/assessments";
 
-export async function saveProgress(formData: FormData) {
+export async function importAssessments(formData: FormData) {
   const { supabase, user, lessons } = await loadStudy();
-  const lessonId = String(formData.get("lessonId") ?? "");
-  const status = String(formData.get("status") ?? "studying");
-  const mastery = Number(formData.get("mastery") ?? 0);
-  const reflection = String(formData.get("reflection") ?? "").trim();
-
-  if (!lessons.some((lesson) => lesson.id === lessonId) || !["not_started", "studying", "completed"].includes(status)
-    || !Number.isInteger(mastery) || mastery < 0 || mastery > 5 || reflection.length > 3000) {
-    throw new Error("Invalid progress information.");
+  const text = String(formData.get("evidenceText") ?? "");
+  const entries = parseEvidence(text);
+  const topics = new Set(lessons.map((lesson) => topicPath(lesson.sourcePath)));
+  for (const entry of entries) {
+    if (!topics.has(entry.topic)) throw new Error(`Unknown topic: ${entry.topic}`);
   }
-
-  const { error } = await supabase.from("lesson_progress").upsert({
+  const rows = entries.map((entry) => ({
+    ...entry,
+    fingerprint: evidenceFingerprint(entry),
     user_id: user.id,
-    lesson_id: lessonId,
-    status,
-    mastery,
-    reflection,
-    updated_at: new Date().toISOString(),
-  });
-  if (error) throw new Error("Could not save your progress.");
+    status: "pending",
+  }));
+  const { error } = await supabase.from("assessment_receipts")
+    .upsert(rows, { onConflict: "user_id,fingerprint", ignoreDuplicates: true });
+  if (error) throw new Error("Could not import the assessment. Check that the database migration was applied.");
+  revalidatePath("/assessments");
   revalidatePath("/dashboard");
+  redirect("/assessments");
+}
+
+export async function reviewAssessment(formData: FormData) {
+  const { supabase, user } = await requireAccount();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("decision") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !["approved", "rejected"].includes(status))
+    throw new Error("Invalid review decision.");
+  const { data, error } = await supabase.from("assessment_receipts")
+    .update({ status, reviewed_at: new Date().toISOString() })
+    .eq("id", id).eq("user_id", user.id).eq("status", "pending")
+    .select("id").maybeSingle();
+  if (error || !data) throw new Error("This assessment is no longer pending.");
+  revalidatePath("/assessments");
   revalidatePath("/curriculum");
-  revalidatePath(`/curriculum/${lessonId}`);
+  revalidatePath("/dashboard");
 }
 
 export async function createNote(formData: FormData) {

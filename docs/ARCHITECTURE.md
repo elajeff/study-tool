@@ -22,6 +22,8 @@ The source tables are a foundation for later importers. The current UI still rea
 
 Authenticated owners can create sources and change their names. Other writes go through `accept_source_import(source_id, entries)`, which accepts 1–2,000 text entries in one transaction. For example, an entry can contain `{"external_id":"stable-file-id","path":"Lessons/Methods.md","content":"# Methods"}`. The function returns the accepted batch UUID.
 
+The JSON batch is limited to 35 MiB, with at most 500,000 characters of content per entry. Optional paths and external IDs must be strings or null, with at most 1,024 UTF-8 bytes each. Oversized or malformed input rejects the batch. These limits bound database writes; a future adapter must also limit input before constructing the request.
+
 A known external ID or an explicit artifact UUID can preserve identity through a rename. Without either, a new path creates a new artifact, even if its text matches. A new external ID at an occupied path requires explicit reconciliation with the existing artifact UUID. Conflicting IDs or occupied rename destinations reject the whole batch. This function accepts changes; it does not preview them, infer deleted files, or write to a vault.
 
 The function locks the source while publishing, so imports into the same source run in order. A failed batch or disconnected transaction leaves no accepted changes. Row-level security limits reads to the owner, and composite foreign keys prevent references across accounts, sources, or artifacts. Clients cannot directly rewrite revision history or change current-revision pointers.

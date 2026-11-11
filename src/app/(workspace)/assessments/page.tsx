@@ -3,14 +3,17 @@ import { requireAccount } from "@/lib/auth";
 import { importAssessments, reviewAssessment } from "@/app/actions";
 import type { Assessment } from "@/lib/progress";
 
+import { loadAssessments } from "@/lib/assessment-queries";
+
 export default async function AssessmentsPage() {
   const { supabase } = await requireAccount();
-  const { data, error } = await supabase.from("assessment_receipts")
-    .select("*").order("submitted_at", { ascending: false }).limit(200);
-  if (error) throw new Error("Could not load assessments. Apply the database migration first.");
-  const receipts = (data ?? []) as Assessment[];
-  const pending = receipts.filter((r) => r.status === "pending");
-  const reviewed = receipts.filter((r) => r.status !== "pending").slice(0, 15);
+  const [pending, { data: history, error }] = await Promise.all([
+    loadAssessments(supabase, "pending"),
+    supabase.from("assessment_receipts").select("*").neq("status", "pending")
+      .order("reviewed_at", { ascending: false }).order("id").limit(15),
+  ]);
+  if (error) throw new Error("Could not load assessment history.");
+  const reviewed = (history ?? []) as Assessment[];
   return <>
     <div className="page-heading"><span className="eyebrow">ASSESSMENTS</span>
       <h1>Review your work.</h1>

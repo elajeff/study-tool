@@ -2,18 +2,20 @@ import Link from "next/link";
 import { Check, ArrowUpRight } from "lucide-react";
 import { loadStudy } from "@/lib/study";
 import { topicPath } from "@/lib/curriculum";
-import { latestApproved, demonstratedLessons, type Assessment } from "@/lib/progress";
+import { latestApproved, demonstratedLessons } from "@/lib/progress";
+
+import { loadAssessments } from "@/lib/assessment-queries";
 
 export default async function CurriculumPage() {
-  const { supabase, profile, lessons, tracks } = await loadStudy();
-  const { data, error } = await supabase.from("assessment_receipts").select("*").eq("status", "approved").limit(1000);
-  if (error) throw new Error("Could not load assessments. Apply the database migration first.");
-  const latest = latestApproved((data ?? []) as Assessment[]);
+  const { supabase, profile, lessons, tracks, issues } = await loadStudy();
+  const latest = latestApproved(await loadAssessments(supabase, "approved"));
   const demonstrated = demonstratedLessons(lessons, latest);
   return <><div className="page-heading"><span className="eyebrow">YOUR ROADMAP</span><h1>Built from your notes.</h1>
     <p>{profile ? `${profile.goals} · ${profile.hours_per_week} hours per week` : "Add your goals to build your roadmap."}</p></div>
+    {issues.length > 0 && <section className="panel" role="alert"><h2>Check your source notes</h2>
+      {issues.map((issue) => <p key={issue}>{issue}</p>)}<Link href="/notes" className="text-link">Open My notes</Link></section>}
     {!profile ? <section className="panel"><h2>Start with your goals</h2><Link href="/settings" className="button button-dark">Set goals</Link></section>
-      : !lessons.length ? <section className="panel"><h2>Import some material first</h2><p>Bring in an Obsidian vault ZIP or your own Markdown notes.</p><Link href="/notes" className="button button-dark">Open notes</Link></section>
+      : !lessons.length && !issues.length ? <section className="panel"><h2>Import some material first</h2><p>Bring in an Obsidian vault ZIP or your own Markdown notes.</p><Link href="/notes" className="button button-dark">Open notes</Link></section>
       : <div className="curriculum-sections">{tracks.map((track, index) => {
         const own = lessons.filter((lesson) => lesson.track === track.id);
         const count = own.filter((lesson) => demonstrated.has(lesson.id)).length;

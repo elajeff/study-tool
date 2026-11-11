@@ -80,12 +80,19 @@ function isTopic(path: string) {
   return true;
 }
 
-export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | null): { tracks: Track[]; lessons: Lesson[] } {
-  if (!profile) return { tracks: [], lessons: [] };
+export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | null): { tracks: Track[]; lessons: Lesson[]; issues: string[] } {
+  if (!profile) return { tracks: [], lessons: [], issues: [] };
 
-  const notes = allNotes.filter((note) => isTopic(note.path));
-  const grouped = notes.filter((note) => categoryOf(note.path));
-  const candidates = grouped.length ? grouped : notes;
+  const candidates = allNotes.filter((note) => isTopic(note.path));
+  const issues: string[] = [];
+  const paths = new Map<string, string>();
+  for (const note of candidates) {
+    const key = note.path.toLowerCase();
+    const previous = paths.get(key);
+    if (previous) issues.push(`Conflicting note paths: ${previous} and ${note.path}. Remove or rename one conflicting note before continuing.`);
+    paths.set(key, note.path);
+  }
+  if (issues.length) return { tracks: [], lessons: [], issues };
   const structured = candidates.some((note) => /^(lessons\/java|dsa|foundations|learning projects|walkthroughs)\//i.test(note.path));
 
   const trackMap = new Map<string, Track>();
@@ -149,9 +156,12 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
   const done = new Set<string>();
   const active = new Set<string>();
   function visit(lesson: Lesson) {
-    if (done.has(lesson.id) || active.has(lesson.id)) return;
+    if (done.has(lesson.id)) return;
+    if (active.has(lesson.id)) {
+      issues.push(`Circular prerequisites involving ${lesson.sourcePath}. Check the linked prerequisite notes.`);
+      return;
+    }
     active.add(lesson.id);
-    lesson.prerequisites = lesson.prerequisites.filter((id) => !active.has(id));
     for (const id of lesson.prerequisites) {
       const previous = byId.get(id);
       if (previous) visit(previous);
@@ -165,7 +175,7 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
     || (outlineRank.get(a.sourcePath) ?? 999) - (outlineRank.get(b.sourcePath) ?? 999)
     || (structured ? a.sourcePath.localeCompare(b.sourcePath, undefined, { numeric: true }) : goalPriority(b.title, profile) - goalPriority(a.title, profile))
     || a.title.localeCompare(b.title))) visit(lesson);
-  return { tracks: [...trackMap.values()], lessons: sorted };
+  return { tracks: [...trackMap.values()], lessons: sorted, issues };
 }
 
 export function getLesson(lessons: Lesson[], id: string) {

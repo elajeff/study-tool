@@ -6,10 +6,10 @@ import { BookOpen, ChartNoAxesCombined, ClipboardCheck, FileText, Settings } fro
 
 const links = [
   { href: "/dashboard", label: "Dashboard", mobileLabel: "Home", icon: ChartNoAxesCombined },
-  { href: "/curriculum", label: "Curriculum", mobileLabel: "Learn", icon: BookOpen },
-  { href: "/notes", label: "My notes", mobileLabel: "Notes", icon: FileText },
+  { href: "/curriculum", label: "Curriculum", mobileLabel: "Topics", icon: BookOpen },
+  { href: "/notes", label: "Notes", mobileLabel: "Notes", icon: FileText },
   { href: "/assessments", label: "Assessments", mobileLabel: "Reviews", icon: ClipboardCheck },
-  { href: "/settings", label: "Settings", mobileLabel: "More", icon: Settings },
+  { href: "/settings", label: "Settings", mobileLabel: "Settings", icon: Settings },
 ];
 
 export function WorkspaceNav({ compact = false }: { compact?: boolean }) {

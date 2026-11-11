@@ -51,6 +51,36 @@ begin
   assert (select count(*) = 2 from public.source_artifacts where source_id = source_a);
 end $$;
 
+-- Reject malformed identities and oversized requests before publishing any records.
+do $$
+declare
+  source_a uuid := '10000000-0000-4000-8000-000000000001';
+  entry jsonb;
+  batch jsonb;
+  imports_before bigint := (select count(*) from public.source_imports);
+begin
+  for entry in select value from jsonb_array_elements(jsonb_build_array(
+    jsonb_build_object('external_id', 42, 'content', 'invalid ID'),
+    jsonb_build_object('path', false, 'content', 'invalid path'),
+    jsonb_build_object('external_id', repeat('x', 1025), 'content', 'long ID'),
+    jsonb_build_object('path', repeat('x', 1025), 'content', 'long path'),
+    jsonb_build_object('path', 'too-large.md', 'content', repeat('x', 500001)))) loop
+    begin
+      perform public.accept_source_import(source_a, jsonb_build_array(entry));
+      assert false, 'Invalid input must reject the import';
+    exception when invalid_parameter_value then null;
+    end;
+  end loop;
+  select jsonb_agg(jsonb_build_object('external_id', n::text, 'content', repeat('x', 500000)))
+    into batch from generate_series(1, 74) n;
+  begin
+    perform public.accept_source_import(source_a, batch);
+    assert false, 'An oversized batch must be rejected even below the entry-count limit';
+  exception when invalid_parameter_value then null;
+  end;
+  assert (select count(*) from public.source_imports) = imports_before;
+end $$;
+
 -- A conflict in a later entry must undo earlier entries and the accepted-run record.
 do $$
 declare

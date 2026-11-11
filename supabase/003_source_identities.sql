@@ -123,15 +123,26 @@ begin
   if jsonb_array_length(p_entries) not between 1 and 2000 then
     raise exception 'Import between 1 and 2000 artifacts at a time.' using errcode = '22023';
   end if;
+  if octet_length(p_entries::text) > 35 * 1024 * 1024 then
+    raise exception 'Import entries must fit within 35 MiB of JSON.' using errcode = '22023';
+  end if;
   insert into public.source_imports(id, user_id, source_id) values (run_id, owner_id, p_source_id);
 
   for entry in select value from jsonb_array_elements(p_entries) loop
     if jsonb_typeof(entry -> 'content') is distinct from 'string' then
       raise exception 'Each artifact needs text content.' using errcode = '22023';
     end if;
+    if jsonb_typeof(entry -> 'external_id') not in ('string', 'null')
+      or jsonb_typeof(entry -> 'path') not in ('string', 'null') then
+      raise exception 'External IDs and paths must be strings or null.' using errcode = '22023';
+    end if;
     requested_id := (entry ->> 'artifact_id')::uuid;
     external_key := nullif(entry ->> 'external_id', '');
     entry_path := nullif(entry ->> 'path', '');
+    body := entry ->> 'content';
+    if char_length(body) > 500000 or octet_length(external_key) > 1024 or octet_length(entry_path) > 1024 then
+      raise exception 'Content must be at most 500000 characters; IDs and paths at most 1024 bytes.' using errcode = '22023';
+    end if;
     select id into key_match from public.source_artifacts
       where source_id = p_source_id and user_id = owner_id and external_id = external_key;
     select id into path_match from public.source_artifacts
@@ -162,7 +173,6 @@ begin
       raise exception 'The destination path belongs to another artifact.' using errcode = '23505';
     end if;
 
-    body := entry ->> 'content';
     hash := encode(sha256(convert_to(body, 'UTF8')), 'hex');
     insert into public.source_revisions(user_id, source_id, artifact_id, import_id, content, content_hash)
       values (owner_id, p_source_id, artifact.id, run_id, body, hash)

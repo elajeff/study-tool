@@ -19,13 +19,14 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then `supabase/002_assessments.sql`, in that order. Both files are required.
-   - **Upgrade from v0.1:** run only `supabase/002_assessments.sql` against the existing database before using v0.2. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** if the assessment migration has already been applied, do not rerun it. Its policy creation is not idempotent.
+   - **Fresh installation:** run `supabase/schema.sql`, `supabase/002_assessments.sql`, then `supabase/003_source_identities.sql`, in that order.
+   - **Upgrade from v0.1:** run `supabase/002_assessments.sql`, then `supabase/003_source_identities.sql` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** if the assessment migration has already been applied, run only `supabase/003_source_identities.sql`.
+   - Apply each file once. They create tables or policies that already exist if rerun.
 
-   The assessment migration retains existing notes, profiles, and legacy progress. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
+   The migrations retain existing notes, profiles, progress, and assessment receipts. The source migration snapshots current notes without changing their paths or the application's assessment lookups. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
 4. Enable email sign-in in Supabase Authentication. Set the Site URL to `http://localhost:3000` for development and allow `http://localhost:3000/auth/confirm` as a redirect.
-5. For the magic-link PKCE callback, use this link in the Supabase email template:
+5. For the email sign-in callback, use this link in the Supabase email template:
 
    ```html
    <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Sign in to Study Tool</a>

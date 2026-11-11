@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { BookOpenCheck } from "lucide-react";
+import Image from "next/image";
 
 export function Logo({ href = "/dashboard" }: { href?: string }) {
-  return <Link href={href} className="logo"><span className="logo-mark"><BookOpenCheck size={21} /></span><span>study tool<span className="logo-period">.</span></span></Link>;
+  return <Link href={href} className="logo"><Image src="/cat-icon.png" alt="" width={30} height={30} className="logo-mark" unoptimized /><span>study tool<span className="logo-period">.</span></span></Link>;
 }

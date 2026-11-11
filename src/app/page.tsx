@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2, FileText, MessageSquare, Sparkles } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function HomePage() {
   return <div className="landing">
-    <header className="landing-nav wrap"><Logo href="/" /><Link href="/login" className="button button-dark">Get started <ArrowRight size={16} /></Link></header>
+    <header className="landing-nav wrap"><Logo href="/" /><div className="header-actions"><ThemeToggle /><Link href="/login" className="button button-dark">Get started <ArrowRight size={16} /></Link></div></header>
     <main className="wrap">
       <div className="hero">
         <div className="eyebrow"><span className="dot" /> An open learning workspace</div>

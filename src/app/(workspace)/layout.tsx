@@ -9,7 +9,6 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
   const { user } = await requireAccount();
   return <div className="workspace">
     <aside className="sidebar"><div className="sidebar-top"><Logo /></div>
-      <div className="sidebar-label">WORKSPACE</div>
       <WorkspaceNav />
       <div className="sidebar-bottom"><ThemeToggle sidebar /><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open ChatGPT</a><p className="account-email" title={user.email}>{user.email}</p><form action={signOut}><button type="submit"><LogOut size={16} /> Sign out</button></form></div>
     </aside>

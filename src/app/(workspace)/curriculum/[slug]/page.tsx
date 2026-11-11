@@ -19,18 +19,18 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   const track = tracks.find((item) => item.id === lesson.track);
 
   return <div className="lesson-page">
-    <Link href="/curriculum" className="back-link"><ArrowLeft size={16} /> Back to roadmap</Link>
+    <Link href="/curriculum" className="back-link"><ArrowLeft size={16} /> Back to curriculum</Link>
     <div className="page-heading"><span className="eyebrow">{track?.title}</span>
       <h1>{lesson.title}</h1><p>{lesson.summary}</p><small>Source: {lesson.sourcePath}</small>
     </div>
     <div className="lesson-layout">
       <article className="lesson-body">
         <section className="panel lesson-section">
-          <div className="panel-kicker"><BookOpen size={17} /> SOURCE NOTE</div>
+          <div className="panel-kicker"><BookOpen size={17} /> Source note</div>
           <div className="markdown-body"><ReactMarkdown>{lesson.sourceBody}</ReactMarkdown></div>
         </section>
         <section className="panel lesson-section">
-          <div className="panel-kicker"><Lightbulb size={17} /> PRACTICE</div>
+          <div className="panel-kicker"><Lightbulb size={17} /> Practice</div>
           <p>{lesson.completion}</p>
           <p className="muted small">The note is reference material. Demonstrate the skill with a new exercise before approving an assessment.</p>
         </section>
@@ -39,7 +39,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
       </article>
       <aside className="lesson-aside">
         <LessonControls assessment={assessment} />
-        <section className="panel prerequisites"><h3>Required foundations</h3>
+        <section className="panel prerequisites"><h3>Prerequisites</h3>
           {lesson.prerequisites.length ? <ul>{lesson.prerequisites.map((id) => {
             const related = getLesson(lessons, id);
             return <li key={id}><Link href={`/curriculum/${id}`}>{related?.title ?? id}</Link></li>;

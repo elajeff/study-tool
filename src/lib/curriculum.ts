@@ -58,7 +58,7 @@ function summary(body: string) {
   const paragraphs = body.replace(/^# [^\n]+\n/, "").split(/\n\s*\n/);
   const paragraph = paragraphs.find((part) => part.trim() && !part.trim().startsWith("#"));
   return paragraph?.trim().replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, path, label) => label || path).slice(0, 350)
-    ?? "Open the source note to explore this topic.";
+    ?? "Open the source note.";
 }
 
 function goalPriority(title: string, profile: StudyProfile) {

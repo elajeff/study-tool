@@ -1,4 +1,4 @@
-import { ClipboardCheck, FileText, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { requireAccount } from "@/lib/auth";
 import { importAssessments, reviewAssessment } from "@/app/actions";
 import type { Assessment } from "@/lib/progress";
@@ -15,12 +15,11 @@ export default async function AssessmentsPage() {
   if (error) throw new Error("Could not load assessment history.");
   const reviewed = (history ?? []) as Assessment[];
   return <>
-    <div className="page-heading"><span className="eyebrow">ASSESSMENTS</span>
-      <h1>Review your work.</h1>
+    <div className="page-heading">
+      <h1>Assessments</h1>
       <p>A score counts only when the evidence is approved. Check the exercise, hints, and original work before accepting a level.</p>
     </div>
     <section className="panel assessment-import">
-      <div className="panel-kicker"><FileText size={17} /> IMPORT EVIDENCE</div>
       <h2>Add an assessment</h2>
       <p>Paste a <code>study-evidence</code> JSON block from a tutoring conversation. Imported receipts start as pending. Chat transcripts are not uploaded automatically.</p>
       <form action={importAssessments} className="stack">
@@ -31,7 +30,6 @@ export default async function AssessmentsPage() {
       </form>
     </section>
     <section className="panel assessment-list">
-      <div className="panel-kicker"><ClipboardCheck size={17} /> INBOX</div>
       <h2>Pending review ({pending.length})</h2>
       {pending.length ? pending.map((record) => <article className="assessment-record" key={record.id}>
         <div className="assessment-heading"><strong>{record.topic}</strong><span>Level {record.level} · {record.date}</span></div>

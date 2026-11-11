@@ -8,9 +8,14 @@ import type { Note } from "@/lib/notes";
 export default async function NotesPage({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
   const { search = "" } = await searchParams;
   const { supabase } = await requireAccount();
-  const { data, error } = await supabase.from("notes").select("id,path,title,body,updated_at").order("updated_at", { ascending: false }).limit(500);
-  if (error) throw new Error("Could not load your notes.");
-  const notes = (data ?? []) as Note[];
+  const notes: Note[] = [];
+  for (let offset = 0; offset < 3000; offset += 500) {
+    const { data, error } = await supabase.from("notes")
+      .select("id,path,title,body,updated_at").order("updated_at", { ascending: false }).range(offset, offset + 499);
+    if (error) throw new Error("Could not load your notes.");
+    notes.push(...(data ?? []) as Note[]);
+    if (!data || data.length < 500) break;
+  }
   const filtered = notes.filter((note) => `${note.path} ${note.title}`.toLowerCase().includes(search.toLowerCase()));
   return <><div className="page-heading"><span className="eyebrow">PERSONAL KNOWLEDGE</span><h1>Your notes, connected.</h1><p>Import Markdown from Obsidian, keep your own explanations, and take your notes with you.</p></div>
     <NotesImporter notes={notes} />

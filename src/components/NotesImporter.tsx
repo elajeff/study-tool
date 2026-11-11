@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import JSZip from "jszip";
-import { Download, FileUp, LoaderCircle } from "lucide-react";
+import { Download, FileUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { cleanNotePath, titleFromPath, type Note } from "@/lib/notes";
+import { cleanNotePath, shouldImportNote, titleFromPath, vaultRoot, type Note } from "@/lib/notes";
 
-const MAX_ZIP_BYTES = 5 * 1024 * 1024;
+const MAX_ZIP_BYTES = 20 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 35 * 1024 * 1024;
 const MAX_NOTE_BYTES = 500_000;
-const MAX_NOTES = 200;
+const MAX_NOTES = 2000;
 
 type Imported = { path: string; title: string; body: string };
 
@@ -19,28 +20,40 @@ export function NotesImporter({ notes }: { notes: Note[] }) {
     setBusy(true); setMessage("");
     try {
       const candidates: Imported[] = [];
+      const plainFiles = Array.from(files).filter((file) => !file.name.toLowerCase().endsWith(".zip"));
+      const sharedRoot = vaultRoot(plainFiles.map((file) => file.webkitRelativePath || file.name));
+      let totalBytes = 0;
       for (const file of Array.from(files)) {
         if (file.name.toLowerCase().endsWith(".zip")) {
-          if (file.size > MAX_ZIP_BYTES) throw new Error("A ZIP exceeds the 5 MB import limit.");
+          if (file.size > MAX_ZIP_BYTES) throw new Error("A ZIP exceeds the 20 MB import limit.");
           const zip = await JSZip.loadAsync(file);
+          if (Object.keys(zip.files).length > MAX_NOTES * 2) throw new Error("The archive contains too many files.");
+          const root = vaultRoot(Object.keys(zip.files).filter((name) => name.toLowerCase().endsWith(".md")));
           for (const entry of Object.values(zip.files)) {
             if (entry.dir) continue;
-            const path = cleanNotePath(entry.name);
-            if (!path) continue;
-            if (entry._data && (entry as unknown as { _data: { uncompressedSize: number } })._data.uncompressedSize > MAX_NOTE_BYTES) continue;
+            const name = root ? entry.name.slice(root.length + 1) : entry.name;
+            const path = cleanNotePath(name);
+            if (!path || !shouldImportNote(path)) continue;
+            const sizeHint = (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize;
+            if (sizeHint !== undefined && sizeHint > MAX_NOTE_BYTES) continue;
             const body = await entry.async("string");
-            if (new Blob([body]).size <= MAX_NOTE_BYTES) candidates.push({ path, title: titleFromPath(path), body });
-            if (candidates.length > MAX_NOTES) throw new Error("Import at most 200 notes at a time.");
+            const size = new Blob([body]).size;
+            totalBytes += size;
+            if (totalBytes > MAX_TOTAL_BYTES) throw new Error("The uncompressed notes exceed 35 MB.");
+            if (size <= MAX_NOTE_BYTES) candidates.push({ path, title: titleFromPath(path), body });
+            if (candidates.length > MAX_NOTES) throw new Error("Import at most 2000 notes at a time.");
           }
         } else {
           const rawPath = file.webkitRelativePath || file.name;
-          const path = cleanNotePath(rawPath);
-          if (!path || file.size > MAX_NOTE_BYTES) continue;
+          const path = cleanNotePath(sharedRoot ? rawPath.slice(sharedRoot.length + 1) : rawPath);
+          if (!path || !shouldImportNote(path) || file.size > MAX_NOTE_BYTES) continue;
+          totalBytes += file.size;
+          if (totalBytes > MAX_TOTAL_BYTES) throw new Error("The selected notes exceed 35 MB.");
           candidates.push({ path, title: titleFromPath(path), body: await file.text() });
         }
       }
       if (!candidates.length) throw new Error("No valid .md files were found.");
-      if (candidates.length > MAX_NOTES) throw new Error("Import at most 200 notes at a time.");
+      if (candidates.length > MAX_NOTES) throw new Error("Import at most 2000 notes at a time.");
       const unique = [...new Map(candidates.map((n) => [n.path, n])).values()];
       const collisions = unique.filter((n) => notes.some((old) => old.path === n.path));
       if (collisions.length && !window.confirm(`${collisions.length} existing notes have matching paths. Replace them with the imported versions?`)) {

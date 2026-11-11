@@ -33,3 +33,20 @@ export function findLinkedNote(target: string, notes: Pick<Note, "path">[]) {
   return notes.find((note) => note.path.replace(/\.md$/i, "").toLowerCase() === normalized)
     ?? notes.find((note) => note.path.replace(/\.md$/i, "").split("/").at(-1)?.toLowerCase() === normalized);
 }
+
+
+/** Skip Obsidian metadata and generated records during study-note import. */
+export function shouldImportNote(path: string) {
+  return !!cleanNotePath(path) && !/^(ai chats|progress|tools|\.obsidian|\.trash)\//i.test(path)
+    && !/^research\/source-manifest\.json$/i.test(path);
+}
+
+/** ZIP exports sometimes include the vault directory above the Markdown folders. */
+export function vaultRoot(paths: string[]): string | null {
+  const namedFolders = new Set(["lessons", "dsa", "foundations", "concepts", "learning projects", "walkthroughs", "learning paths", "progress", "ai chats"]);
+  const parts = paths.map((path) => path.replaceAll("\\", "/").split("/"));
+  const root = parts[0]?.[0];
+  if (!root || !parts.every((part) => part[0] === root && part.length > 1)) return null;
+  const looksLikeVault = parts.some((part) => namedFolders.has(part[1]?.toLowerCase()) || part[1]?.toLowerCase() === "home.md");
+  return looksLikeVault ? root : null;
+}

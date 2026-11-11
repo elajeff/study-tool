@@ -1,6 +1,6 @@
 {
   "name": "study-tool",
-  "version": "0.1.0",
+  "version": "0.2.0-dev",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -29,7 +29,7 @@
     "typescript": "^5.9.0"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": "^22.13.0 || >=24.0.0"
   },
   "type": "module"
 }

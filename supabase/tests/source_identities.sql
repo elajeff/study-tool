@@ -1,4 +1,4 @@
--- Run with psql after all three migrations, against a disposable development database.
+-- Run with psql after all migrations, against a disposable development database.
 -- Fixtures and all imports are rolled back, including when an assertion fails.
 \set ON_ERROR_STOP on
 begin;
@@ -11,7 +11,7 @@ insert into auth.users(id, email) values
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 insert into public.sources(id, user_id, kind, name) values
-  ('10000000-0000-4000-8000-000000000001', auth.uid(), 'obsidian', 'Vault A'),
+  ('10000000-0000-4000-8000-000000000001', auth.uid(), 'repository', 'Repository A1'),
   ('10000000-0000-4000-8000-000000000002', auth.uid(), 'repository', 'Repository A');
 
 -- Content equality does not establish identity. Updates and reliable renames do.

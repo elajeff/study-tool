@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { ArrowLeft, BookOpen, Lightbulb } from "lucide-react";
 import { loadStudy } from "@/lib/study";
-import { getLesson, topicPath } from "@/lib/curriculum";
+import { getLesson } from "@/lib/curriculum";
 import { latestApproved } from "@/lib/progress";
 import { LessonControls } from "@/components/LessonControls";
 import { TutorHandoff } from "@/components/TutorHandoff";
@@ -15,13 +15,14 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   const { supabase, profile, lessons, tracks } = await loadStudy();
   const lesson = getLesson(lessons, slug);
   if (!lesson) notFound();
-  const assessment = latestApproved(await loadAssessments(supabase, "approved", topicPath(lesson.sourcePath))).get(topicPath(lesson.sourcePath));
+  const assessment = latestApproved(await loadAssessments(supabase, "approved", lesson.topic)).get(lesson.topic);
   const track = tracks.find((item) => item.id === lesson.track);
 
   return <div className="lesson-page">
     <Link href="/curriculum" className="back-link"><ArrowLeft size={16} /> Back to curriculum</Link>
     <div className="page-heading"><span className="eyebrow">{track?.title}</span>
-      <h1>{lesson.title}</h1><p>{lesson.summary}</p><small>Source: {lesson.sourcePath}</small>
+      <h1>{lesson.title}</h1><p>{lesson.summary}</p><small>Source: {lesson.sourceName} · {lesson.sourcePath}</small>
+      {lesson.blocked && <p role="alert">Review missing or ambiguous prerequisites in this source note.</p>}
     </div>
     <div className="lesson-layout">
       <article className="lesson-body">
@@ -34,7 +35,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           <p>{lesson.completion}</p>
           <p className="muted small">The note is reference material. Demonstrate the skill with a new exercise before approving an assessment.</p>
         </section>
-        <TutorHandoff lesson={lesson} topic={topicPath(lesson.sourcePath)} profile={profile!}
+        <TutorHandoff lesson={lesson} topic={lesson.topic} profile={profile!}
           prerequisiteNames={lesson.prerequisites.map((id) => getLesson(lessons, id)?.title ?? id)} />
       </article>
       <aside className="lesson-aside">

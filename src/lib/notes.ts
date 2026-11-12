@@ -4,6 +4,10 @@ export type Note = {
   title: string;
   body: string;
   updated_at: string;
+  source_id: string | null;
+  artifact_id: string | null;
+  topic: string;
+  source_name: string;
 };
 
 /** Keep imported paths inside one vault; reject dot files and traversal. */
@@ -28,10 +32,12 @@ export function wikiLinks(markdown: string): string[] {
   return [...links];
 }
 
-export function findLinkedNote(target: string, notes: Pick<Note, "path">[]) {
+export function findLinkedNote<T extends { path: string }>(target: string, notes: T[]): T | undefined {
   const normalized = target.replace(/\.md$/i, "").toLowerCase();
-  return notes.find((note) => note.path.replace(/\.md$/i, "").toLowerCase() === normalized)
-    ?? notes.find((note) => note.path.replace(/\.md$/i, "").split("/").at(-1)?.toLowerCase() === normalized);
+  const exact = notes.filter((note) => note.path.replace(/\.md$/i, "").toLowerCase() === normalized);
+  if (exact.length) return exact.length === 1 ? exact[0] : undefined;
+  const names = notes.filter((note) => note.path.replace(/\.md$/i, "").split("/").at(-1)?.toLowerCase() === normalized);
+  return names.length === 1 ? names[0] : undefined;
 }
 
 

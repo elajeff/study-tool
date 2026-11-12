@@ -99,3 +99,21 @@ test("ambiguous prerequisite names are reported rather than linked to an arbitra
   assert.match(result.issues.join(" "), /ambiguous link/);
   assert.equal(nextLesson([advanced], new Set()), undefined);
 });
+
+test("only explicit prerequisites block study, and renamed targets stay scoped while content changes take effect", () => {
+  const base = { path: "Renamed.md", title: "Basics", body: "# Basics", source_id: "vault-a", artifact_id: "base-a", topic: "source/base-a" };
+  const next = { path: "Next.md", title: "Next", body: "[[Missing ordinary link]]\n## Prerequisites\n[[Basics]]\n## Related study material\n[[Optional]]", source_id: "vault-a", artifact_id: "next-a", topic: "source/next-a" };
+  const notes = [base, next, { path: "Basics.md", title: "Other vault", body: "# Other", source_id: "vault-b", artifact_id: "base-b", topic: "source/base-b" },
+    { path: "Optional.md", title: "Optional", body: "# Optional", source_id: "vault-a", artifact_id: "optional" }];
+  const aliases = [{ source_id: "vault-a", artifact_id: "base-a", path: "Basics.md", current_path: "Renamed.md", current_revision_id: "revision" }];
+  const current = buildCurriculum(notes, profile, aliases);
+  const lesson = current.lessons.find((lesson) => lesson.topic === next.topic)!;
+  assert.equal(lesson.blocked, false);
+  assert.deepEqual(lesson.prerequisites, [current.lessons.find((lesson) => lesson.topic === base.topic)!.id]);
+  assert.equal(lesson.recommendations.length, 1);
+  assert.deepEqual(current.issues, []);
+  const changed = buildCurriculum(notes.map((note) => note === next ? { ...note, body: "[[Optional]]" } : note), profile, aliases);
+  assert.deepEqual(changed.lessons.find((candidate) => candidate.id === lesson.id)?.prerequisites, []);
+  const reused = buildCurriculum([...notes, { ...base, path: "Basics.md", artifact_id: "new-file", topic: "source/new-file" }], profile, aliases);
+  assert.equal(reused.lessons.find((candidate) => candidate.id === lesson.id)?.blocked, true);
+});

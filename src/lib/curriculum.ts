@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { findLinkedNote, wikiLinks } from "./notes.ts";
+import { noteRelationships, resolveNoteLink, wikiLinks, type SourceAlias } from "./notes.ts";
 
 export type StudyProfile = {
   experience: string;
@@ -8,7 +8,7 @@ export type StudyProfile = {
   hours_per_week: number;
 };
 
-export type SourceNote = { path: string; title: string; body: string; topic?: string; source_id?: string | null; source_name?: string };
+export type SourceNote = { path: string; title: string; body: string; topic?: string; source_id?: string | null; source_name?: string; artifact_id?: string | null };
 export type Track = { id: string; title: string; description: string };
 export type Lesson = {
   id: string;
@@ -83,7 +83,7 @@ function isTopic(path: string) {
   return true;
 }
 
-export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | null): { tracks: Track[]; lessons: Lesson[]; issues: string[] } {
+export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | null, aliases: SourceAlias[] = []): { tracks: Track[]; lessons: Lesson[]; issues: string[] } {
   if (!profile) return { tracks: [], lessons: [], issues: [] };
 
   const candidates = allNotes.filter((note) => isTopic(note.path));
@@ -91,6 +91,12 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
   const paths = new Map<string, string>();
   const ids = new Map(candidates.map((note) => [note, sourceId(note.topic ? `${note.topic}.md` : note.path)]));
   const scopes = new Map<string | null, SourceNote[]>();
+  const aliasScopes = new Map<string, SourceAlias[]>();
+  for (const alias of aliases) {
+    const group = aliasScopes.get(alias.source_id) ?? [];
+    group.push(alias);
+    aliasScopes.set(alias.source_id, group);
+  }
   for (const note of candidates) {
     const scope = note.source_id ?? null;
     const group = scopes.get(scope) ?? [];
@@ -113,7 +119,8 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
     const id = sourceId(outline.topic ? `${outline.topic}.md` : outline.path);
     let rank = 0;
     for (const link of wikiLinks(outline.body)) {
-      const target = findLinkedNote(link, scopes.get(outline.source_id ?? null) ?? []);
+      const result = resolveNoteLink(link, scopes.get(outline.source_id ?? null) ?? [], aliasScopes.get(outline.source_id ?? ""));
+      const target = result.state === "resolved" ? result.note : undefined;
       if (target && !outlineTrack.has(target)) {
         outlineTrack.set(target, id);
         outlineRank.set(ids.get(target)!, rank++);
@@ -134,19 +141,19 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
   }
 
   const lessons: Lesson[] = candidates.map((note) => {
-    const required = section(note.body, /^(required (conceptual )?foundations|required prerequisites|prerequisites|before you start)$/i);
-    const recommended = section(note.body, /^(recommended (study )?(preparation|background|reading)|preparation)$/i);
+    const relationships = noteRelationships(note.body);
     let blocked = false;
-    const links = (text: string, required: boolean) => [...new Set(wikiLinks(text).flatMap((link) => {
-      const target = findLinkedNote(link, scopes.get(note.source_id ?? null) ?? []);
-      if (!target) {
-        issues.push(`Missing or ambiguous link [[${link}]] in ${note.source_name ?? "Notes"}: ${note.path}. Use a full path within the same vault.`);
-        if (required) blocked = true;
+    const links = (kind: "prerequisite" | "recommendation") => [...new Set(relationships.filter((link) => link.kind === kind).flatMap((link) => {
+      const result = resolveNoteLink(link.target, scopes.get(note.source_id ?? null) ?? [], aliasScopes.get(note.source_id ?? ""));
+      if (result.state !== "resolved") {
+        issues.push(`Missing or ambiguous link [[${link.target}]] in ${note.source_name ?? "Notes"}: ${note.path}, line ${link.line}. Review the link within the same vault.`);
+        if (kind === "prerequisite") blocked = true;
       }
+      const target = result.state === "resolved" ? result.note : undefined;
       return target && target !== note ? [ids.get(target)!] : [];
     }))];
-    const prerequisites = links(required, true);
-    const recommendations = links(recommended, false);
+    const prerequisites = links("prerequisite");
+    const recommendations = links("recommendation");
     const code = note.body.match(/```[^\n]*\n([\s\S]*?)\n```/);
     const questions = section(note.body, /^(what you should be able to explain|practice( on your own)?|exercises?|original practice problem)$/i);
     const exercise = questions.split("\n").map((line) => line.replace(/^[-*\d.)\s]+/, "").trim()).find(Boolean);

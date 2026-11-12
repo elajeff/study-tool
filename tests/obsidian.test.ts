@@ -46,3 +46,18 @@ test("ZIP preview preserves text and rejects traversal, private/generated folder
   assert.equal(result.skipped, 4);
   await assert.rejects(() => readMarkdownFiles([new File(["one"], "Topic.md"), new File(["two"], "topic.md")]), /Duplicate path/);
 });
+
+test("ZIP preview stops oversized decompression even when the archive understates its size", async () => {
+  const zip = new JSZip();
+  zip.file("Large.md", "x".repeat(8 * 1024 * 1024));
+  zip.file("Small.md", "# Small\n\nKeep π and \uFEFF.");
+  const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+  const view = new DataView(bytes.buffer);
+  // The first central-directory entry and its local header falsely advertise one byte.
+  const central = view.getUint32(bytes.length - 22 + 16, true);
+  view.setUint32(central + 24, 1, true);
+  view.setUint32(view.getUint32(central + 42, true) + 22, 1, true);
+  const result = await readMarkdownFiles([new File([bytes], "understated.zip")]);
+  assert.deepEqual(result.files.map(({ path, body }) => ({ path, body })), [{ path: "Small.md", body: "# Small\n\nKeep π and \uFEFF." }]);
+  assert.equal(result.skipped, 1);
+});

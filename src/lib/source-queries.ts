@@ -1,5 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SourceAlias } from "./notes.ts";
+import type { RepositoryFile } from "./repository-import.ts";
+
+export async function loadRepositoryFiles(supabase: SupabaseClient, sourceId: string): Promise<RepositoryFile[]> {
+  const files: RepositoryFile[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("source_artifacts")
+      .select("id,path,current_revision_id,revision:source_revisions!artifact_current_revision_fk(content_hash)")
+      .eq("source_id", sourceId).order("id").range(offset, offset + 499);
+    if (error) throw new Error("Could not load repository files.");
+    for (const row of data) {
+      const revision = row.revision as unknown as { content_hash: string } | null;
+      files.push({ artifact_id: row.id, path: row.path, revision_id: row.current_revision_id, content_hash: revision?.content_hash ?? null });
+    }
+    if (data.length < 500) return files;
+  }
+}
 
 export async function loadSourceAliases(supabase: SupabaseClient, sourceId?: string | null): Promise<SourceAlias[]> {
   if (sourceId === null) return [];

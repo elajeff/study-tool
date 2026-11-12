@@ -15,7 +15,8 @@ export default async function SourceRevisionPage({ params, searchParams }: {
   const line = Math.min(lines.length, Math.max(1, Number.parseInt(requestedLine ?? "1", 10) || 1));
   const start = Math.max(0, line - 4);
   return <>
-    <Link className="back-link" href="/notes">Back to notes</Link>
+    <Link className="back-link" href={revision.source.kind === "repository" ? `/repositories?source=${revision.source_id}` : "/notes"}>
+      {revision.source.kind === "repository" ? "Back to repository" : "Back to notes"}</Link>
     <div className="page-heading"><h1>Source text</h1><p>{revision.source.name} · {revision.path ?? "Unnamed source"}</p></div>
     <section className="panel markdown-preview">
       {revision.current_revision_id !== revision.id && <p role="status">Historical revision. The current import may contain different connections.</p>}

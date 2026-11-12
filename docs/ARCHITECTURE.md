@@ -13,18 +13,18 @@ The curriculum is computed from editable notes. Existing topic keys are retained
 
 ## Source records
 
-The Obsidian importer publishes source records and editable notes together. Repository and conversation adapters are not implemented.
+The Obsidian importer publishes source records and editable notes together. Repository imports save source files without creating notes. A conversation adapter is not implemented.
 
 - `sources` identifies one owner's vault, repository, or conversation collection. Reimports must reuse this UUID; the display name is not an identity.
 - `source_artifacts` identifies a file or conversation within that source. Its UUID stays the same across content updates. Paths and external IDs are unique within a source, so separate sources can both contain `README.md`.
 - `source_revisions` stores full text and its SHA-256 hash. Identical content reuses a revision of the same artifact, including a return to older content. Matching content across different artifacts does not merge them.
 - `source_imports` records accepted batches. `source_import_items` records each batch's artifact, revision, and path, including unchanged content and renames. A revision points to the batch that first accepted that content.
 
-Authenticated owners can create sources and change their names. Repository and conversation source writes go through `accept_source_import(source_id, entries)`, which accepts 1–2,000 text entries in one transaction. For example, an entry can contain `{"external_id":"stable-file-id","path":"Lessons/Methods.md","content":"# Methods"}`. The function returns the accepted batch UUID. Vaults must use the preview-checked Obsidian function below. Both call `publish_source_import`, the shared publishing function that clients cannot execute directly.
+Authenticated owners can create sources and change their names. Repository and conversation source writes go through `accept_source_import(source_id, entries)`, which accepts 1–2,000 text entries and returns the batch UUID. Repository entries require the preview references described below; conversation foundation calls retain optional external IDs. Vaults use the preview-checked Obsidian function. Both call `publish_source_import`, the shared publishing function that clients cannot execute directly.
 
-The JSON batch is limited to 35 MiB, with at most 500,000 characters of content per entry. Optional paths and external IDs must be strings or null, with at most 1,024 UTF-8 bytes each. Oversized or malformed input rejects the batch. These limits bound database writes; a future adapter must also limit input before constructing the request.
+The shared publisher limits JSON batches to 35 MiB and content to 500,000 characters per entry. Optional paths and external IDs must be strings or null, with at most 1,024 UTF-8 bytes each. Repository imports additionally require a path, preview references, and at most 500,000 UTF-8 bytes per file. Oversized or malformed input rejects the batch. Adapters also limit input before constructing requests.
 
-A known external ID or an explicit artifact UUID can preserve identity through a rename. Without either, a new path creates a new artifact, even if its text matches. A new external ID at an occupied path requires explicit reconciliation with the existing artifact UUID. Conflicting IDs or occupied rename destinations reject the whole batch. This function accepts changes; it does not preview them, infer deleted files, or write to a vault.
+The shared publisher resolves known external IDs or explicit artifact UUIDs to preserve identity through a rename. Without either, a new path creates a new artifact, even if its text matches. A new external ID at an occupied path requires explicit reconciliation with the existing artifact UUID. Conflicting IDs or occupied rename destinations reject the whole batch. The publisher accepts changes; it does not preview them, infer deleted files, or write to a vault.
 
 The function locks the source while publishing, so imports into the same source run in order. A failed batch or disconnected transaction leaves no accepted changes. Row-level security limits reads to the owner, and composite foreign keys prevent references across accounts, sources, or artifacts. Clients cannot directly rewrite revision history or change current-revision pointers.
 
@@ -46,7 +46,7 @@ Clients can edit note bodies but cannot directly change source links, import bas
 
 ### Database checks
 
-After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql -f supabase/tests/source_relationships.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, path history, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
+After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql -f supabase/tests/source_relationships.sql -f supabase/tests/repository_import.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, repository imports, path history, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
 
 ## Explicit connections and provenance
 
@@ -55,6 +55,14 @@ After applying all migrations to a disposable development database, run `psql "$
 Relationships are calculated from the selected text, not cached in another table. Saved text is identified by source, artifact, and immutable revision UUIDs. Citations open that revision and its original import path at the recorded line. Current editable text is labelled separately if it differs; legacy collection snapshots are not presented as recovered originals. Changed imports use the artifact's current revision; historical revisions remain readable.
 
 Migration `005` adds only `source_path_aliases`, a read-only security-invoker view over current artifacts and accepted import paths. Existing table RLS applies to the caller. Same-vault resolution uses artifact IDs across those paths, preserving links through confirmed renames. If a path is reused by another artifact, both identities remain candidates: the reference is ambiguous rather than silently reassigned. A target without an editable topic cannot satisfy a curriculum prerequisite. Assessment keys and calculations are unchanged.
+
+## Repository imports
+
+Repositories reuse sources, artifacts, revisions, and import runs. Files are source material only; the importer never creates editable notes or curriculum entries. The existing source reader displays current or retained revisions as escaped text. Vault note relationships stay scoped to their vault; no cross-source code connections are inferred.
+
+`readImportFiles` shares ZIP streaming, text limits, hashing, and safe path handling with Obsidian. `matchImportFiles` shares identity matching and collision checks. Repository ZIPs keep their archive-relative paths; filenames determine supported formats and exclusions. The preview keeps incoming text in browser memory until acceptance. Local checks block known token/private-key patterns and leave uncertain credential values unselected. These advisory checks are not an exhaustive or server-side secret scanner.
+
+Migration `006` requires owned repository calls to `accept_source_import` to supply preview artifact IDs, previous paths, and revision IDs. The source lock and all-entry checks reject stale previews, conflicting identities, and unsafe paths before the existing atomic publisher runs. Callers cannot bypass these checks through an older repository RPC; conversation-source publication retains its foundation contract for a later adapter. No tables or dependencies are added.
 
 ## Tutor handoff
 

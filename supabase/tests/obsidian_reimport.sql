@@ -76,11 +76,30 @@ begin
   assert not exists(select 1 from public.source_artifacts where source_id=src and path='Must roll back.md');
   assert (select body='Edited after preview' from public.notes where source_id=src);
   entry := pg_temp.preview_entry(src,'Renamed.md','Incoming','replace');
-  perform public.accept_source_import(src,'[{"path":"Renamed.md","content":"Concurrent raw revision"}]');
+  perform public.accept_obsidian_import(src,jsonb_build_array(pg_temp.preview_entry(src,'Renamed.md','Concurrent source revision','keep')));
   begin
     perform public.accept_obsidian_import(src,jsonb_build_array(entry));
     assert false,'A stale source revision must reject the batch';
   exception when serialization_failure then null;
+  end;
+end $$;
+
+-- Vault publishing must not bypass preview validation or editable-note updates.
+do $$
+declare
+  src uuid;
+begin
+  foreach src in array array['70000000-0000-4000-8000-000000000001'::uuid,'70000000-0000-4000-8000-000000000003'::uuid] loop
+    begin
+      perform public.accept_source_import(src,'[{"path":"Bypassed.md","content":"Must not publish"}]');
+      assert false,'Direct raw imports into a vault must be denied';
+    exception when insufficient_privilege then null;
+    end;
+  end loop;
+  begin
+    perform public.publish_source_import('70000000-0000-4000-8000-000000000001','[{"path":"Bypassed.md","content":"Must not publish"}]');
+    assert false,'Authenticated users must not call the internal publisher';
+  exception when insufficient_privilege then null;
   end;
 end $$;
 

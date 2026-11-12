@@ -56,6 +56,23 @@ create unique index notes_artifact_idx on public.notes(artifact_id) where artifa
 revoke insert, update on public.notes from public, anon, authenticated;
 grant insert (id, user_id, path, title, body, updated_at), update (body, updated_at) on public.notes to authenticated;
 
+-- Vault imports must update editable notes through the preview-checked RPC below.
+alter function public.accept_source_import(uuid, jsonb) rename to publish_source_import;
+revoke all on function public.publish_source_import(uuid, jsonb) from public, anon, authenticated;
+create function public.accept_source_import(p_source_id uuid, p_entries jsonb)
+returns uuid language plpgsql security definer set search_path = '' as $$
+begin
+  perform 1 from public.sources where id = p_source_id and user_id = auth.uid()
+    and kind in ('repository', 'chatgpt') for update;
+  if not found then
+    raise exception 'Raw imports require an owned repository or conversation source. Use the vault preview for Obsidian notes.' using errcode = '42501';
+  end if;
+  return public.publish_source_import(p_source_id, p_entries);
+end;
+$$;
+revoke all on function public.accept_source_import(uuid, jsonb) from public, anon;
+grant execute on function public.accept_source_import(uuid, jsonb) to authenticated;
+
 create function public.vault_import_state(p_source_id uuid, p_paths text[])
 returns table (artifact_id uuid, path text, revision_id uuid, baseline_hash text, note_id uuid, note_hash text, note_body text)
 language sql stable security invoker set search_path = '' as $$
@@ -129,7 +146,7 @@ begin
       'artifact_id', target_id, 'path', entry_path, 'content', entry ->> 'content'));
   end loop;
 
-  run_id := public.accept_source_import(p_source_id, raw_entries);
+  run_id := public.publish_source_import(p_source_id, raw_entries);
   for item in select i.artifact_id, i.revision_id, i.path, e.value as entry
     from public.source_import_items i join jsonb_array_elements(p_entries) e on e.value ->> 'path' = i.path
     where i.import_id = run_id loop

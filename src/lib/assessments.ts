@@ -24,7 +24,7 @@ export function validateEvidence(value: unknown): Evidence {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Receipt must be a JSON object.");
   const item = value as Record<string, unknown>;
   if (typeof item.topic !== "string" || !item.topic.trim() || item.topic.length > 240)
-    throw new Error("Choose a topic using its vault path, without .md.");
+    throw new Error("Use the topic reference supplied in the lesson's tutor context.");
   if (!isDate(item.date)) throw new Error("The assessment date must use YYYY-MM-DD.");
   if (!Number.isInteger(item.level) || (item.level as number) < 0 || (item.level as number) > 5)
     throw new Error("Mastery must be between 0 and 5.");

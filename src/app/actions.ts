@@ -5,14 +5,13 @@ import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadStudy } from "@/lib/study";
 import { cleanNotePath, titleFromPath } from "@/lib/notes";
-import { topicPath } from "@/lib/curriculum";
 import { parseEvidence, evidenceFingerprint } from "@/lib/assessments";
 
 export async function importAssessments(formData: FormData) {
   const { supabase, user, lessons } = await loadStudy();
   const text = String(formData.get("evidenceText") ?? "");
   const entries = parseEvidence(text);
-  const topics = new Set(lessons.map((lesson) => topicPath(lesson.sourcePath)));
+  const topics = new Set(lessons.map((lesson) => lesson.topic));
   for (const entry of entries) {
     if (!topics.has(entry.topic)) throw new Error(`Unknown topic: ${entry.topic}`);
   }
@@ -51,29 +50,32 @@ export async function createNote(formData: FormData) {
   const path = cleanNotePath(String(formData.get("path") ?? ""));
   const body = String(formData.get("body") ?? "");
   if (!path || body.length > 500000) throw new Error("Invalid note path or size.");
-  const { error } = await supabase.from("notes").upsert({
+  const { error } = await supabase.from("notes").insert({
     user_id: user.id,
     path,
     title: titleFromPath(path),
     body,
     updated_at: new Date().toISOString(),
-  }, { onConflict: "user_id,path" });
-  if (error) throw new Error("Could not save your note.");
+  });
+  if (error) throw new Error(error.code === "23505" ? "A manual note already has that path." : "Could not save your note.");
   revalidatePath("/notes");
   redirect("/notes");
 }
 
-export async function updateNote(formData: FormData) {
+export async function updateNote(formData: FormData): Promise<{ error: string } | { updatedAt: string }> {
   const { supabase, user } = await requireAccount();
   const id = String(formData.get("id") ?? "");
   const body = String(formData.get("body") ?? "");
-  if (!/^[a-f\d-]{36}$/i.test(id) || body.length > 500000) throw new Error("Invalid note.");
-  const { error } = await supabase.from("notes")
+  if (!/^[a-f\d-]{36}$/i.test(id) || body.length > 500000) return { error: "Invalid note." };
+  const { data, error } = await supabase.from("notes")
     .update({ body, updated_at: new Date().toISOString() })
-    .eq("id", id).eq("user_id", user.id);
-  if (error) throw new Error("Could not update your note.");
+    .eq("id", id).eq("user_id", user.id).eq("updated_at", String(formData.get("updated_at") ?? ""))
+    .select("updated_at").maybeSingle();
+  if (error) return { error: "Could not save this note. Your text is kept here." };
+  if (!data) return { error: "This note changed or is no longer available. Copy your text before reloading." };
   revalidatePath("/notes");
   revalidatePath(`/notes/${id}`);
+  return { updatedAt: data.updated_at as string };
 }
 
 export async function removeNote(formData: FormData) {

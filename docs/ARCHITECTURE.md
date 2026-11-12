@@ -5,22 +5,22 @@ Study Tool is a Next.js application backed by Supabase. Each account has its own
 ## Data
 
 - `study_profiles` stores learning goals and starting knowledge.
-- `notes` stores Markdown files and their original vault paths.
+- `notes` stores editable Markdown, display paths, and optional source/artifact links. `imported_revision_id` records the last source revision reviewed by the import workflow.
 - `lesson_progress` stores legacy v0.1 self-ratings. It is retained during the upgrade but no longer determines mastery.
 - `assessment_receipts` stores pending, approved, and rejected evidence. The current score for a topic comes from its most recent approved receipt.
 
-The curriculum is computed from notes rather than stored separately. Identifiers depend on the original path, so edits do not reset progress. Renaming a note changes that identifier.
+The curriculum is computed from editable notes. Existing topic keys are retained in the artifact's read-only `legacy_topic`; new imported topics use `source/<artifact UUID>` and manual notes use `note/<note UUID>`. Lesson routes derive from these stable keys, so content updates and reconciled renames do not reset approved progress. Prerequisites and wikilinks resolve within one vault. Ambiguous names require a full path; unresolved prerequisites are reported and are not recommended as ready.
 
 ## Source records
 
-The source tables are a foundation for later importers. The current UI still reads and edits `notes`; it does not publish imports into these tables yet.
+The Obsidian importer publishes source records and editable notes together. Repository and conversation adapters are not implemented.
 
 - `sources` identifies one owner's vault, repository, or conversation collection. Reimports must reuse this UUID; the display name is not an identity.
 - `source_artifacts` identifies a file or conversation within that source. Its UUID stays the same across content updates. Paths and external IDs are unique within a source, so separate sources can both contain `README.md`.
 - `source_revisions` stores full text and its SHA-256 hash. Identical content reuses a revision of the same artifact, including a return to older content. Matching content across different artifacts does not merge them.
 - `source_imports` records accepted batches. `source_import_items` records each batch's artifact, revision, and path, including unchanged content and renames. A revision points to the batch that first accepted that content.
 
-Authenticated owners can create sources and change their names. Other writes go through `accept_source_import(source_id, entries)`, which accepts 1–2,000 text entries in one transaction. For example, an entry can contain `{"external_id":"stable-file-id","path":"Lessons/Methods.md","content":"# Methods"}`. The function returns the accepted batch UUID.
+Authenticated owners can create sources and change their names. Repository and conversation source writes go through `accept_source_import(source_id, entries)`, which accepts 1–2,000 text entries in one transaction. For example, an entry can contain `{"external_id":"stable-file-id","path":"Lessons/Methods.md","content":"# Methods"}`. The function returns the accepted batch UUID. Vaults must use the preview-checked Obsidian function below. Both call `publish_source_import`, the shared publishing function that clients cannot execute directly.
 
 The JSON batch is limited to 35 MiB, with at most 500,000 characters of content per entry. Optional paths and external IDs must be strings or null, with at most 1,024 UTF-8 bytes each. Oversized or malformed input rejects the batch. These limits bound database writes; a future adapter must also limit input before constructing the request.
 
@@ -32,11 +32,21 @@ The function locks the source while publishing, so imports into the same source 
 
 Migration `003_source_identities.sql` creates one `legacy_notes` source per account with notes. Each artifact reuses its note UUID and keeps its current path and text. These are migration-time snapshots, not recovered originals or a history of earlier edits. Later edits in the current note editor do not update the snapshots.
 
-The migration does not change notes, profiles, legacy progress, or receipts. Curriculum IDs and assessment topics keep their existing path-based meaning. New source records are not added to the curriculum, and receipts are not attached to them by matching unqualified paths. Connecting source-aware imports to editable notes and progress requires a later, explicit compatibility change.
+Migration `004` links these artifacts to editable notes without changing their text or approved receipts. Notes added between migrations receive additional labelled snapshots. Every legacy import baseline starts unconfirmed: the migration snapshot is never assumed to be the current editable text or the original vault file. Differing incoming text requires a choice before the first acceptance. Raw source-only records are not included in the curriculum, and matching paths in another vault never inherit existing assessments.
+
+## Obsidian import and reimport
+
+`vault_import_state` returns artifact identities, source revision IDs, and the last accepted import hashes. It includes editable text/hashes only for requested paths. The browser compares these with the selected files and displays a preview; it writes no file content until acceptance. Identical content does not create a second revision. Unknown paths are new artifacts unless the user explicitly selects an existing artifact for a rename. Missing files are retained, not treated as deletions.
+
+ZIP entries are read in decompressed chunks, with at most 500,000 bytes retained per file. Oversized entries are paused and skipped before the full text is accumulated; declared sizes are not trusted. JSZip may finish processing its current compressed chunk after pausing.
+
+`accept_obsidian_import` locks the owned vault and affected notes, then checks the source revision, previous path, and current editable text hash against the preview. Any mismatch rejects the whole batch. It calls the internal publisher and applies each keep/replace decision in the same transaction. Keeping local text still records the incoming raw revision. Deleting an editable note retains the artifact and its assessment alias; restoration requires a preview decision.
+
+Clients can edit note bodies but cannot directly change source links, import baselines, or assessment aliases. The editor also checks its last-seen timestamp before saving and retains typed text if a concurrent save/import made it stale. Imports never change assessment approval or score calculations, and nothing is written back to Obsidian.
 
 ### Database checks
 
-After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql`. The script checks identity, revision reuse, atomic failure, and ownership, then rolls back its synthetic users and imports. It needs an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
+After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
 
 ## Tutor handoff
 

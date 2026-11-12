@@ -1,5 +1,4 @@
 import type { Lesson } from "./curriculum.ts";
-import { topicPath } from "./curriculum.ts";
 
 export const REVIEW_DAYS = [1, 1, 3, 7, 14, 30] as const;
 
@@ -29,11 +28,11 @@ export function latestApproved(records: Assessment[]) {
 }
 
 export function demonstratedLessons(lessons: Lesson[], latest: Map<string, Assessment>) {
-  return new Set(lessons.filter((lesson) => (latest.get(topicPath(lesson.sourcePath))?.level ?? -1) >= 3).map((lesson) => lesson.id));
+  return new Set(lessons.filter((lesson) => (latest.get(lesson.topic)?.level ?? -1) >= 3).map((lesson) => lesson.id));
 }
 
 export function progressStats(lessons: Lesson[], latest: Map<string, Assessment>) {
-  const assessed = lessons.filter((lesson) => latest.has(topicPath(lesson.sourcePath))).length;
+  const assessed = lessons.filter((lesson) => latest.has(lesson.topic)).length;
   const demonstrated = demonstratedLessons(lessons, latest).size;
   return { assessed, demonstrated, total: lessons.length };
 }

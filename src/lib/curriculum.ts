@@ -8,7 +8,7 @@ export type StudyProfile = {
   hours_per_week: number;
 };
 
-export type SourceNote = { path: string; title: string; body: string };
+export type SourceNote = { path: string; title: string; body: string; topic?: string; source_id?: string | null; source_name?: string };
 export type Track = { id: string; title: string; description: string };
 export type Lesson = {
   id: string;
@@ -23,6 +23,9 @@ export type Lesson = {
   completion: string;
   sourcePath: string;
   sourceBody: string;
+  topic: string;
+  sourceName: string;
+  blocked: boolean;
 };
 
 const categories = [
@@ -86,8 +89,14 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
   const candidates = allNotes.filter((note) => isTopic(note.path));
   const issues: string[] = [];
   const paths = new Map<string, string>();
+  const ids = new Map(candidates.map((note) => [note, sourceId(note.topic ? `${note.topic}.md` : note.path)]));
+  const scopes = new Map<string | null, SourceNote[]>();
   for (const note of candidates) {
-    const key = note.path.toLowerCase();
+    const scope = note.source_id ?? null;
+    const group = scopes.get(scope) ?? [];
+    group.push(note);
+    scopes.set(scope, group);
+    const key = `${scope ?? ""}:${note.path.toLowerCase()}`;
     const previous = paths.get(key);
     if (previous) issues.push(`Conflicting note paths: ${previous} and ${note.path}. Remove or rename one conflicting note before continuing.`);
     paths.set(key, note.path);
@@ -96,60 +105,62 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
   const structured = candidates.some((note) => /^(lessons\/java|dsa|foundations|learning projects|walkthroughs)\//i.test(note.path));
 
   const trackMap = new Map<string, Track>();
-  const outlineTrack = new Map<string, string>();
+  const outlineTrack = new Map<SourceNote, string>();
   const outlineRank = new Map<string, number>();
-  if (!structured) {
-    const outlines = allNotes.filter((note) => /^learning paths\//i.test(note.path));
-    for (const outline of outlines.sort((a, b) => a.path.localeCompare(b.path))) {
-      const id = sourceId(outline.path);
-      let rank = 0;
-      for (const link of wikiLinks(outline.body)) {
-        const target = findLinkedNote(link, candidates);
-        if (target && !outlineTrack.has(target.path)) {
-          outlineTrack.set(target.path, id);
-          outlineRank.set(target.path, rank++);
-        }
+  const structuredScopes = new Set(candidates.filter((note) => /^(lessons\/java|dsa|foundations|learning projects|walkthroughs)\//i.test(note.path)).map((note) => note.source_id ?? null));
+  const outlines = allNotes.filter((note) => /^learning paths\//i.test(note.path) && !structuredScopes.has(note.source_id ?? null));
+  for (const outline of outlines.sort((a, b) => a.path.localeCompare(b.path))) {
+    const id = sourceId(outline.topic ? `${outline.topic}.md` : outline.path);
+    let rank = 0;
+    for (const link of wikiLinks(outline.body)) {
+      const target = findLinkedNote(link, scopes.get(outline.source_id ?? null) ?? []);
+      if (target && !outlineTrack.has(target)) {
+        outlineTrack.set(target, id);
+        outlineRank.set(ids.get(target)!, rank++);
       }
-      if (rank) trackMap.set(id, {
-        id, title: titleFromPath(outline.path).replace(/^\d+\s*/, ""),
-        description: `From ${outline.path}`,
-      });
     }
+    if (rank) trackMap.set(id, {
+      id, title: titleFromPath(outline.path).replace(/^\d+\s*/, ""),
+      description: `From ${outline.path}`,
+    });
   }
   for (const category of categories) {
-    if (candidates.some((note) => categoryOf(note.path)?.id === category.id && !outlineTrack.has(note.path))) {
+    if (candidates.some((note) => categoryOf(note.path)?.id === category.id && !outlineTrack.has(note))) {
       trackMap.set(category.id, { id: category.id, title: category.title, description: category.description });
     }
   }
-  if (candidates.some((note) => !outlineTrack.has(note.path) && !categoryOf(note.path))) {
+  if (candidates.some((note) => !outlineTrack.has(note) && !categoryOf(note.path))) {
     trackMap.set("your-notes", { id: "your-notes", title: "Your notes", description: "Other imported study material" });
   }
 
-  const raw = candidates.map((note) => {
+  const lessons: Lesson[] = candidates.map((note) => {
     const required = section(note.body, /^(required (conceptual )?foundations|required prerequisites|prerequisites|before you start)$/i);
     const recommended = section(note.body, /^(recommended (study )?(preparation|background|reading)|preparation)$/i);
-    const paths = (text: string) => [...new Set(wikiLinks(text)
-      .map((link) => findLinkedNote(link, candidates)?.path)
-      .filter((path): path is string => !!path && path !== note.path))];
+    let blocked = false;
+    const links = (text: string, required: boolean) => [...new Set(wikiLinks(text).flatMap((link) => {
+      const target = findLinkedNote(link, scopes.get(note.source_id ?? null) ?? []);
+      if (!target) {
+        issues.push(`Missing or ambiguous link [[${link}]] in ${note.source_name ?? "Notes"}: ${note.path}. Use a full path within the same vault.`);
+        if (required) blocked = true;
+      }
+      return target && target !== note ? [ids.get(target)!] : [];
+    }))];
+    const prerequisites = links(required, true);
+    const recommendations = links(recommended, false);
     const code = note.body.match(/```[^\n]*\n([\s\S]*?)\n```/);
     const questions = section(note.body, /^(what you should be able to explain|practice( on your own)?|exercises?|original practice problem)$/i);
     const exercise = questions.split("\n").map((line) => line.replace(/^[-*\d.)\s]+/, "").trim()).find(Boolean);
     return {
-      id: sourceId(note.path), track: outlineTrack.get(note.path) ?? categoryOf(note.path)?.id ?? "your-notes",
+      id: ids.get(note)!, track: outlineTrack.get(note) ?? categoryOf(note.path)?.id ?? "your-notes",
       title: note.title || titleFromPath(note.path), sourcePath: note.path, sourceBody: note.body,
-      prerequisites: paths(required), recommendations: paths(recommended),
+      topic: note.topic ?? topicPath(note.path), sourceName: note.source_name ?? "Notes",
+      prerequisites, recommendations, blocked,
       summary: summary(note.body), explanation: summary(note.body), example: code?.[1] ?? "",
       exercise: exercise || `Explain ${note.title || titleFromPath(note.path)} and try a new example.`,
       completion: "Show independent work in an assessment and approve the evidence before counting mastery.",
     };
   });
 
-  const byPath = new Map(raw.map((topic) => [topic.sourcePath, topic.id]));
-  const lessons = raw.map((topic) => ({
-    ...topic,
-    prerequisites: topic.prerequisites.map((path) => byPath.get(path)).filter((id): id is string => !!id),
-    recommendations: topic.recommendations.map((path) => byPath.get(path)).filter((id): id is string => !!id),
-  }));
   const byId = new Map(lessons.map((lesson) => [lesson.id, lesson]));
   const rank = new Map([...trackMap.keys()].map((id, i) => [id, i]));
   const sorted: Lesson[] = [];
@@ -172,7 +183,7 @@ export function buildCurriculum(allNotes: SourceNote[], profile: StudyProfile | 
   }
   for (const lesson of [...lessons].sort((a, b) =>
     (rank.get(a.track) ?? 999) - (rank.get(b.track) ?? 999)
-    || (outlineRank.get(a.sourcePath) ?? 999) - (outlineRank.get(b.sourcePath) ?? 999)
+    || (outlineRank.get(a.id) ?? 999) - (outlineRank.get(b.id) ?? 999)
     || (structured ? a.sourcePath.localeCompare(b.sourcePath, undefined, { numeric: true }) : goalPriority(b.title, profile) - goalPriority(a.title, profile))
     || a.title.localeCompare(b.title))) visit(lesson);
   return { tracks: [...trackMap.values()], lessons: sorted, issues };
@@ -183,5 +194,5 @@ export function getLesson(lessons: Lesson[], id: string) {
 }
 
 export function nextLesson(lessons: Lesson[], demonstrated: Set<string>) {
-  return lessons.find((lesson) => !demonstrated.has(lesson.id) && lesson.prerequisites.every((id) => demonstrated.has(id)));
+  return lessons.find((lesson) => !lesson.blocked && !demonstrated.has(lesson.id) && lesson.prerequisites.every((id) => demonstrated.has(id)));
 }

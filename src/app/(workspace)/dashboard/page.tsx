@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2, ChevronRight, NotebookPen, RotateCcw } from "lucide-react";
 import { loadStudy } from "@/lib/study";
-import { nextLesson, topicPath } from "@/lib/curriculum";
+import { nextLesson } from "@/lib/curriculum";
 import { ProgressExport } from "@/components/ProgressExport";
 import { latestApproved, demonstratedLessons, progressStats, isDueForReview } from "@/lib/progress";
 
@@ -17,14 +17,14 @@ export default async function DashboardPage() {
   const demonstrated = demonstratedLessons(lessons, latest);
   const stats = progressStats(lessons, latest);
   const next = nextLesson(lessons, demonstrated);
-  const review = lessons.map((lesson) => ({ lesson, assessment: latest.get(topicPath(lesson.sourcePath)) }))
+  const review = lessons.map((lesson) => ({ lesson, assessment: latest.get(lesson.topic) }))
     .filter((row) => row.assessment && isDueForReview(row.assessment)).slice(0, 3);
   return <>
     <div className="page-heading">
       <h1>Dashboard</h1>
       {lessons.length > 0 && <div style={{ marginTop: 18 }}><ProgressExport rows={lessons.map((lesson) => {
-        const record = latest.get(topicPath(lesson.sourcePath));
-        return { title: lesson.title, path: topicPath(lesson.sourcePath), level: record?.level ?? null, date: record?.date ?? null };
+        const record = latest.get(lesson.topic);
+        return { title: lesson.title, path: lesson.topic, level: record?.level ?? null, date: record?.date ?? null };
       })} /></div>}
     </div>
     {issues.length > 0 && <section className="panel" role="alert"><h2>Check your source notes</h2>

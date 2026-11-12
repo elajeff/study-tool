@@ -55,7 +55,8 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       const parsed = await readMarkdownFiles(Array.from(selected));
       const state = await loadState(parsed.files.map((file) => file.path));
       setVaultState(state); setBindings({}); setChoices({}); setFiles(parsed.files);
-      setMessage(`${parsed.files.length} files ready for preview. ${parsed.skipped} unsupported, generated, or oversized files skipped.`);
+      setMessage(`${parsed.files.length} ${parsed.files.length === 1 ? "file" : "files"} ready for preview.${parsed.skipped
+        ? ` ${parsed.skipped} unsupported, generated, or oversized ${parsed.skipped === 1 ? "file" : "files"} skipped.` : ""}`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview files."); }
     finally { setBusy(false); }
   }
@@ -136,7 +137,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       <button className="button button-light" disabled={busy} type="button" onClick={() => void exportNotes()}><Download size={16} /> Export ZIP</button></div>
     {message && <p role="status" className="import-message">{message}</p>}
     {files.length > 0 && <div className="import-preview"><h3>Preview ({rows.length})</h3>
-      <p>Missing files are kept. Matching text does not establish identity. For a rename, select the existing artifact. Legacy snapshots are not a trusted import baseline.</p>
+      <p>Files missing from this import are not deleted. Confirm renames by selecting the existing note. Older imported notes may need review.</p>
       {rows.map((row) => <article className="import-row" key={row.file.path}>
         <strong>{row.file.path}</strong><span>{row.previous && row.previous.path !== row.file.path ? "Rename · " : ""}{row.status}</span>
         {(!row.previous || row.previous.path !== row.file.path) && <label>Identity for {row.file.path}

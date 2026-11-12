@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Check, ArrowUpRight } from "lucide-react";
 import { loadStudy } from "@/lib/study";
-import { topicPath } from "@/lib/curriculum";
 import { latestApproved, demonstratedLessons } from "@/lib/progress";
 
 import { loadAssessments } from "@/lib/assessment-queries";
@@ -23,13 +22,13 @@ export default async function CurriculumPage() {
           <div className="track-header"><span className="track-number">{String(index + 1).padStart(2, "0")}</span>
             <div><h2>{track.title}</h2><p>{track.description}</p></div><span className="count-pill">{count}/{own.length}</span></div>
           <div className="lesson-rows">{own.map((lesson, i) => {
-            const score = latest.get(topicPath(lesson.sourcePath));
+            const score = latest.get(lesson.topic);
             const isDone = demonstrated.has(lesson.id);
             const ready = lesson.prerequisites.every((id) => demonstrated.has(id));
             return <Link href={`/curriculum/${lesson.id}`} key={lesson.id} className="lesson-row">
               <span className={`lesson-index ${isDone ? "done" : ""}`}>{isDone ? <Check size={15} /> : String(i + 1).padStart(2, "0")}</span>
-              <div><strong>{lesson.title}</strong><small>{lesson.summary}</small></div>
-              <span className="lesson-state">{score ? `Level ${score.level}` : ready ? "Not assessed" : "Later"}</span><ArrowUpRight size={17} />
+              <div><strong>{lesson.title}</strong><small>{lesson.sourceName} · {lesson.summary}</small></div>
+              <span className="lesson-state">{lesson.blocked ? "Check links" : score ? `Level ${score.level}` : ready ? "Not assessed" : "Later"}</span><ArrowUpRight size={17} />
             </Link>;
           })}</div>
         </section>;

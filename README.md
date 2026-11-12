@@ -19,12 +19,12 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, `supabase/002_assessments.sql`, then `supabase/003_source_identities.sql`, in that order.
-   - **Upgrade from v0.1:** run `supabase/002_assessments.sql`, then `supabase/003_source_identities.sql` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** if the assessment migration has already been applied, run only `supabase/003_source_identities.sql`.
+   - **Fresh installation:** run `supabase/schema.sql`, `supabase/002_assessments.sql`, `supabase/003_source_identities.sql`, then `supabase/004_obsidian_reimport.sql`, in that order.
+   - **Upgrade from v0.1:** run migrations `002`, `003`, and `004` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `003` already applied needs only `004`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
-   The migrations retain existing notes, profiles, progress, and assessment receipts. The source migration snapshots current notes without changing their paths or the application's assessment lookups. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
+   The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
 4. Enable email sign-in in Supabase Authentication. Set the Site URL to `http://localhost:3000` for development and allow `http://localhost:3000/auth/confirm` as a redirect.
 5. For the email sign-in callback, use this link in the Supabase email template:
 
@@ -38,7 +38,7 @@ For deployment, configure the production site URL and redirect URL in Supabase, 
 
 ## Obsidian
 
-Import `.md` files or a ZIP containing Markdown. The app uses these folders when present:
+Create or select a vault on the Notes page, then preview `.md` files or a ZIP containing Markdown. Reuse that vault when reimporting; its UUID identifies the collection independently of its name. Different vaults can contain the same path. The app uses these folders when present:
 
 - `Lessons/Java/`, `DSA/`, and `Foundations/` for the main study tracks.
 - `Concepts/` for technical reference topics.
@@ -47,7 +47,13 @@ Import `.md` files or a ZIP containing Markdown. The app uses these folders when
 
 Other Markdown collections can be used too. Obsidian configuration, chat archives, and generated progress reports are skipped during import. Prerequisites are read from explicitly named sections, not from every wikilink.
 
-Import and export are manual; this version does not synchronize with the local Obsidian directory or read ChatGPT conversations automatically.
+The preview compares incoming files with the current editable notes and the last accepted import. Local edits are kept when the source is unchanged. Conflicting changes require a choice. For a rename, select the existing artifact; matching text alone never merges files. Files absent from the selection are kept.
+
+Legacy migration snapshots have no trusted import baseline. If their current text differs from an incoming file, review both versions and choose which editable text to keep. Existing assessment keys stay attached to the same artifacts through renames and note restoration.
+
+Imports accept at most 2,000 notes, 500,000 UTF-8 bytes per file, a 20 MiB ZIP, and 35 MiB of JSON per batch. Oversized or excluded files are counted in the preview. Exporting a selected vault keeps its paths; exporting all notes uses separate folders by vault ID to prevent collisions. Manual notes can also be exported separately.
+
+Import and export are manual. Nothing is written to the original vault, and there is no live sync or automatic ChatGPT conversation import.
 
 ## Assessments
 

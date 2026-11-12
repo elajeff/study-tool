@@ -1,12 +1,13 @@
 import { Check, X } from "lucide-react";
-import { requireAccount } from "@/lib/auth";
+import { loadStudy } from "@/lib/study";
 import { importAssessments, reviewAssessment } from "@/app/actions";
 import type { Assessment } from "@/lib/progress";
 
 import { loadAssessments } from "@/lib/assessment-queries";
 
 export default async function AssessmentsPage() {
-  const { supabase } = await requireAccount();
+  const { supabase, lessons } = await loadStudy();
+  const labels = new Map(lessons.map((lesson) => [lesson.topic, `${lesson.title} · ${lesson.sourceName}`]));
   const [pending, { data: history, error }] = await Promise.all([
     loadAssessments(supabase, "pending"),
     supabase.from("assessment_receipts").select("*").neq("status", "pending")
@@ -32,7 +33,7 @@ export default async function AssessmentsPage() {
     <section className="panel assessment-list">
       <h2>Pending review ({pending.length})</h2>
       {pending.length ? pending.map((record) => <article className="assessment-record" key={record.id}>
-        <div className="assessment-heading"><strong>{record.topic}</strong><span>Level {record.level} · {record.date}</span></div>
+        <div className="assessment-heading"><strong>{labels.get(record.topic) ?? record.topic}</strong><span>Level {record.level} · {record.date}</span></div>
         <p><strong>Task:</strong> {record.task}</p>
         <p><strong>Evidence:</strong> {record.evidence}</p>
         <p><strong>Independent:</strong> {record.independent ? "Yes" : "No"} · <strong>Hints:</strong> {record.hints}</p>
@@ -51,7 +52,7 @@ export default async function AssessmentsPage() {
     {reviewed.length > 0 && <section className="panel assessment-list">
       <h2>Recent decisions</h2>
       {reviewed.map((r) => <div className="assessment-history" key={r.id}>
-        <span>{r.topic}</span><span>{r.status === "approved" ? `Approved · level ${r.level}` : "Rejected"} · {r.date}</span>
+        <span>{labels.get(r.topic) ?? r.topic}</span><span>{r.status === "approved" ? `Approved · level ${r.level}` : "Rejected"} · {r.date}</span>
       </div>)}
     </section>}
   </>;

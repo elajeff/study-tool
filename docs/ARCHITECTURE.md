@@ -46,7 +46,15 @@ Clients can edit note bodies but cannot directly change source links, import bas
 
 ### Database checks
 
-After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
+After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql -f supabase/tests/source_relationships.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, path history, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
+
+## Explicit connections and provenance
+
+`noteRelationships` is shared by wikilinks, curriculum prerequisites/recommendations, and the note connection list. It classifies named prerequisite/background sections, ignores fenced/inline code and attachment embeds, and returns the target, kind, heading, and one-based source line. Ordinary links never become prerequisites. No inferred relationships or assessment evidence are generated.
+
+Relationships are calculated from the selected text, not cached in another table. Saved text is identified by source, artifact, and immutable revision UUIDs. Citations open that revision and its original import path at the recorded line. Current editable text is labelled separately if it differs; legacy collection snapshots are not presented as recovered originals. Changed imports use the artifact's current revision; historical revisions remain readable.
+
+Migration `005` adds only `source_path_aliases`, a read-only security-invoker view over current artifacts and accepted import paths. Existing table RLS applies to the caller. Same-vault resolution uses artifact IDs across those paths, preserving links through confirmed renames. If a path is reused by another artifact, both identities remain candidates: the reference is ambiguous rather than silently reassigned. A target without an editable topic cannot satisfy a curriculum prerequisite. Assessment keys and calculations are unchanged.
 
 ## Tutor handoff
 

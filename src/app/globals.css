@@ -274,6 +274,12 @@ textarea.input { resize: vertical; }
 .related-links li { margin-bottom: 7px; }
 .related-links a { color: var(--accent); }
 .related-links small { color: var(--muted); }
+.source-reference { font-size: 12px; overflow-wrap: anywhere; }
+.source-reference dd { margin: 0 0 8px; }
+.source-context { white-space: pre-wrap; overflow-wrap: anywhere; }
+.source-context > span { display: block; scroll-margin-top: 24px; }
+.source-context .selected-line { background: var(--accent-soft); }
+.source-context a { display: inline-block; min-width: 4ch; margin-right: 12px; }
 .danger-panel { border-color: var(--error-border); }
 .assessment-import, .assessment-list { margin-bottom: 16px; }
 .assessment-record { padding: 18px 0; border-top: 1px solid var(--border); }

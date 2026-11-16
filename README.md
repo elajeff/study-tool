@@ -82,7 +82,9 @@ Repository source readers include a syntax outline for supported text formats. T
 
 ## Conversations
 
-On Conversations, select a ChatGPT conversations JSON export of at most 100 MiB and preview it in the browser. This preview does not save or upload the conversation text. The selected branch retains visible user and assistant messages; hidden reasoning, tool output and other branches are excluded. Missing branch nodes and cycles are reported instead of guessed. Attachments are marked but not analyzed.
+On Conversations, choose ChatGPT or Claude, then select a conversations JSON export of at most 100 MiB and preview it in the browser. This preview does not save or upload the conversation text. The selected branch retains visible user and assistant messages; hidden reasoning, tool output and other branches are excluded. Missing branch nodes and cycles are reported instead of guessed. Attachments are marked but not analyzed.
+
+Claude exports without parent metadata retain their supplied message order and report that branch metadata is unavailable. Parent-linked exports must form one unambiguous chain. Mixed content blocks retain visible text without also copying duplicate legacy text.
 
 Recognizable tokens and private keys are removed from the derived preview. Other credential-like values remain with warnings; these checks can miss secrets or flag examples. Original exports are unchanged. Code and mathematics are retained as text, not executed or checked for correctness.
 

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { parseConversationExport } from "@/lib/conversation-import";
+import { parseConversationExport, type ChatProvider } from "@/lib/conversation-import";
 import { inspectImportText } from "@/lib/import-privacy";
 
 export function ConversationPreview() {
+  const [provider, setProvider] = useState<ChatProvider>("chatgpt");
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ReturnType<typeof parseConversationExport> | null>(null);
   const [selected, setSelected] = useState(0);
@@ -16,7 +17,7 @@ export function ConversationPreview() {
     setBusy(true); setError(""); setResult(null); setSelected(0);
     try {
       if (file.size > 100 * 1024 * 1024) throw new Error("Select an export smaller than 100 MiB.");
-      setResult(parseConversationExport(await file.text()));
+      setResult(parseConversationExport(await file.text(), provider));
     } catch (error) {
       setError(error instanceof SyntaxError ? "This file is not valid JSON."
         : error instanceof Error ? error.message : "Could not read the file.");
@@ -29,7 +30,11 @@ export function ConversationPreview() {
     <section className="panel"><h2>Preview an export</h2>
       <p>Export text is processed in this browser. This preview does not save conversations or send their text to an AI service.</p>
       <p>Recognizable access tokens and private keys are removed from preview text. Other possible credentials are kept with warnings. Personal information and unrecognized secrets may remain. Keep the original export separately.</p>
-      <label htmlFor="chat-file">ChatGPT conversations JSON</label>
+      <label htmlFor="chat-provider">Export format</label>
+      <select id="chat-provider" className="input" value={provider} disabled={busy} onChange={event => {
+        setProvider(event.target.value as ChatProvider); setResult(null); setError("");
+      }}><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option></select>
+      <label htmlFor="chat-file">Conversations JSON</label>
       <input id="chat-file" type="file" accept=".json,application/json" disabled={busy} onChange={event => {
         setFile(event.target.files?.[0] ?? null); setResult(null); setError("");
       }} />

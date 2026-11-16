@@ -42,3 +42,13 @@ test("credential redaction preserves example values, original input and long cod
   assert.ok(chat.text.includes(long)); assert.equal(chat.redactions, 1);
   assert.equal(JSON.stringify(input), original);
 });
+
+test("Claude mixed blocks exclude tools and thinking without falling back to duplicate legacy text", () => {
+  const rows = [{ uuid: "a", parent_message_uuid: "root-sentinel", sender: "human", content: [{ type: "text", text: "Question" }] },
+    { uuid: "b", parent_message_uuid: "a", sender: "assistant", text: "Do not fall back", content: [{ type: "thinking", thinking: "hidden" }, { type: "tool_result", content: "private tool output" }, { type: "text", text: "Real answer" }] }];
+  const result = parseConversationExport(JSON.stringify([{ uuid: "claude", name: "Synthetic", chat_messages: [...rows].reverse() }]), "claude");
+  assert.equal(result.rejected.length, 0);
+  assert.deepEqual(result.conversations[0].messages.map(item => item.text), ["Question", "Real answer"]);
+  const branch = { ...rows[1], uuid: "c" };
+  assert.equal(parseConversationExport(JSON.stringify([{ uuid: "claude", chat_messages: [...rows, branch] }]), "claude").rejected.length, 1);
+});

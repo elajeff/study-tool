@@ -231,6 +231,8 @@ textarea.input { resize: vertical; }
 .import-preview { margin-top: 20px; }
 .import-row { display: grid; gap: 8px; border-top: 1px solid var(--border); padding: 14px 0; overflow-wrap: anywhere; }
 .import-row > span { color: var(--muted); font-size: 12px; }
+.import-row .file-choice { display: flex; align-items: start; gap: 8px; }
+.repository-files a { min-width: 0; overflow-wrap: anywhere; }
 .import-row summary { color: var(--accent); cursor: pointer; }
 .import-row pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; background: var(--code-bg); border: 1px solid var(--border); padding: 12px; border-radius: 6px; font-size: 12px; }
 .import-actions { display: flex; gap: 8px; flex-wrap: wrap; }

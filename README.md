@@ -74,6 +74,8 @@ The same ZIP/text size limits listed above apply. Saved files open in the source
 
 Library lists the imported collections in your account with their short reading references. Importing material does not demonstrate understanding of it.
 
+Select a collection to see its saved items. Each item opens its current saved revision in the source reader, with the import path and original text. Editable notes remain separate from the imported text.
+
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.

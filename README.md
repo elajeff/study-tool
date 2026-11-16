@@ -76,6 +76,8 @@ Library lists the imported collections in your account with their short reading 
 
 Select a collection to see its saved items. Each item opens its current saved revision in the source reader, with the import path and original text. Editable notes remain separate from the imported text.
 
+Folder maps group saved items into pages of at most 4,000 characters. Follow the folder and next-page links to browse large collections. Long navigation labels may be shortened; the source reader retains the full path and text. Maps describe saved items, not verified completeness of the original collection.
+
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.

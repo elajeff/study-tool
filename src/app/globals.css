@@ -234,6 +234,7 @@ textarea.input { resize: vertical; }
 .import-row .file-choice { display: flex; align-items: start; gap: 8px; }
 .repository-files a { min-width: 0; overflow-wrap: anywhere; }
 .library-source { overflow-wrap: anywhere; }
+.library-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 560px; overflow: auto; background: var(--code-bg); padding: 14px; border-radius: 6px; font-size: 12px; }
 .import-row summary { color: var(--accent); cursor: pointer; }
 .import-row pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; background: var(--code-bg); border: 1px solid var(--border); padding: 12px; border-radius: 6px; font-size: 12px; }
 .import-actions { display: flex; gap: 8px; flex-wrap: wrap; }

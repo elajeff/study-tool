@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then migrations `002_assessments.sql`, `003_source_identities.sql`, `004_obsidian_reimport.sql`, `005_source_relationships.sql`, and `006_repository_import.sql` from `supabase/`, in that order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `006` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `005` already applied needs only `006`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `007` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `007` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `006` already applied needs only `007`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.

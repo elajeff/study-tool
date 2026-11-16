@@ -1,6 +1,6 @@
 import { redactConversationText } from "./import-privacy.ts";
 
-export type ChatProvider = "chatgpt";
+export type ChatProvider = "chatgpt" | "claude";
 // UTF-16 offsets address the rendered message block, including its role label.
 type SourceTime = string | number | null;
 export type ConversationMessage = { id: string; role: "user" | "assistant"; text: string; start: number; end: number; created_at: SourceTime };
@@ -39,7 +39,34 @@ function chatgptNodes(record: Row, excluded: Record<string, number>): { id: stri
   return chain.reverse();
 }
 
-export function parseConversationExport(raw: string) {
+function claudeNodes(record: Row, excluded: Record<string, number>): { id: string; message: Row }[] {
+  if (!Array.isArray(record.chat_messages)) throw new ConversationFormatError("Missing Claude messages.");
+  const messages = record.chat_messages.map((value, index) => ({ id: typeof row(value).uuid === "string" ? identifier(row(value).uuid) : `index:${index}`, message: row(value) }));
+  if (!messages.length) return [];
+  if (messages.every(item => item.message.parent_message_uuid === undefined)) {
+    excluded.unavailable_branch_metadata = 1; return messages;
+  }
+  const byId = new Map(messages.map(item => [item.id, item]));
+  if (byId.size !== messages.length) throw new ConversationFormatError("Duplicate Claude message identity.");
+  const parents = new Set(messages.map(item => item.message.parent_message_uuid));
+  const leaves = messages.filter(item => !parents.has(item.id));
+  if (leaves.length !== 1) throw new ConversationFormatError("Claude export has ambiguous branches; no active branch was specified.");
+  const chain: typeof messages = [], visited = new Set<string>();
+  let current: typeof messages[number] | undefined = leaves[0];
+  while (current) {
+    if (visited.has(current.id)) throw new ConversationFormatError("Cycle in Claude messages.");
+    visited.add(current.id); chain.push(current);
+    const parent: unknown = current.message.parent_message_uuid;
+    if (parent !== null && typeof parent !== "string") throw new ConversationFormatError("Incomplete Claude parent metadata.");
+    current = typeof parent === "string" ? byId.get(parent) : undefined;
+  }
+  if (visited.size !== messages.length) throw new ConversationFormatError("Claude messages do not form one complete branch.");
+  // Claude may reference an external root sentinel. Retain the boundary explicitly.
+  if (chain.at(-1)!.message.parent_message_uuid) excluded.external_root_boundary = 1;
+  return chain.reverse();
+}
+
+export function parseConversationExport(raw: string, provider: ChatProvider = "chatgpt") {
   if (raw.length > 100 * 1024 * 1024) throw new ConversationFormatError("Select an export smaller than 100 MiB.");
   const records: unknown = JSON.parse(raw);
   if (!Array.isArray(records)) throw new ConversationFormatError("Select a conversations JSON array, not account or settings files.");
@@ -48,35 +75,45 @@ export function parseConversationExport(raw: string) {
   const identities = new Map<string, { signature: string; index: number }>(), conflicts = new Set<string>();
   for (const [index, value] of records.entries()) {
     try {
-      const record = row(value), id = identifier(record.conversation_id ?? record.id);
+      const record = row(value), id = identifier(provider === "chatgpt" ? record.conversation_id ?? record.id : record.uuid ?? record.id);
       const excluded: Record<string, number> = {};
       const skip = (reason: string) => { excluded[reason] = (excluded[reason] ?? 0) + 1; };
-      const nodes = chatgptNodes(record, excluded);
+      const nodes = provider === "chatgpt" ? chatgptNodes(record, excluded) : claudeNodes(record, excluded);
       const title = redactConversationText(typeof (record.title ?? record.name) === "string" ? String(record.title ?? record.name) : "Untitled conversation");
       let redactions = title.redactions, text = `# ${JSON.stringify(title.text)}\n`;
       const messages: ConversationMessage[] = [];
       for (const node of nodes) {
         const message = node.message, author = message.author && typeof message.author === "object" ? row(message.author) : {};
-        const role = author.role;
+        const role = provider === "chatgpt" ? author.role : message.sender === "human" ? "user" : message.sender;
         const metadata = message.metadata && typeof message.metadata === "object" ? row(message.metadata) : {};
         if (metadata.is_visually_hidden_from_conversation === true) { skip("hidden_messages"); continue; }
         if (role !== "user" && role !== "assistant") { skip("non_dialogue_messages"); continue; }
         if (message.channel === "analysis" || (role === "assistant" && message.recipient != null && message.recipient !== "all")) { skip("internal_messages"); continue; }
         const parts: string[] = [];
-        const content = row(message.content);
-        if (content.content_type !== "text" && content.content_type !== "multimodal_text") {
-          skip(content.content_type === "thoughts" || content.content_type === "reasoning_recap" ? content.content_type : "unsupported_message_types"); continue;
-        }
-        if (!Array.isArray(content.parts)) throw new ConversationFormatError("Visible message has no text parts.");
-        for (const part of content.parts) {
-          if (typeof part === "string") parts.push(part);
-          else {
-            const type = part && typeof part === "object" ? row(part).content_type : undefined;
-            if (type === "image_asset_pointer") parts.push("[image not analyzed]");
-            else if (type === "file") parts.push("[file not analyzed]");
-            else { skip("unsupported_parts"); parts.push("[unsupported non-text part]"); }
+        if (provider === "chatgpt") {
+          const content = row(message.content);
+          if (content.content_type !== "text" && content.content_type !== "multimodal_text") {
+            skip(content.content_type === "thoughts" || content.content_type === "reasoning_recap" ? content.content_type : "unsupported_message_types"); continue;
           }
-        }
+          if (!Array.isArray(content.parts)) throw new ConversationFormatError("Visible message has no text parts.");
+          for (const part of content.parts) {
+            if (typeof part === "string") parts.push(part);
+            else {
+              const type = part && typeof part === "object" ? row(part).content_type : undefined;
+              if (type === "image_asset_pointer") parts.push("[image not analyzed]");
+              else if (type === "file") parts.push("[file not analyzed]");
+              else { skip("unsupported_parts"); parts.push("[unsupported non-text part]"); }
+            }
+          }
+        } else if (Array.isArray(message.content)) {
+          for (const value of message.content) {
+            const block = row(value);
+            if (block.type === "text" && typeof block.text === "string") parts.push(block.text);
+            else if (block.type === "image" || block.type === "document") parts.push(`[${block.type === "image" ? "image" : "file"} not analyzed]`);
+            else skip(["thinking", "tool_use", "tool_result", "injected_prompt_block"].includes(String(block.type)) ? String(block.type) : "unsupported_blocks");
+          }
+        } else if (message.content == null && typeof message.text === "string") parts.push(message.text);
+        else throw new ConversationFormatError("Unsupported Claude message content.");
         if (Array.isArray(message.attachments) && message.attachments.length || Array.isArray(message.files) && message.files.length
           || Array.isArray(metadata.attachments) && metadata.attachments.length) { parts.push("[attachments not analyzed]"); skip("attachments"); }
         const cleaned = redactConversationText(parts.join("\n"));
@@ -85,11 +122,11 @@ export function parseConversationExport(raw: string) {
         const start = text.length;
         text += `\n${role.toUpperCase()}\n${cleaned.text}\n`;
         messages.push({ id: node.id, role, text: cleaned.text, start, end: text.length,
-          created_at: sourceTime(message.create_time) });
+          created_at: sourceTime(provider === "chatgpt" ? message.create_time : message.created_at) });
       }
       if (!messages.length) { empty++; continue; }
-      const created_at = sourceTime(record.create_time);
-      const updated_at = sourceTime(record.update_time);
+      const created_at = sourceTime(provider === "chatgpt" ? record.create_time : record.created_at);
+      const updated_at = sourceTime(provider === "chatgpt" ? record.update_time : record.updated_at);
       const signature = JSON.stringify([title.text, created_at, updated_at, messages.map(item => [item.id, item.role, item.text, item.created_at])]);
       if (conflicts.has(id)) throw new ConversationFormatError("Conflicting copies of one conversation; select one version.");
       const previous = identities.get(id);
@@ -103,7 +140,7 @@ export function parseConversationExport(raw: string) {
         duplicates++; continue;
       }
       identities.set(id, { signature, index });
-      conversations.push({ id, provider: "chatgpt", title: title.text, text, messages, created_at, updated_at, excluded, redactions });
+      conversations.push({ id, provider, title: title.text, text, messages, created_at, updated_at, excluded, redactions });
     } catch (error) {
       if (!(error instanceof ConversationFormatError)) throw error;
       rejected.push({ index, reason: error.message });

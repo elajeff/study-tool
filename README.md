@@ -60,6 +60,8 @@ The note editor shows explicit links, prerequisites, and recommendations. Source
 
 ## Repositories
 
+Repository imports include reStructuredText documentation, `.conf`, `.cfg` and `.ini` configuration, Windows scripts, and the `mvnw` and `gradlew` build scripts. These are imported as text.
+
 Create or select a repository on the Repositories page, then preview a ZIP of its contents. Paths are relative to the archive root; enclosing folders are kept. Reuse the same repository when reimporting. Review the file list and text, deselect anything unwanted, then accept the selected files. Confirm renames by selecting the existing saved file; equal text alone does not establish identity. Missing files remain saved.
 
 Java, TypeScript, JavaScript, Python, SQL, YAML, JSON, Markdown, and other common text formats are supported. Environment files, keys, Git internals, dependencies, and common generated outputs are excluded. Local pattern checks block apparent private keys and known tokens and flag credential-like values for review. These checks are not exhaustive, can flag examples, and do not replace inspecting or sanitizing the files yourself.

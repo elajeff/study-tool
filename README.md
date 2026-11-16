@@ -70,6 +70,10 @@ Java, TypeScript, JavaScript, Python, SQL, YAML, JSON, Markdown, and other commo
 
 The same ZIP/text size limits listed above apply. Saved files open in the source reader with the repository name, path, revision, and line context. Code is never executed or sent automatically to an AI service. Imports do not create curriculum topics, infer concept-to-code links, or award mastery. Folder selection and public GitHub URL ingestion are not implemented.
 
+## Library
+
+Library lists the imported collections in your account with their short reading references. Importing material does not demonstrate understanding of it.
+
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.

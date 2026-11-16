@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, ChartNoAxesCombined, ClipboardCheck, FileText, Settings } from "lucide-react";
+import { BookOpen, ChartNoAxesCombined, ClipboardCheck, FileText, FolderGit2, Settings } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", mobileLabel: "Home", icon: ChartNoAxesCombined },
   { href: "/curriculum", label: "Curriculum", mobileLabel: "Topics", icon: BookOpen },
   { href: "/notes", label: "Notes", mobileLabel: "Notes", icon: FileText },
+  { href: "/repositories", label: "Repositories", mobileLabel: "Code", icon: FolderGit2 },
   { href: "/assessments", label: "Assessments", mobileLabel: "Reviews", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", mobileLabel: "Settings", icon: Settings },
 ];

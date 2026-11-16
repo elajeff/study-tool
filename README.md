@@ -8,6 +8,7 @@ The roadmap follows the material each person imports. No standard course is assi
 
 - Email sign-in and private workspaces using Supabase Auth and row-level security.
 - Markdown import, editing, and export.
+- Local repository ZIP previews and source-file browsing.
 - Study topics and prerequisite links drawn from source notes.
 - Progress and review reminders based on approved assessments.
 - ChatGPT Web as the default tutor, with an optional Codex handoff. Both open in their official sites.
@@ -19,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then migrations `002_assessments.sql`, `003_source_identities.sql`, `004_obsidian_reimport.sql`, and `005_source_relationships.sql` from `supabase/`, in that order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `005` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `004` already applied needs only `005`.
+   - **Fresh installation:** run `supabase/schema.sql`, then migrations `002_assessments.sql`, `003_source_identities.sql`, `004_obsidian_reimport.sql`, `005_source_relationships.sql`, and `006_repository_import.sql` from `supabase/`, in that order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `006` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `005` already applied needs only `006`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -56,6 +57,14 @@ Imports accept at most 2,000 notes, 500,000 UTF-8 bytes per file, a 20 MiB ZIP, 
 Import and export are manual. Nothing is written to the original vault, and there is no live sync or automatic ChatGPT conversation import.
 
 The note editor shows explicit links, prerequisites, and recommendations. Source citations open the saved revision at the relevant line. Local edits are shown separately when they differ from the source. Confirmed renames retain recorded paths; ambiguous or reused names require correction. Connections do not count as assessment evidence.
+
+## Repositories
+
+Create or select a repository on the Repositories page, then preview a ZIP of its contents. Paths are relative to the archive root; enclosing folders are kept. Reuse the same repository when reimporting. Review the file list and text, deselect anything unwanted, then accept the selected files. Confirm renames by selecting the existing saved file; equal text alone does not establish identity. Missing files remain saved.
+
+Java, TypeScript, JavaScript, Python, SQL, YAML, JSON, Markdown, and other common text formats are supported. Environment files, keys, Git internals, dependencies, and common generated outputs are excluded. Local pattern checks block apparent private keys and known tokens and flag credential-like values for review. These checks are not exhaustive, can flag examples, and do not replace inspecting or sanitizing the files yourself.
+
+The same ZIP/text size limits listed above apply. Saved files open in the source reader with the repository name, path, revision, and line context. Code is never executed or sent automatically to an AI service. Imports do not create curriculum topics, infer concept-to-code links, or award mastery. Folder selection and public GitHub URL ingestion are not implemented.
 
 ## Assessments
 

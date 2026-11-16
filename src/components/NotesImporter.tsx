@@ -5,7 +5,8 @@ import { Download, FileUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cleanNotePath } from "@/lib/notes";
 import { loadNotes } from "@/lib/note-queries";
-import { previewImport, readMarkdownFiles, type ImportFile, type Vault, type VaultState } from "@/lib/obsidian";
+import { previewImport, readMarkdownFiles, type Vault, type VaultState } from "@/lib/obsidian";
+import type { ImportFile } from "@/lib/import-files";
 
 export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   const [vaults, setVaults] = useState(initialVaults);

@@ -40,10 +40,13 @@ test("ZIP preview preserves text and rejects traversal, private/generated folder
   zip.file("Vault/Progress/report.md", "Excluded");
   zip.file("Vault/.obsidian/config.md", "Excluded");
   zip.file("Vault/../escape.md", "Excluded");
+  zip.file("README.txt", "Archive packaging note");
+  zip.file(".hidden.md", "Excluded");
+  zip.file(".obsidian/config.md", "Excluded");
   const result = await readMarkdownFiles([new File([await zip.generateAsync({ type: "uint8array" })], "vault.zip")]);
   assert.deepEqual(result.files.map((file) => file.path), ["Lessons/Java/Methods.md"]);
   assert.equal(result.files[0].body, "# Methods\r\n\r\nReturn π.");
-  assert.equal(result.skipped, 4);
+  assert.equal(result.skipped, 7);
   await assert.rejects(() => readMarkdownFiles([new File(["one"], "Topic.md"), new File(["two"], "topic.md")]), /Duplicate path/);
 });
 

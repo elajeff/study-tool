@@ -80,6 +80,12 @@ Folder maps group saved items into pages of at most 4,000 characters. Follow the
 
 Repository source readers include a syntax outline for supported text formats. These pattern-based hints can miss declarations and are limited to 30 lines of 240 characters each. They do not infer concepts or verify correctness. Full source text remains available.
 
+## Conversations
+
+On Conversations, select a ChatGPT conversations JSON export of at most 100 MiB and preview it in the browser. This preview does not save or upload the conversation text. The selected branch retains visible user and assistant messages; hidden reasoning, tool output and other branches are excluded. Missing branch nodes and cycles are reported instead of guessed. Attachments are marked but not analyzed.
+
+Recognizable tokens and private keys are removed from the derived preview. Other credential-like values remain with warnings; these checks can miss secrets or flag examples. Original exports are unchanged. Code and mathematics are retained as text, not executed or checked for correctness.
+
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.

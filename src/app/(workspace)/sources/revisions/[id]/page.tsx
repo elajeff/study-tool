@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadSourceRevision } from "@/lib/source-queries";
+import { repositoryOutline } from "@/lib/repo-outline";
 
 export default async function SourceRevisionPage({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams: Promise<{ line?: string }>;
@@ -11,6 +12,7 @@ export default async function SourceRevisionPage({ params, searchParams }: {
   const { line: requestedLine } = await searchParams;
   const revision = await loadSourceRevision(supabase, id);
   if (!revision) notFound();
+  const outline = revision.source.kind === "repository" ? repositoryOutline(revision.path ?? "", revision.content) : null;
   const lines = revision.content.split(/\r?\n/);
   const line = Math.min(lines.length, Math.max(1, Number.parseInt(requestedLine ?? "1", 10) || 1));
   const start = Math.max(0, line - 4);
@@ -25,6 +27,13 @@ export default async function SourceRevisionPage({ params, searchParams }: {
         <dt>Source</dt><dd>{revision.source_id}</dd><dt>File</dt><dd>{revision.artifact_id}</dd><dt>Revision</dt><dd>{revision.id}</dd>
         <dt>Current path</dt><dd>{revision.current_path ?? "None"}</dd>
       </dl></details>
+      {outline && <details><summary>Syntax outline</summary>
+        <p>Pattern-based navigation hints. These can miss or misidentify declarations. Read the original text to verify them.</p>
+        {!outline.supported && <p>No syntax outline for this file type.</p>}
+        {outline.warning && <p>{outline.warning}</p>}
+        <pre className="source-context">{outline.lines.join("\n")}</pre>
+        {outline.truncated && <p>Outline shortened. Original text is unchanged.</p>}
+      </details>}
       <h2>Line {line}</h2>
       <pre className="source-context">{lines.slice(start, line + 3).map((text, index) => <span id={`L${start + index + 1}`} key={index}
         className={start + index + 1 === line ? "selected-line" : ""}><a href={`?line=${start + index + 1}#L${start + index + 1}`}

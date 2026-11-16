@@ -13,6 +13,8 @@ The curriculum is computed from editable notes. Existing topic keys are retained
 
 ## Source records
 
+Sources and artifacts also have short reading references, such as `R1/F001`. Migration 007 assigns them to existing records and new imports. They stay with the same record through content updates and confirmed renames; the UUIDs remain the database identities. Each owner's source numbering is separate.
+
 The Obsidian importer publishes source records and editable notes together. Repository imports save source files without creating notes. A conversation adapter is not implemented.
 
 - `sources` identifies one owner's vault, repository, or conversation collection. Reimports must reuse this UUID; the display name is not an identity.

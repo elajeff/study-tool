@@ -6,7 +6,8 @@ import { shouldImportRepositoryFile, inspectRepositoryText, previewRepository } 
 
 test("repository ZIPs retain relative paths and text while excluding secrets, generated files, and unsafe paths", async () => {
   const zip = new JSZip();
-  const paths = ["src/Main.java", "ui/App.tsx", "tools/task.js", "scripts/main.py", "db/schema.sql", ".github/workflows/ci.yml", "package.json", "README.md"];
+  const paths = ["src/Main.java", "ui/App.tsx", "tools/task.js", "scripts/main.py", "db/schema.sql", ".github/workflows/ci.yml", "package.json", "README.md", "docs/usage.rst",
+    "server/nginx.conf", "config/client.ini", "tools/setup.cfg", "mvnw", "gradlew", "mvnw.cmd", "scripts/start.bat"];
   for (const path of paths) zip.file(path, "// Synthetic π\r\n");
   const excluded = [".env", "config/.env.local", "config/private.pem", "node_modules/a/index.js", "target/Main.java", ".git/config", "package-lock.json", "../escape.py", "/absolute.sql", "C:/drive.sql"];
   for (const path of excluded) zip.file(path, "Excluded");

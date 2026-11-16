@@ -7,8 +7,8 @@ export function shouldImportRepositoryFile(path: string) {
   const name = path.split("/").at(-1)!;
   if (/^(\.env(?:\..*)?|id_(rsa|dsa|ecdsa|ed25519)|credentials(?:\..*)?|secrets?\.(json|ya?ml|txt)|package-lock\.json|pnpm-lock\.yaml)$/i.test(name)
     || /\.(pem|key|p12|pfx|jks|keystore|min\.js|map)$/i.test(name)) return false;
-  return /\.(java|tsx?|[cm]?jsx?|py|sql|ya?ml|json|md|markdown|html|css|scss|xml|properties|toml|gradle|sh|ps1|txt|c|h|cpp|go|rs|kt|rb)$/i.test(name)
-    || /^(Dockerfile|Makefile|\.gitignore|\.dockerignore)$/i.test(name);
+  return /\.(java|tsx?|[cm]?jsx?|py|sql|ya?ml|json|md|markdown|rst|html|css|scss|xml|properties|toml|conf|cfg|ini|gradle|sh|ps1|bat|cmd|txt|c|h|cpp|go|rs|kt|rb)$/i.test(name)
+    || /^(Dockerfile|Makefile|mvnw|gradlew|\.gitignore|\.dockerignore)$/i.test(name);
 }
 
 export function inspectRepositoryText(body: string): { blocked: string | null; review: string | null } {

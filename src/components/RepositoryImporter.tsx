@@ -44,7 +44,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       const current = await loadRepositoryFiles(createClient(), sourceId);
       const reviewed = parsed.files.map((file) => ({ ...file, ...inspectRepositoryText(file.body) }));
       setState(current); setBindings({}); setFiles(reviewed); setSkipped(parsed.skipped);
-      setSelected(new Set(reviewed.filter((file) => !file.blocked && !file.review).map((file) => file.path)));
+      setSelected(new Set(reviewed.filter((file) => !file.blocked).map((file) => file.path)));
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the archive."); }
     finally { setBusy(false); }
   }
@@ -98,13 +98,13 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
         onChange={(event) => { void prepare(event.target.files?.[0]); event.target.value = ""; }} /></label></div>
     {message && <p role="status" className="import-message">{message}</p>}
     {files.length > 0 && <div className="import-preview"><h3>Preview ({files.length})</h3>
-      <p>Review the selected files. Possible credentials are excluded by default; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
+      <p>Review the selected files. Possible credential values stay selected with a warning; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
       {skipped.length > 0 && <details><summary>Skipped files ({skipped.length})</summary><ul>{skipped.map((path, index) => <li key={index}><code>{path}</code></li>)}</ul></details>}
       {files.map((file) => {
         const row = rows.find((row) => row.file.path === file.path);
         return <article className="import-row" key={file.path}>
           <label className="file-choice"><input type="checkbox" checked={selected.has(file.path)} disabled={busy || !!file.blocked} onChange={() => toggle(file.path)} />
-            {file.review ? "Include reviewed file: " : "Include: "}{file.path}</label>
+            {file.review ? "Include flagged file: " : "Include: "}{file.path}</label>
           <span>{row?.status ?? "Not selected"}{row?.previous?.path !== file.path && row?.previous ? ` · Rename ${row.previous.path}` : ""}</span>
           {(file.blocked || file.review) && <p role="note">{file.blocked ?? file.review}</p>}
           {row && (!row.previous || row.previous.path !== file.path) && <label>Saved file for {file.path}

@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `009` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `009` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `008` already applied needs only `009`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `010` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `010` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `009` already applied needs only `010`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -99,6 +99,12 @@ Saving accepts 1–2,000 conversations within 35 MiB of prepared JSON and 500,00
 Previews show source-reported dates. Saved conversation readers also show the accepted import, visible message count and recorded omissions. Unchanged text uses the newest accepted import metadata for that revision. Older imports without metadata are labelled as unavailable. These dates and counts do not verify correctness, completeness or mastery.
 
 Obsidian previews recognize ChatBridge frontmatter when its conversation URL and UUID agree. Matching saved chats link to their current source revision; multiple copies remain listed. This matches identity, not identical text or branches. Generated `AI Chats/` files remain outside note imports, while annotated notes elsewhere are preserved.
+
+## Library snapshots
+
+In Library, select collections and choose **Save Library snapshot**. The saved page links to the selected source revisions and records their paths, hashes, maps and accepted conversation context. Reimporting a source does not update an existing snapshot. Repeating the same selection without changes reuses its reference.
+
+Snapshots contain saved imports, which may omit parts of the original collections. Preparing a snapshot does not send it to an AI service. Selected source text is limited to 35 MiB; larger libraries need separate selections.
 
 ## Assessments
 

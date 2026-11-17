@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadExportManifest } from "@/lib/export-queries";
-import { repositoryDraftPrompt } from "@/lib/portfolio";
+import { repositoryDraftPrompt, repositoryDraftSource, type RepositoryDraft } from "@/lib/portfolio";
+import { parseCourse } from "@/lib/course";
+import { PortfolioPlanner } from "@/components/PortfolioPlanner";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ export?: string }> }) {
@@ -13,6 +15,17 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const manifest = id ? await loadExportManifest(supabase, id) : null;
   if (query.export && !manifest) notFound();
   const repositories = manifest?.sources.filter(source => source.kind === "repository") ?? [];
+  const drafts: RepositoryDraft[] = [];
+  if (manifest && repositories.length >= 2) for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("courses").select("id,raw_block").eq("export_id", manifest.export_id)
+      .order("created_at", { ascending: false }).order("id").range(offset, offset + 499);
+    if (error) throw new Error("Could not load repository courses.");
+    for (const row of data) {
+      const course = parseCourse(row.raw_block, manifest).course;
+      if (repositoryDraftSource(repositories, course)) drafts.push({ id: row.id, course });
+    }
+    if (data.length < 500) break;
+  }
   return <>
     <div className="page-heading"><h1>Portfolio</h1><p>Prepare a separate course draft for each repository in a saved Library snapshot.</p></div>
     <section className="panel"><form method="GET"><label htmlFor="portfolio-export">Saved Library snapshot</label>
@@ -25,5 +38,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <CourseLessonCard text={repositoryDraftPrompt(manifest.export_id, source)} />
       </details>)}
     </section> : <p>Select a saved Library snapshot containing a repository.</p>}
+    {manifest && repositories.length >= 2 && <PortfolioPlanner key={manifest.export_id} exportId={manifest.export_id} repositories={repositories} drafts={drafts} />}
   </>;
 }

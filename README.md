@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `008` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `008` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `007` already applied needs only `008`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `009` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `009` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `008` already applied needs only `009`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -95,6 +95,8 @@ Recognizable tokens and private keys are removed from the derived preview. Other
 Create or select a saved conversation source matching the export format, then preview and save. Reuse that source for later imports. The preview shows new, updated and unchanged conversations. Provider IDs keep conversations separate; titles and matching text do not establish identity. Changed text creates a revision, and missing conversations remain saved. If saved data changes after preview, preview again before retrying.
 
 Saving accepts 1–2,000 conversations within 35 MiB of prepared JSON and 500,000 characters per conversation. Text is rejected rather than shortened when it exceeds the limit. Library shows the saved text separately from editable notes and assessments.
+
+Previews show source-reported dates. Saved conversation readers also show the accepted import, visible message count and recorded omissions. Unchanged text uses the newest accepted import metadata for that revision. Older imports without metadata are labelled as unavailable. These dates and counts do not verify correctness, completeness or mastery.
 
 ## Assessments
 

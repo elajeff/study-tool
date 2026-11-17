@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadSourceRevision } from "@/lib/source-queries";
 import { repositoryOutline } from "@/lib/repo-outline";
+import { loadConversationContexts } from "@/lib/conversation-queries";
+import { conversationContextText } from "@/lib/conversation-context";
 
 export default async function SourceRevisionPage({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams: Promise<{ line?: string }>;
@@ -12,6 +14,8 @@ export default async function SourceRevisionPage({ params, searchParams }: {
   const { line: requestedLine } = await searchParams;
   const revision = await loadSourceRevision(supabase, id);
   if (!revision) notFound();
+  const context = ["chatgpt", "claude"].includes(revision.source.kind)
+    ? (await loadConversationContexts(supabase, [revision.id])).get(revision.id) : null;
   const back = revision.source.kind === "repository"
     ? { href: `/repositories?source=${revision.source_id}`, label: "Back to repository" }
     : ["chatgpt", "claude"].includes(revision.source.kind)
@@ -31,6 +35,7 @@ export default async function SourceRevisionPage({ params, searchParams }: {
         <dt>Source</dt><dd>{revision.source_id}</dd><dt>File</dt><dd>{revision.artifact_id}</dd><dt>Revision</dt><dd>{revision.id}</dd>
         <dt>Current path</dt><dd>{revision.current_path ?? "None"}</dd>
       </dl></details>
+      {context && <details><summary>Conversation context</summary><pre className="source-context">{conversationContextText(context)}</pre></details>}
       {outline && <details><summary>Syntax outline</summary>
         <p>Pattern-based navigation hints. These can miss or misidentify declarations. Read the original text to verify them.</p>
         {!outline.supported && <p>No syntax outline for this file type.</p>}

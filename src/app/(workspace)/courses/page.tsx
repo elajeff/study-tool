@@ -6,13 +6,13 @@ import { InboxImporter } from "@/components/InboxImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard } from "@/lib/module-request";
 import { lessonStudyCard } from "@/lib/lesson-request";
-import { markCourseStep } from "@/app/course-actions";
 import { nextCourseLesson } from "@/lib/course";
 import { loadAssessments } from "@/lib/assessment-queries";
 import { latestApproved } from "@/lib/progress";
 import { LessonControls } from "@/components/LessonControls";
 import { CourseReviewCard } from "@/components/CourseReviewCard";
 import { CourseModules } from "@/components/CourseModules";
+import { CourseStepAction } from "@/components/CourseStepAction";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string }> }) {
   const { supabase } = await requireAccount();
@@ -45,7 +45,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       {next ? <p><Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) }, hash: next.step ? "lesson-focus" : "module-plan" }}>
         {next.step ? `Continue at ${next.step.id}` : `Prepare ${next.module.id} lesson plan`}
       </Link></p> : <p>All course lessons are marked done. This does not establish mastery.</p>}
-      <CourseModules courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id} nextModule={next?.module.id} />
+      <CourseModules courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id} nextModule={next?.module.id} selectedStep={currentStep?.row_id} nextStep={next?.step?.row_id} />
       <details><summary>Exclusions and open questions</summary>
         <ul>{result.course.not_covered.map(item => <li key={item.id}>{item.id}: {item.why}</li>)}</ul>
         <ul>{result.course.open_questions.map((question, index) => <li key={index}>{question}</li>)}</ul>
@@ -55,13 +55,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && <CourseReviewCard key={query.id} course={result.course} />}
     {query.module && !selected && <p role="status">Module not found in this course.</p>}
     {result && query.id && selected && <section className="panel" id="module-plan"><h2>{selected.id} · Lesson plan</h2>
-      {steps.length ? <>
-        <ol>{steps.map(step => <li key={step.row_id}>
-          <Link href={{ pathname: "/courses", query: { id: query.id, module: selected.id, step: step.row_id }, hash: "lesson-focus" }} aria-current={step.row_id === currentStep?.row_id ? "step" : undefined}>{step.id} · {step.kind}</Link>
-          <p>{step.goal}</p><p>Done when: {step.done_when}</p><p>Sources: {step.sources.join(", ")}. Status: {step.completed_at ? "Done" : "Not started"}.</p>
-        </li>)}</ol>
-        <p>The saved plan keeps its lesson identities. Reimporting the same plan is safe; replacing it with different steps is rejected.</p>
-      </> : <><p>Request a plan from ChatGPT, then import its JSON here. Preparing or importing a plan does not demonstrate mastery.</p>
+      {steps.length ? <p>The saved plan keeps its lesson identities. Reimporting the same plan is safe; replacing it with different steps is rejected.</p>
+      : <><p>Request a plan from ChatGPT, then import its JSON here. Preparing or importing a plan does not demonstrate mastery.</p>
         <CourseLessonCard key={`${query.id}/${selected.id}`} text={modulePlanningCard(query.id, result.course, selected)} />
       </>}
       <details open={!steps.length}><summary>Import a plan</summary>
@@ -72,12 +67,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Study request</h2>
       <p>{currentStep.goal}</p><p>Done when: {currentStep.done_when}</p>
       <p>Status: {currentStep.completed_at ? "Done" : "Not started"}. Marking a lesson done records study activity, not mastery.</p>
-      <form action={markCourseStep}>
-        <input type="hidden" name="course_id" value={query.id} />
-        <input type="hidden" name="step_id" value={currentStep.row_id} />
-        <input type="hidden" name="state" value={currentStep.completed_at ? "reopen" : "studied"} />
-        <button className="button button-light">{currentStep.completed_at ? "Reopen" : "Mark done"} {currentStep.id}</button>
-      </form>
+      <p>Sources: {currentStep.sources.join(", ")}.</p>
+      <CourseStepAction courseId={query.id} step={currentStep} />
       <CourseLessonCard key={currentStep.row_id} text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
       <LessonControls assessment={assessment} />
     </section>}

@@ -126,6 +126,8 @@ Select a saved lesson to copy its study request. It includes the lesson's goal, 
 
 Use **Mark done** after studying a lesson, or **Reopen** to clear that mark. This records study activity only; approved assessments still determine mastery. Reimporting the same lesson plan retains these marks.
 
+The course's continuation button opens the first unfinished lesson in outline order. Marking a lesson done moves there automatically. If the next module has no saved plan, the app opens its planning request first. Reopening a lesson keeps that lesson selected.
+
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.

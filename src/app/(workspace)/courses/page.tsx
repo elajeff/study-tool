@@ -8,6 +8,7 @@ import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard } from "@/lib/module-request";
 import { lessonStudyCard } from "@/lib/lesson-request";
 import { markCourseStep } from "@/app/course-actions";
+import { nextCourseLesson } from "@/lib/course";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string }> }) {
   const { supabase } = await requireAccount();
@@ -18,8 +19,10 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const result = query.id ? await loadCourse(supabase, query.id) : null;
   if (query.id && !result) notFound();
   const selected = result?.course.modules.find(item => item.id === query.module);
-  const steps = query.id && selected ? (await loadCourseSteps(supabase, query.id)).filter(step => step.module_key === selected.id).sort((a, b) => a.position - b.position) : [];
-  const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps[0];
+  const allSteps = query.id && result ? await loadCourseSteps(supabase, query.id) : [];
+  const steps = allSteps.filter(step => step.module_key === selected?.id).sort((a, b) => a.position - b.position);
+  const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps.find(step => !step.completed_at) ?? steps[0];
+  const next = result ? nextCourseLesson(result.course, allSteps) : null;
   return <>
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
@@ -29,10 +32,13 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     <section className="panel"><h2>Recent courses</h2>
       {recent.length ? <ul>{recent.map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title}</Link></li>)}</ul> : <p>No courses saved yet.</p>}
     </section>
-    {result && <section className="panel"><h2>{result.course.title}</h2><p>{result.course.goal}</p>
+    {result && <section className="panel" id="course-path"><h2>{result.course.title}</h2><p>{result.course.goal}</p>
       <p>Target: {result.course.target}</p><p>Starting level: {result.course.assumed_level}</p>
       <p><Link href={`/library/exports/${result.course.export_id}`}>Saved Library snapshot</Link></p>
       <p>Source items without a module or exclusion: {result.unassigned.length}. This is file accounting, not a check of teaching completeness.</p>
+      {next ? <p><Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) }, hash: next.step ? "lesson-focus" : "module-plan" }}>
+        {next.step ? `Continue at ${next.step.id}` : `Prepare ${next.module.id} lesson plan`}
+      </Link></p> : <p>All course lessons are marked done. This does not establish mastery.</p>}
       <ol>{result.course.modules.map(module => <li key={module.id}><h3>{module.id} · {module.title}</h3><p>{module.outcome}</p>
         <p>Prerequisites: {module.needs.join(", ") || "None"}. Estimated steps: {module.steps_estimate}.</p>
         <p>Sources: {module.sources.join(", ")}.</p><p>Independent proof: {module.proof}</p>

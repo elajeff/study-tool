@@ -16,16 +16,6 @@ function strings(value: unknown): string[] {
   if (!Array.isArray(value)) throw new Error("Expected a list of text values.");
   return value.map(text);
 }
-export function readCourse(raw: string): Record<string, unknown> & { export_id: string } {
-  if (raw.length > 300000) throw new Error("Course text exceeds 300,000 characters.");
-  const blocks = [...raw.matchAll(/^```(?:study-course|json)\s*\r?\n([\s\S]*?)^```\s*$/gm)];
-  if (blocks.length > 1) throw new Error("Import one complete course JSON object at a time.");
-  const value = object(JSON.parse(blocks.length ? blocks[0][1] : raw));
-  if (value.format !== "study-course/1" || typeof value.export_id !== "string" || !/^X[a-f0-9]{64}$/.test(value.export_id))
-    throw new Error("Expected a study-course object with a saved Library export ID.");
-  return value as Record<string, unknown> & { export_id: string };
-}
-
 export function parseCourse(input: unknown, manifest: ExportManifest): { course: Course; unassigned: string[] } {
   const value = object(input);
   if (value.format !== "study-course/1" || value.export_id !== manifest.export_id) throw new Error("Course format or export ID does not match this saved export.");

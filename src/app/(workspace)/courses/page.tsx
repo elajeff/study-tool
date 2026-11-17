@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
-import { CourseImporter } from "@/components/CourseImporter";
+import { InboxImporter } from "@/components/InboxImporter";
 import { ModuleImporter } from "@/components/ModuleImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard } from "@/lib/module-request";
@@ -31,7 +31,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   return <>
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
-      <p>Paste one complete course JSON object or study-course code block. The Library version is detected automatically.</p><CourseImporter />
+      <p>Import the returned file or paste its response. The Library version is detected automatically.</p><InboxImporter openCourse />
       <p><Link href="/library">Prepare a Library snapshot</Link></p>
     </details></section>
     <section className="panel"><h2>Recent courses</h2>

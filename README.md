@@ -122,6 +122,8 @@ The download page flags uncertain credential values without removing them. Known
 
 Inbox accepts one complete JSON object or a response containing course, module, digest and assessment code blocks. Paste up to 20 blocks within 1 MiB. It validates the full batch before saving it in one database transaction. An invalid block leaves the batch unchanged. Repeated imports retain existing records and assessment decisions; new assessments start pending review. Unrelated JSON blocks are counted and ignored.
 
+Use **Import ChatGPT file** in Inbox or Courses to choose a downloaded `.json`, `.txt` or `.md` response. Selection starts validation and saving without another submit button. Files containing a course or module open that course automatically. For pasted responses, Inbox shows the saved results; Courses opens the course. Paste remains available when ChatGPT cannot create a file.
+
 ## Source summaries
 
 ChatGPT can return a `study-digest/1` block for source items it opened. Import it under **Import source summaries** on the matching snapshot page. Each entry has an item ID and a one-line summary of at most 200 characters. Saved summaries appear beside Library items only while the revision, path and conversation context match. Corrections append a version; retrying an old summary does not replace a newer correction. Summaries remain unverified navigation aids. Original text and saved snapshots stay unchanged.
@@ -130,7 +132,7 @@ New snapshots include matching summaries in their navigation maps. The snapshot 
 
 ## Courses
 
-Ask ChatGPT for a course using your uploaded Library, then paste the returned `study-course/1` JSON in **Courses**. The app detects its export reference and requires that snapshot in your account. It checks module prerequisites, item references, exclusions and required fields before saving. Reimporting an unchanged outline opens the same course.
+Ask ChatGPT for a course using your uploaded Library, then import the returned file in **Courses**. The app detects its export reference and requires that snapshot in your account. It checks module prerequisites, item references, exclusions and required fields before saving. Reimporting an unchanged outline opens the same course.
 
 Courses show the outline, independent proofs, source accounting, exclusions and open questions. Unassigned sources are reported rather than treated as covered. These checks validate structure and references; they do not verify explanations, lesson quality or mastery.
 

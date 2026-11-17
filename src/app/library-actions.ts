@@ -2,9 +2,11 @@
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadLibrarySources, loadLibraryArtifacts } from "@/lib/library-queries";
-import { loadExportRevisions } from "@/lib/export-queries";
+import { loadExportManifest, loadExportRevisions } from "@/lib/export-queries";
 import { loadConversationContexts } from "@/lib/conversation-queries";
 import { prepareLibraryExport } from "@/lib/library-pack";
+import { parseDigest } from "@/lib/library-digest";
+import { revalidatePath } from "next/cache";
 
 export async function prepareProjectExport(form: FormData) {
   const { supabase } = await requireAccount();
@@ -21,4 +23,17 @@ export async function prepareProjectExport(form: FormData) {
   const { error } = await supabase.rpc("save_library_export", { p_manifest: manifest });
   if (error) throw new Error("Could not save the Library snapshot. Check migration 010 and retry.");
   redirect(`/library/exports/${manifest.export_id}`);
+}
+
+export async function importLibraryDigest(_previous: { error?: string; saved?: number } | null, form: FormData): Promise<{ error?: string; saved?: number }> {
+  const { supabase } = await requireAccount();
+  const manifest = await loadExportManifest(supabase, String(form.get("export_id") ?? ""));
+  if (!manifest) return { error: "Library snapshot not found in your account." };
+  let digest;
+  try { digest = parseDigest(String(form.get("digest") ?? ""), manifest); }
+  catch (error) { return { error: error instanceof Error ? error.message : "Invalid digest JSON." }; }
+  const { data, error } = await supabase.rpc("save_library_digest", { p_export_id: manifest.export_id, p_items: digest.items });
+  if (error) return { error: "Could not save summaries. Check migration 015 and retry." };
+  revalidatePath("/library");
+  return { saved: data as number };
 }

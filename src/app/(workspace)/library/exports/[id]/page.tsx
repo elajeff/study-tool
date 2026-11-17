@@ -5,6 +5,7 @@ import { loadExportManifest, loadExportRevisions } from "@/lib/export-queries";
 import { conversationContextText } from "@/lib/conversation-context";
 import { inspectImportText } from "@/lib/import-privacy";
 import { buildLibraryFiles, LibraryFileSizeError } from "@/lib/library-files";
+import { DigestImporter } from "@/components/DigestImporter";
 
 export default async function ExportPage({ params }: { params: Promise<{ id: string }> }) {
   const { supabase } = await requireAccount();
@@ -43,6 +44,10 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
       {blocked && <p>Known credential patterns were found. Sanitize the source and prepare a new snapshot before downloading.</p>}
       <details><summary>View study-library.md</summary><pre className="library-text">{files[0].text}</pre></details>
       <p><Link href="/courses">Import the returned course</Link></p>
+      <details><summary>Import source summaries</summary>
+        <p>Paste the study-digest block for this snapshot. Summaries are unverified navigation aids; they do not replace source text.</p>
+        <DigestImporter exportId={manifest.export_id} />
+      </details>
     </section>
     <section className="panel"><p>Saved reference: <code>{manifest.export_id}</code></p>
       <p>This snapshot retains the selected revisions and import context. Later imports do not update it. Original collection omissions remain unknown.</p>

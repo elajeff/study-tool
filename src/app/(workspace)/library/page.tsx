@@ -3,6 +3,9 @@ import { requireAccount } from "@/lib/auth";
 import { loadLibrarySources, loadLibraryArtifacts } from "@/lib/library-queries";
 import { buildLibraryMaps } from "@/lib/library-map";
 import { prepareProjectExport } from "@/app/library-actions";
+import { loadConversationContexts } from "@/lib/conversation-queries";
+import { loadLibraryDigests } from "@/lib/digest-queries";
+import { currentLibraryDigests } from "@/lib/library-digest";
 
 export default async function LibraryPage({ searchParams }: {
   searchParams: Promise<{ source?: string; map?: string }>;
@@ -13,6 +16,9 @@ export default async function LibraryPage({ searchParams }: {
     .sort((a, b) => a.short_code.localeCompare(b.short_code, undefined, { numeric: true }));
   const source = query.source ? sources.find(row => row.short_code === query.source) : sources[0];
   const artifacts = source ? await loadLibraryArtifacts(supabase, source.id) : [];
+  const revisionIds = artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []);
+  const contexts = source && ["chatgpt", "claude"].includes(source.kind) ? await loadConversationContexts(supabase, revisionIds) : new Map();
+  const digests = currentLibraryDigests(artifacts, contexts, await loadLibraryDigests(supabase, revisionIds));
   const maps = source ? buildLibraryMaps(source, artifacts) : [];
   const map = query.map ? maps.find(row => row.id === query.map) : maps[0];
   return <>
@@ -44,7 +50,9 @@ export default async function LibraryPage({ searchParams }: {
             ? entry.artifact.current_revision_id && `/sources/revisions/${entry.artifact.current_revision_id}`
             : { pathname: "/library", query: { source: source.short_code, map: entry.id } };
           return <li key={entry.id}>{href ? <Link href={href}>{entry.id} · {entry.label}</Link>
-            : <span>{entry.id} · {entry.label}</span>}</li>;
+            : <span>{entry.id} · {entry.label}</span>}
+            {entry.artifact && digests.has(entry.artifact.id) && <p>AI summary, unverified: {digests.get(entry.artifact.id)!.summary}</p>}
+          </li>;
         })}</ul>
         {!map.entries.length && <p>No saved items in this source.</p>}
         {map.next && <Link href={{ pathname: "/library", query: { source: source.short_code, map: map.next } }}>Next map page</Link>}

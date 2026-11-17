@@ -35,6 +35,24 @@ test("long Unicode summaries keep all items reachable within map size limits", (
   for (const item of saved.items) assert.ok(saved.maps.some(map => map.text.includes(item.id + "  ")));
 });
 
+test("repository exports bind first-save origin and exclusions while older imports remain unknown", () => {
+  const collections = [{ source, artifacts: [artifact] }];
+  const old = prepareLibraryExport(collections, [revision], new Map());
+  assert.equal(old.origins, undefined);
+  const archive = { format: "study-repository/1" as const, kind: "archive" as const, url: null, commit: null, excluded: ["generated.js", "unchecked.md"] };
+  const recorded = { ...revision, import_id: "first-run", repository_origin: archive };
+  const saved = prepareLibraryExport(collections, [recorded], new Map());
+  assert.equal(saved.items[0].origin_import_id, "first-run");
+  assert.deepEqual(saved.origins?.[0].origin.excluded, archive.excluded);
+  const text = buildLibraryFiles(saved, [recorded]).map(file => file.text).join("\n");
+  assert.ok(text.includes("original repository commit is unknown"));
+  assert.ok(text.includes("not a verified current checkout"));
+  assert.ok(text.includes(content));
+  const github = { ...archive, kind: "github" as const, url: "https://github.com/example/project", commit: "a".repeat(40) };
+  const pinned = prepareLibraryExport(collections, [{ ...recorded, repository_origin: github }], new Map());
+  assert.ok(buildLibraryFiles(pinned, [recorded])[0].text.includes(github.commit));
+});
+
 test("snapshots keep mixed-source identities and hashes stable regardless of selection order", () => {
   const notes = { ...source, id: "notes", short_code: "V1", kind: "obsidian" };
   const note = { ...artifact, id: "note", short_code: "N001", current_revision_id: "note-revision" };

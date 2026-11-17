@@ -25,7 +25,7 @@ export async function prepareProjectExport(form: FormData) {
     form.get("learning") === "include" ? loadLearningSnapshot(supabase) : undefined]);
   const manifest = prepareLibraryExport(collections, revisions, contexts, digests, learning);
   const { error } = await supabase.rpc("save_library_export", { p_manifest: manifest });
-  if (error) throw new Error("Could not save the Library snapshot. Check migration 017 and retry.");
+  if (error) throw new Error("Could not save the Library snapshot. Check migration 019 and retry.");
   redirect(`/library/exports/${manifest.export_id}`);
 }
 

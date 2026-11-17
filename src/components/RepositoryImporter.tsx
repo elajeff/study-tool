@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { readImportFiles, type ImportFile } from "@/lib/import-files";
 import { inspectRepositoryText, previewRepository, shouldImportRepositoryFile, type RepositoryFile } from "@/lib/repository-import";
 import { loadRepositoryFiles } from "@/lib/source-queries";
+import type { RepositoryOrigin } from "@/lib/repository-origin";
 
 type Repository = { id: string; name: string };
 type ReviewedFile = ImportFile & ReturnType<typeof inspectRepositoryText>;
@@ -73,7 +74,9 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       const entries = rows.map((row) => ({ artifact_id: row.previous?.artifact_id ?? null, path: row.file.path, content: row.file.body,
         expected_path: row.previous?.path ?? null, expected_revision_id: row.previous?.revision_id ?? null }));
       if (new Blob([JSON.stringify(entries)]).size > 35 * 1024 * 1024) throw new Error("The import exceeds 35 MiB of JSON. Select fewer files.");
-      const { error } = await createClient().rpc("accept_source_import", { p_source_id: sourceId, p_entries: entries });
+      const origin: RepositoryOrigin = { format: "study-repository/1", kind: "archive", url: null, commit: null,
+        excluded: [...skipped, ...files.filter(file => !selected.has(file.path)).map(file => file.path)] };
+      const { error } = await createClient().rpc("accept_repository_import", { p_source_id: sourceId, p_entries: entries, p_origin: origin });
       if (error) throw new Error(error.message);
       setFiles([]); setSkipped([]); setMessage("Import accepted."); router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import could not be confirmed. Select the ZIP again before retrying."); }

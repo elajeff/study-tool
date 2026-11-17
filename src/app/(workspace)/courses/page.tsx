@@ -6,8 +6,9 @@ import { CourseImporter } from "@/components/CourseImporter";
 import { ModuleImporter } from "@/components/ModuleImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard } from "@/lib/module-request";
+import { lessonStudyCard } from "@/lib/lesson-request";
 
-export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string }> }) {
+export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string }> }) {
   const { supabase } = await requireAccount();
   const query = await searchParams;
   const { data: recent, error } = await supabase.from("courses").select("id,title:raw_block->>title")
@@ -17,6 +18,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   if (query.id && !result) notFound();
   const selected = result?.course.modules.find(item => item.id === query.module);
   const steps = query.id && selected ? (await loadCourseSteps(supabase, query.id)).filter(step => step.module_key === selected.id).sort((a, b) => a.position - b.position) : [];
+  const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps[0];
   return <>
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
@@ -44,12 +46,20 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {query.module && !selected && <p role="status">Module not found in this course.</p>}
     {result && query.id && selected && <section className="panel" id="module-plan"><h2>{selected.id} · Lesson plan</h2>
       {steps.length ? <>
-        <ol>{steps.map(step => <li key={step.row_id}><strong>{step.id} · {step.kind}</strong><p>{step.goal}</p><p>Done when: {step.done_when}</p><p>Sources: {step.sources.join(", ")}.</p></li>)}</ol>
+        <ol>{steps.map(step => <li key={step.row_id}>
+          <Link href={{ pathname: "/courses", query: { id: query.id, module: selected.id, step: step.row_id }, hash: "lesson-focus" }} aria-current={step.row_id === currentStep?.row_id ? "step" : undefined}>{step.id} · {step.kind}</Link>
+          <p>{step.goal}</p><p>Done when: {step.done_when}</p><p>Sources: {step.sources.join(", ")}.</p>
+        </li>)}</ol>
         <p>The saved plan keeps its lesson identities. Reimporting the same plan is safe; replacing it with different steps is rejected.</p>
       </> : <><p>Request a plan from ChatGPT, then import its JSON here. Preparing or importing a plan does not demonstrate mastery.</p>
         <CourseLessonCard key={`${query.id}/${selected.id}`} text={modulePlanningCard(query.id, result.course, selected)} />
       </>}
       <details open={!steps.length}><summary>Import a plan</summary><ModuleImporter key={`${query.id}/${selected.id}`} courseId={query.id} moduleId={selected.id} /></details>
+    </section>}
+    {result && query.id && selected && query.step && !currentStep && <p role="status">Lesson not found in this module.</p>}
+    {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Study request</h2>
+      <p>{currentStep.goal}</p><p>Done when: {currentStep.done_when}</p>
+      <CourseLessonCard key={currentStep.row_id} text={lessonStudyCard(query.id, result.course, selected, currentStep)} />
     </section>}
   </>;
 }

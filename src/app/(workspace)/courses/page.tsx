@@ -11,6 +11,7 @@ import { nextCourseLesson } from "@/lib/course";
 import { loadAssessments } from "@/lib/assessment-queries";
 import { latestApproved } from "@/lib/progress";
 import { LessonControls } from "@/components/LessonControls";
+import { CourseReviewCard } from "@/components/CourseReviewCard";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string }> }) {
   const { supabase } = await requireAccount();
@@ -54,6 +55,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         {!!result.unassigned.length && <p>Unassigned items: {result.unassigned.join(", ")}</p>}
       </details>
     </section>}
+    {result && <CourseReviewCard key={query.id} course={result.course} />}
     {query.module && !selected && <p role="status">Module not found in this course.</p>}
     {result && query.id && selected && <section className="panel" id="module-plan"><h2>{selected.id} · Lesson plan</h2>
       {steps.length ? <>

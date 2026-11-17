@@ -11,6 +11,6 @@ export function CourseLessonCard({ text }: { text: string }) {
     <p>Copy this request and paste it into the ChatGPT conversation containing your Study Library. Nothing is sent automatically.</p>
     <button type="button" className="button button-dark" onClick={copy}>Copy request for ChatGPT</button>
     <p role="status">{status}</p>
-    <details><summary>Lesson card text</summary><textarea aria-label="Lesson card text" className="input" readOnly rows={12} value={text} /></details>
+    <details><summary>Request text</summary><textarea aria-label="Request text" className="input" readOnly rows={12} value={text} /></details>
   </>;
 }

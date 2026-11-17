@@ -36,6 +36,8 @@ export default async function LibraryPage({ searchParams }: {
             <input type="checkbox" name="source" value={source.id} defaultChecked /> {source.short_code} · {source.name}
           </label>)}
         </fieldset>
+        <p><label><input type="checkbox" name="learning" value="include" /> Include learning history</label></p>
+        <p>Adds saved course titles and reviewed assessment summaries from this account. Leave unchecked to export only the selected sources.</p>
         <p><button className="button button-light">Save Library snapshot</button></p>
       </form>}
       {query.source && !source && <p role="status">Source not found in your Library.</p>}

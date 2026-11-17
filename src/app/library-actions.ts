@@ -8,6 +8,7 @@ import { prepareLibraryExport } from "@/lib/library-pack";
 import { parseDigest } from "@/lib/library-digest";
 import { revalidatePath } from "next/cache";
 import { loadLibraryDigests } from "@/lib/digest-queries";
+import { loadLearningSnapshot } from "@/lib/learning-snapshot";
 
 export async function prepareProjectExport(form: FormData) {
   const { supabase } = await requireAccount();
@@ -20,10 +21,11 @@ export async function prepareProjectExport(form: FormData) {
   const revisions = await loadExportRevisions(supabase, sources.map(source => source.id), ids);
   const chatIds = collections.filter(({ source }) => ["chatgpt", "claude"].includes(source.kind))
     .flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
-  const [contexts, digests] = await Promise.all([loadConversationContexts(supabase, chatIds), loadLibraryDigests(supabase, ids)]);
-  const manifest = prepareLibraryExport(collections, revisions, contexts, digests);
+  const [contexts, digests, learning] = await Promise.all([loadConversationContexts(supabase, chatIds), loadLibraryDigests(supabase, ids),
+    form.get("learning") === "include" ? loadLearningSnapshot(supabase) : undefined]);
+  const manifest = prepareLibraryExport(collections, revisions, contexts, digests, learning);
   const { error } = await supabase.rpc("save_library_export", { p_manifest: manifest });
-  if (error) throw new Error("Could not save the Library snapshot. Check migration 016 and retry.");
+  if (error) throw new Error("Could not save the Library snapshot. Check migration 017 and retry.");
   redirect(`/library/exports/${manifest.export_id}`);
 }
 

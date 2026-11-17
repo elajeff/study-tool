@@ -25,6 +25,13 @@ begin
   assert saved=snapshot_id and public.save_library_export(snapshot)=snapshot_id;
   assert (select count(*)=1 from public.library_exports);
   for invalid in select value from jsonb_array_elements(jsonb_build_array(
+    jsonb_set(snapshot,'{card}','{}'),jsonb_set(snapshot,'{card}',to_jsonb(repeat('x',6001))))) loop
+    begin
+      perform public.save_library_export(invalid);
+      raise exception 'Invalid card accepted';
+    exception when invalid_parameter_value then null; end;
+  end loop;
+  for invalid in select value from jsonb_array_elements(jsonb_build_array(
     jsonb_set(snapshot,'{sources,0,kind}','"claude"'),
     jsonb_set(snapshot,'{items,0,content_hash}','"wrong"'),
     jsonb_set(snapshot,'{items,0,source_id}','"96000000-0000-4000-8000-000000000002"'),

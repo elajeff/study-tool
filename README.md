@@ -106,6 +106,12 @@ In Library, select collections and choose **Save Library snapshot**. The saved p
 
 Snapshots contain saved imports, which may omit parts of the original collections. Preparing a snapshot does not send it to an AI service. Selected source text is limited to 35 MiB; larger libraries need separate selections.
 
+From the saved page, download `study-library.md` and upload it to a ChatGPT Project. The same file includes authoring instructions, maps, exact source text and saved conversation context. Ask ChatGPT to follow those instructions for your learning request. It should inspect relevant items itself, use general knowledge where needed and name anything it cannot retrieve.
+
+The instructions request a complete course outline as downloadable JSON, with a JSON block as fallback. ChatGPT Web still requires manual file upload and response transfer. Study Tool does not automate its website or require a paid AI API. Upload limits and reading behavior depend on the account and model; including text does not prove ChatGPT read it.
+
+The download page flags uncertain credential values without removing them. Known token/private-key patterns block the download. These checks do not identify all private information; review the selected material before sharing it.
+
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.

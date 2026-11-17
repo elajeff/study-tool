@@ -123,7 +123,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   }
 
   return <section className="panel vault-import">
-    <h2>Import notes</h2>
+    <h2>Import Obsidian notes</h2>
     <p>Choose the same vault when reimporting. Preview files before accepting them. Original files are not changed.</p>
     <div className="vault-controls">
       <div><label htmlFor="import-vault">Vault</label><select className="input" id="import-vault" value={sourceId} disabled={busy}
@@ -136,10 +136,14 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
         <button className="button button-light" type="submit" disabled={busy}>Create vault</button>
       </div></form>
     </div>
+    {!canImport && <p>Create or select a vault above to enable import.</p>}
     <div className="import-actions"><label className={`button button-dark ${busy || !canImport ? "disabled" : ""}`}>
-      <FileUp size={17} /> Preview Markdown<input type="file" multiple accept=".zip,.md,text/markdown" className="import-file"
+      <FileUp size={17} /> Import Obsidian notes<input aria-label="Import Obsidian notes" type="file" multiple accept=".zip,.md,text/markdown" className="import-file"
         disabled={busy || !canImport} onChange={(event) => { void prepare(event.target.files); event.target.value = ""; }} /></label>
-      <button className="button button-light" disabled={busy} type="button" onClick={() => void exportNotes()}><Download size={16} /> Export ZIP</button></div>
+      </div>
+    <p>Choose Markdown files or a ZIP of your vault, review the notes, then save them below.</p>
+    <details className="import-export"><summary>Export saved notes</summary><p>
+      <button className="button button-light" disabled={busy} type="button" onClick={() => void exportNotes()}><Download size={16} /> Export ZIP</button></p></details>
     {message && <p role="status" className="import-message">{message}</p>}
     {!!chatMatches.length && <details><summary>Conversation references ({chatMatches.length})</summary>
       <p>Provider URLs and IDs identify related saved chats. They do not prove equal text or branches. AI Chats files remain outside note imports; notes elsewhere are kept.</p>
@@ -149,7 +153,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
         </span>)}
       </>}</li>)}</ul>
     </details>}
-    {files.length > 0 && <div className="import-preview"><h3>Preview ({rows.length})</h3>
+    {files.length > 0 && <div className="import-preview"><h3>Review notes ({rows.length})</h3>
       <p>Files missing from this import are not deleted. Confirm renames by selecting the existing note. Older imported notes may need review.</p>
       {rows.map((row) => <article className="import-row" key={row.file.path}>
         <strong>{row.file.path}</strong><span>{row.previous && row.previous.path !== row.file.path ? "Rename · " : ""}{row.status}</span>
@@ -174,8 +178,10 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
           <h4>Incoming file</h4><pre>{row.file.body}</pre>
         </details>
       </article>)}
-      <div className="import-actions"><button className="button button-dark" disabled={busy || unresolved} type="button" onClick={() => void accept()}>Accept import</button>
+      <div className="import-save" aria-label="Save Obsidian import"><div><h3>Save notes to your vault</h3><p>{rows.length} notes · {vaults.find(vault => vault.id === sourceId)?.name}</p>
+        {!!unresolved && <p>Resolve the marked conflicts before saving.</p>}</div><div className="import-actions"><button className="button button-dark" disabled={busy || unresolved} type="button" onClick={() => void accept()}>{busy ? "Saving…" : "Save notes to vault"}</button>
         <button className="button button-light" disabled={busy} type="button" onClick={() => { setFiles([]); setMessage(""); setChatMatches([]); }}>Cancel preview</button></div>
+      </div>
     </div>}
   </section>;
 }

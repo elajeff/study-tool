@@ -53,34 +53,35 @@ export function ConversationPreview({ sources, sourceId }: { sources: LibrarySou
   const conversation = result?.conversations[selected], slice = conversation?.pages[page];
   const credentialWarning = conversation ? inspectImportText(conversation.text).review : null;
   return <>
-    <section className="panel"><h2>Preview an export</h2>
+    <section className="panel conversation-import"><h2>1. Import conversations</h2>
       <p>Raw exports are processed in this browser. Saving sends the prepared conversations to your Study Tool account. Keep the original exports separately.</p>
       <p>Recognizable access tokens and private keys are removed from preview text. Other possible credentials are kept with warnings. Personal information and unrecognized secrets may remain.</p>
-      <label htmlFor="chat-provider">Export format</label>
+      <div className="conversation-controls"><div><label htmlFor="chat-provider">Export format</label>
       <select id="chat-provider" className="input" value={provider} disabled={busy} onChange={event => { setProvider(event.target.value as ChatProvider); setResult(null); setEntries([]); setError(""); setSaved(false); }}>
         <option value="chatgpt">ChatGPT</option><option value="claude">Claude</option>
-      </select>
-      <label htmlFor="chat-source">Saved conversation source</label>
+      </select></div><div>
+      <label htmlFor="chat-source">Save into collection</label>
       <select id="chat-source" className="input" value={sourceId} disabled={busy} onChange={event => router.push(`/conversations?source=${event.target.value}`)}>
         {!sources.length && <option value="">Create a source to save conversations</option>}
         {sources.map(item => <option key={item.id} value={item.id}>{item.short_code} · {item.name} ({item.kind})</option>)}
-      </select>
-      <form onSubmit={createSource}><label htmlFor="chat-source-name">New source name</label>
+      </select></div></div>
+      <details open={!source}><summary>Create a conversation collection</summary>
+      <form onSubmit={createSource} className="stack"><label htmlFor="chat-source-name">New collection name</label>
         <input id="chat-source-name" className="input" required maxLength={160} value={name} disabled={busy} onChange={event => setName(event.target.value)} />
-        <button className="button button-light" disabled={busy}>Create conversation source</button>
-      </form>
-      <p>Reuse the same source for reimports. Missing conversations are retained.</p>
+        <button className="button button-light" disabled={busy}>Create collection</button>
+      </form></details>
+      <p>Reuse the same collection for reimports. Missing conversations are retained.</p>
       <label htmlFor="chat-file">Conversations JSON</label><input id="chat-file" className="input" type="file" multiple accept=".json,application/json" disabled={busy}
         onChange={event => { setFiles(Array.from(event.target.files ?? [])); setResult(null); setEntries([]); setError(""); setSaved(false); }} />
-      <p><button className="button button-dark" disabled={!files.length || busy} onClick={() => void preview()}>{busy ? "Working…" : "Preview conversations"}</button></p>
+      <p><button className="button button-dark" disabled={!files.length || busy} onClick={() => void preview()}>{busy ? "Working…" : "Review selected files"}</button></p>
+      <p>Choosing and reviewing files does not save them. Use the save bar after the review to add them to your Library.</p>
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">Conversations saved. <Link href="/library">Open Library</Link></p>}
     </section>
-    {result && <section className="panel"><h2>Preview results</h2>
+    {result && <section className="panel conversation-review"><h2>2. Review conversations</h2>
       <p>Conversations: {result.conversations.length} · Empty: {result.empty} · Identical duplicates: {result.duplicates} · Rejected: {result.rejected.length}.</p>
       <p>Possible credential values removed: {result.conversations.reduce((total, item) => total + item.redactions, 0)}. Hidden reasoning, tools and unselected branches are excluded. Visible code and mathematics are not shortened; credential redactions still apply.</p>
-      {entries.length ? <><p>New: {entries.filter(item => item.status === "New").length} · Updated: {entries.filter(item => item.status === "Updated").length} · Unchanged: {entries.filter(item => item.status === "Unchanged").length}.</p>
-        <button className="button button-dark" disabled={busy} onClick={() => void accept()}>Save conversations ({entries.length})</button></>
+      {entries.length ? <p>New: {entries.filter(item => item.status === "New").length} · Updated: {entries.filter(item => item.status === "Updated").length} · Unchanged: {entries.filter(item => item.status === "Unchanged").length}.</p>
         : <p>{result.conversations.length ? "Select or create a source matching this export format before saving." : "No conversations available to save."}</p>}
       {!!result.rejected.length && <details><summary>Rejected records</summary><ul>{result.rejected.map(item => <li key={item.index}>Record {item.index + 1}: {item.reason}</li>)}</ul></details>}
       {!!result.conversations.length && <><label htmlFor="chat-conversation">Conversation</label>
@@ -96,6 +97,10 @@ export function ConversationPreview({ sources, sourceId }: { sources: LibrarySou
         <button className="button button-light" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous page</button>{" "}
         <button className="button button-light" disabled={page + 1 === conversation.pages.length} onClick={() => setPage(page + 1)}>Next page</button>
       </>}
+    </section>}
+    {!!entries.length && result && <section className="panel import-save" aria-label="Save conversation import">
+      <div><h2>3. Save to your Library</h2><p>{entries.length} conversations · Collection: {source?.name}</p></div>
+      <button className="button button-dark" disabled={busy} onClick={() => void accept()}>{busy ? "Saving…" : "Save conversations to Library"}</button>
     </section>}
   </>;
 }

@@ -65,3 +65,16 @@ test("reading pages retain every character and split only before a new user turn
   for (const page of chat.pages.slice(1)) assert.ok(chat.messages.some(item => item.role === "user" && item.start === page.start));
   for (const item of chat.messages) assert.ok(chat.pages.some(page => page.start <= item.start && page.end >= item.end));
 });
+
+test("overlapping shards deduplicate identical copies and reject conflicting versions", () => {
+  const raw = JSON.stringify([record]);
+  const duplicate = parseConversationExport([raw, raw]);
+  assert.equal(duplicate.conversations.length, 1);
+  assert.equal(duplicate.duplicates, 1);
+  const changed = JSON.stringify([{ ...record, title: "Changed title" }]);
+  const conflict = parseConversationExport([raw, changed, raw]);
+  assert.equal(conflict.conversations.length, 0);
+  assert.equal(conflict.rejected.length, 3);
+  assert.throws(() => parseConversationExport([raw, "{}"]), /JSON arrays/);
+  assert.throws(() => parseConversationExport([raw, "not JSON"]), SyntaxError);
+});

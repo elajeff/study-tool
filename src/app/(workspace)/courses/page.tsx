@@ -27,6 +27,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const steps = allSteps.filter(step => step.module_key === selected?.id).sort((a, b) => a.position - b.position);
   const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps.find(step => !step.completed_at) ?? steps[0];
   const next = result ? nextCourseLesson(result.course, allSteps) : null;
+  const completed = allSteps.filter(step => step.completed_at).length;
+  const unplanned = result?.course.modules.filter(module => !allSteps.some(step => step.module_key === module.id)).length ?? 0;
   const assessmentTopic = currentStep ? `course-step:${currentStep.row_id}` : undefined;
   const assessment = assessmentTopic ? latestApproved(await loadAssessments(supabase, "approved", assessmentTopic)).get(assessmentTopic) : undefined;
   return <>
@@ -42,6 +44,11 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <p>Target: {result.course.target}</p><p>Starting level: {result.course.assumed_level}</p>
       <p><Link href={`/library/exports/${result.course.export_id}`}>Saved Library snapshot</Link></p>
       <p>Source items without a module or exclusion: {result.unassigned.length}. This is file accounting, not a check of teaching completeness.</p>
+      <div className="course-progress-heading"><p>{result.course.modules.length} modules · {completed} of {allSteps.length} planned lessons done</p>
+        <progress className="course-progress" aria-label="Planned lessons completed" value={completed} max={allSteps.length || 1} />
+        <p>{unplanned ? `${unplanned} modules still need a lesson plan.` : "All modules have lesson plans."}</p>
+        <p>Done records study activity. Approved assessments track demonstrated knowledge separately.</p>
+      </div>
       {next ? <p><Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) }, hash: next.step ? "lesson-focus" : "module-plan" }}>
         {next.step ? `Continue at ${next.step.id}` : `Prepare ${next.module.id} lesson plan`}
       </Link></p> : <p>All course lessons are marked done. This does not establish mastery.</p>}

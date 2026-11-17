@@ -1,0 +1,64 @@
+\set ON_ERROR_STOP on
+begin;
+set local plpgsql.check_asserts=on;
+insert into auth.users(id,email) values
+('00000000-0000-4000-8000-000000000096','inbox-a@example.test'),
+('00000000-0000-4000-8000-000000000097','inbox-b@example.test');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000096',true);
+insert into public.sources(id,user_id,kind,name) values('96000000-0000-4000-8000-000000000001',auth.uid(),'repository','Synthetic source');
+select public.accept_source_import('96000000-0000-4000-8000-000000000001','[{"path":"one.md","content":"Source text","artifact_id":null,"expected_path":null,"expected_revision_id":null}]');
+do $$
+declare manifest jsonb; outline jsonb; plan jsonb; batch jsonb; result jsonb; course_uuid uuid; step_uuid uuid; receipt jsonb; key text := 'X'||repeat('6',64);
+begin
+ select jsonb_build_object('format','study-export/3','export_id',key,
+  'maps','[]'::jsonb,'sources',jsonb_build_array(jsonb_build_object('id',s.id,'name',s.name,'kind',s.kind,'short_code',s.short_code)),
+  'items',jsonb_build_array(jsonb_build_object('id','R1/F001','source_id',s.id,'artifact_id',a.id,'revision_id',r.id,'path',a.path,'content_hash',r.content_hash)))
+ into manifest from public.sources s join public.source_artifacts a on a.source_id=s.id join public.source_revisions r on r.id=a.current_revision_id;
+ perform public.save_library_export(manifest);
+ outline := jsonb_build_object('format','study-course/1','export_id',key,'title','Synthetic outline','goal','Learn','target','Independent','assumed_level','Beginner',
+  'modules',jsonb_build_array(jsonb_build_object('id','M01','title','First','outcome','Explain','proof','Explain alone','needs','[]'::jsonb,'sources','["R1/F001"]'::jsonb,'steps_estimate',1)),
+  'not_covered','[]'::jsonb,'open_questions','[]'::jsonb);
+ batch := jsonb_build_array(jsonb_build_object('kind','course','course',outline),jsonb_build_object('kind','digest','export_id',key,'items','[{"id":"R1/F001","summary":"Source summary."}]'::jsonb));
+ result := public.save_study_inbox(batch);course_uuid := (result->0->>'id')::uuid;
+ assert result->0->>'created'='true' and result->1->>'new_items'='1';
+ result := public.save_study_inbox(batch);
+ assert result->0->>'created'='false' and result->1->>'new_items'='0';
+ assert (select count(*)=1 from public.courses);
+ plan := jsonb_build_object('format','study-module/1','course_id',course_uuid,'export_id',key,'module','M01',
+  'steps',jsonb_build_array(jsonb_build_object('id','M01.S1','kind','explain','goal','Explain source','sources','["R1/F001"]'::jsonb,'done_when','Explain without help')));
+ perform public.save_study_inbox(jsonb_build_array(jsonb_build_object('kind','module','course_id',course_uuid,'plan',plan)));
+ select id into step_uuid from public.course_steps;
+ receipt := jsonb_build_object('topic','course-step:'||step_uuid::text,'step',step_uuid,'date','2026-11-15','level',3,'task','Explain independently',
+  'evidence','A concrete independent explanation for this synthetic check.','independent',true,'hints','none','artifact','','next_step','Practice','status','approved');
+ batch := jsonb_build_array(jsonb_build_object('kind','evidence','receipt',receipt,'fingerprint',repeat('a',64)));
+ result := public.save_study_inbox(batch);
+ assert result->0->>'created'='true';
+ assert (select status='pending' from public.assessment_receipts);
+ result := public.save_study_inbox(batch);assert result->0->>'created'='false';
+ begin
+  perform public.save_study_inbox(jsonb_build_array(
+   jsonb_build_object('kind','course','course',outline||jsonb_build_object('title','Must roll back')),
+   jsonb_build_object('kind','digest','export_id',key,'items','[{"id":"R1/F001","summary":"Must roll back."}]'::jsonb),
+   jsonb_build_object('kind','module','course_id',course_uuid,'plan',jsonb_set(plan,'{steps,0,goal}','"Different plan"'))));
+  assert false,'A late failure must roll back the entire pasted response';
+ exception when unique_violation then null; end;
+ assert (select count(*)=1 from public.courses);
+ assert (select count(*)=1 from public.source_digests);
+ perform set_config('test.inbox_step',step_uuid::text,true);
+ perform set_config('test.inbox_course',outline::text,true);
+ perform set_config('test.inbox_receipt',receipt::text,true);
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000097',true);
+do $$ begin
+ assert not exists(select 1 from public.courses);
+ begin
+  perform public.save_study_inbox(jsonb_build_array(jsonb_build_object('kind','course','course',current_setting('test.inbox_course')::jsonb)));
+  assert false,'Foreign exports cannot be imported';
+ exception when insufficient_privilege then null; end;
+ begin
+  perform public.save_study_inbox(jsonb_build_array(jsonb_build_object('kind','evidence','receipt',current_setting('test.inbox_receipt')::jsonb,'fingerprint',repeat('b',64))));
+  assert false,'Foreign persistent step references must fail';
+ exception when foreign_key_violation then null; end;
+end $$;
+rollback;

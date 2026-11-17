@@ -16,14 +16,15 @@ export function ConversationPreview({ sources, sourceId }: { sources: LibrarySou
   const [entries, setEntries] = useState<Awaited<ReturnType<typeof prepareConversationEntries>>>([]);
   const [result, setResult] = useState<ReturnType<typeof parseConversationExport> | null>(null);
   const [selected, setSelected] = useState(0), [page, setPage] = useState(0), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const canImport = source?.kind === provider;
   async function preview() {
-    if (!files.length) return;
+    if (!canImport || !files.length) return;
     setBusy(true); setError(""); setSaved(false); setEntries([]); setResult(null); setSelected(0); setPage(0);
     try {
       if (files.reduce((size, file) => size + file.size, 0) > 100 * 1024 * 1024) throw new Error("Select JSON shards smaller than 100 MiB combined.");
       const texts = []; for (const file of files) texts.push(await file.text());
       const parsed = parseConversationExport(texts, provider); setResult(parsed);
-      if (source?.kind === provider && parsed.conversations.length)
+      if (parsed.conversations.length)
         setEntries(await prepareConversationEntries(parsed.conversations, await loadConversationState(createClient(), sourceId)));
     } catch (error) { setError(error instanceof SyntaxError ? "This file is not valid JSON." : error instanceof Error ? error.message : "Could not read the file."); }
     finally { setBusy(false); }
@@ -60,20 +61,21 @@ export function ConversationPreview({ sources, sourceId }: { sources: LibrarySou
       <select id="chat-provider" className="input" value={provider} disabled={busy} onChange={event => { setProvider(event.target.value as ChatProvider); setResult(null); setEntries([]); setError(""); setSaved(false); }}>
         <option value="chatgpt">ChatGPT</option><option value="claude">Claude</option>
       </select></div><div>
-      <label htmlFor="chat-source">Save into collection</label>
+      <label htmlFor="chat-source">Choose a collection first</label>
       <select id="chat-source" className="input" value={sourceId} disabled={busy} onChange={event => router.push(`/conversations?source=${event.target.value}`)}>
-        {!sources.length && <option value="">Create a source to save conversations</option>}
+        {!sources.length && <option value="">Create a collection first</option>}
         {sources.map(item => <option key={item.id} value={item.id}>{item.short_code} · {item.name} ({item.kind})</option>)}
       </select></div></div>
-      <details open={!source}><summary>Create a conversation collection</summary>
+      <details open={!canImport}><summary>Create a conversation collection</summary>
       <form onSubmit={createSource} className="stack"><label htmlFor="chat-source-name">New collection name</label>
         <input id="chat-source-name" className="input" required maxLength={160} value={name} disabled={busy} onChange={event => setName(event.target.value)} />
-        <button className="button button-light" disabled={busy}>Create collection</button>
+        <button className="button button-light" disabled={busy || !name.trim()}>Create collection</button>
       </form></details>
       <p>Reuse the same collection for reimports. Missing conversations are retained.</p>
-      <label htmlFor="chat-file">Conversations JSON</label><input id="chat-file" className="input" type="file" multiple accept=".json,application/json" disabled={busy}
+      {!canImport && <p id="chat-collection-required">Create a named {provider === "claude" ? "Claude" : "ChatGPT"} collection or select an existing one above to enable file selection and review.</p>}
+      <label htmlFor="chat-file">Conversations JSON</label><input id="chat-file" className="input" type="file" multiple accept=".json,application/json" disabled={busy || !canImport} aria-describedby={!canImport ? "chat-collection-required" : undefined}
         onChange={event => { setFiles(Array.from(event.target.files ?? [])); setResult(null); setEntries([]); setError(""); setSaved(false); }} />
-      <p><button className="button button-dark" disabled={!files.length || busy} onClick={() => void preview()}>{busy ? "Working…" : "Review selected files"}</button></p>
+      <p><button className="button button-dark" disabled={!canImport || !files.length || busy} onClick={() => void preview()}>{busy ? "Working…" : "Review selected files"}</button></p>
       <p>Choosing and reviewing files does not save them. Use the save bar after the review to add them to your Library.</p>
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">Conversations saved. <Link href="/library">Open Library</Link></p>}

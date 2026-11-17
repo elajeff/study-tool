@@ -8,24 +8,35 @@ import { cleanNotePath, titleFromPath } from "@/lib/notes";
 import { parseEvidence, evidenceFingerprint } from "@/lib/assessments";
 
 export async function importAssessments(formData: FormData) {
-  const { supabase, user, lessons } = await loadStudy();
+  const { supabase, user } = await requireAccount();
   const text = String(formData.get("evidenceText") ?? "");
   const entries = parseEvidence(text);
-  const topics = new Set(lessons.map((lesson) => lesson.topic));
-  for (const entry of entries) {
-    if (!topics.has(entry.topic)) throw new Error(`Unknown topic: ${entry.topic}`);
+  const topics = new Set<string>();
+  if (entries.some(entry => !entry.step)) {
+    const { lessons } = await loadStudy();
+    lessons.forEach(lesson => topics.add(lesson.topic));
   }
-  const rows = entries.map((entry) => ({
-    ...entry,
-    fingerprint: evidenceFingerprint(entry),
-    user_id: user.id,
-    status: "pending",
-  }));
+  const stepIds = entries.flatMap(entry => entry.step ? [entry.step] : []);
+  const knownSteps = new Set<string>();
+  if (stepIds.length) {
+    const { data, error } = await supabase.from("course_steps").select("id").in("id", stepIds);
+    if (error) throw new Error("Could not load course steps for these receipts.");
+    data.forEach(step => knownSteps.add(step.id));
+  }
+  for (const entry of entries) {
+    if (entry.step ? !knownSteps.has(entry.step) : !topics.has(entry.topic))
+      throw new Error(`Unknown assessment topic: ${entry.topic}`);
+  }
+  const rows = entries.map(receipt => {
+    const { step, ...fields } = receipt;
+    return { ...fields, step_id: step ?? null, fingerprint: evidenceFingerprint(receipt), user_id: user.id, status: "pending" };
+  });
   const { error } = await supabase.from("assessment_receipts")
     .upsert(rows, { onConflict: "user_id,fingerprint", ignoreDuplicates: true });
   if (error) throw new Error("Could not import the assessment. Check that the database migration was applied.");
   revalidatePath("/assessments");
   revalidatePath("/dashboard");
+  revalidatePath("/courses");
   redirect("/assessments");
 }
 
@@ -43,6 +54,7 @@ export async function reviewAssessment(formData: FormData) {
   revalidatePath("/assessments");
   revalidatePath("/curriculum");
   revalidatePath("/dashboard");
+  revalidatePath("/courses");
 }
 
 export async function createNote(formData: FormData) {

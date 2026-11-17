@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `013` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `013` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `012` already applied needs only `013`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `014` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `014` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `013` already applied needs only `014`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -131,6 +131,8 @@ The course's continuation button opens the first unfinished lesson in outline or
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.
+
+Saved lesson requests supply a persistent `step` UUID and matching `course-step:<UUID>` topic for receipts. The app accepts only lesson IDs in your account and shows their goals during review. Repeat imports keep the existing receipt and review decision. Existing note-topic receipts remain supported. A receipt reports demonstrated work; importing it does not independently verify that work.
 
 Levels run from 0 (unfamiliar) to 5 (able to transfer the skill to a new problem). Level 3 or higher requires independent work. An assessment can lower an earlier score; the most recent approved assessment is used.
 

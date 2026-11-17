@@ -66,10 +66,14 @@ function claudeNodes(record: Row, excluded: Record<string, number>): { id: strin
   return chain.reverse();
 }
 
-export function parseConversationExport(raw: string, provider: ChatProvider = "chatgpt") {
-  if (raw.length > 100 * 1024 * 1024) throw new ConversationFormatError("Select an export smaller than 100 MiB.");
-  const records: unknown = JSON.parse(raw);
-  if (!Array.isArray(records)) throw new ConversationFormatError("Select a conversations JSON array, not account or settings files.");
+export function parseConversationExport(raw: string | string[], provider: ChatProvider = "chatgpt") {
+  const inputs = typeof raw === "string" ? [raw] : raw;
+  if (inputs.reduce((size, input) => size + input.length, 0) > 100 * 1024 * 1024) throw new ConversationFormatError("Select export shards smaller than 100 MiB combined.");
+  const records = inputs.flatMap(input => {
+    const parsed: unknown = JSON.parse(input);
+    if (!Array.isArray(parsed)) throw new ConversationFormatError("Select conversations JSON arrays, not account or settings files.");
+    return parsed;
+  });
   const conversations: ImportedConversation[] = [], rejected: { index: number; reason: string }[] = [];
   let empty = 0, duplicates = 0;
   const identities = new Map<string, { signature: string; index: number }>(), conflicts = new Set<string>();

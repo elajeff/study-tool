@@ -88,6 +88,8 @@ Claude exports without parent metadata retain their supplied message order and r
 
 Long conversations use reading pages split before a new user turn after roughly 20,000 characters. A large turn can exceed that size. Pages retain the complete text and never split a message; selecting another conversation starts at its first page.
 
+Select multiple JSON export files together when an export is split into shards, within 100 MiB combined. Identical copies are counted once. Conflicting versions of the same conversation are rejected rather than merged; select one version to resolve the conflict.
+
 Recognizable tokens and private keys are removed from the derived preview. Other credential-like values remain with warnings; these checks can miss secrets or flag examples. Original exports are unchanged. Code and mathematics are retained as text, not executed or checked for correctness.
 
 ## Assessments

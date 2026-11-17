@@ -8,11 +8,11 @@ const links = [
   { href: "/dashboard", label: "Dashboard", mobileLabel: "Home", icon: ChartNoAxesCombined },
   { href: "/library", label: "Library", mobileLabel: "Library", icon: Library },
   { href: "/conversations", label: "Conversations", mobileLabel: "Chats", icon: MessagesSquare },
+  { href: "/notes", label: "Notes", mobileLabel: "Notes", icon: FileText },
+  { href: "/repositories", label: "Repositories", mobileLabel: "Code", icon: FolderGit2 },
   { href: "/inbox", label: "Inbox", mobileLabel: "Inbox", icon: Inbox },
   { href: "/courses", label: "Courses", mobileLabel: "Courses", icon: BookOpen },
   { href: "/curriculum", label: "Curriculum", mobileLabel: "Topics", icon: BookOpen },
-  { href: "/notes", label: "Notes", mobileLabel: "Notes", icon: FileText },
-  { href: "/repositories", label: "Repositories", mobileLabel: "Code", icon: FolderGit2 },
   { href: "/assessments", label: "Assessments", mobileLabel: "Reviews", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", mobileLabel: "Settings", icon: Settings },
 ];

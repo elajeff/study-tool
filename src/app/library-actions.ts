@@ -10,23 +10,29 @@ import { revalidatePath } from "next/cache";
 import { loadLibraryDigests } from "@/lib/digest-queries";
 import { loadLearningSnapshot } from "@/lib/learning-snapshot";
 
-export async function prepareProjectExport(form: FormData) {
+export async function prepareProjectExport(_previous: { error: string } | null, form: FormData): Promise<{ error: string }> {
   const { supabase } = await requireAccount();
-  const selected = new Set(form.getAll("source"));
-  const sources = (await loadLibrarySources(supabase)).filter(source => selected.has(source.id));
-  if (!sources.length || sources.length !== selected.size) throw new Error("Select owned Library sources.");
-  const collections = [];
-  for (const source of sources) collections.push({ source, artifacts: await loadLibraryArtifacts(supabase, source.id) });
-  const ids = collections.flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
-  const revisions = await loadExportRevisions(supabase, sources.map(source => source.id), ids);
-  const chatIds = collections.filter(({ source }) => ["chatgpt", "claude"].includes(source.kind))
-    .flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
-  const [contexts, digests, learning] = await Promise.all([loadConversationContexts(supabase, chatIds), loadLibraryDigests(supabase, ids),
-    form.get("learning") === "include" ? loadLearningSnapshot(supabase) : undefined]);
-  const manifest = prepareLibraryExport(collections, revisions, contexts, digests, learning);
-  const { error } = await supabase.rpc("save_library_export", { p_manifest: manifest });
-  if (error) throw new Error("Could not save the Library snapshot. Check migration 019 and retry.");
-  redirect(`/library/exports/${manifest.export_id}`);
+  let exportId: string;
+  try {
+    const selected = new Set(form.getAll("source"));
+    const sources = (await loadLibrarySources(supabase)).filter(source => selected.has(source.id));
+    if (!sources.length || sources.length !== selected.size) throw new Error("Select owned Library sources.");
+    const collections = [];
+    for (const source of sources) collections.push({ source, artifacts: await loadLibraryArtifacts(supabase, source.id) });
+    const ids = collections.flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
+    const revisions = await loadExportRevisions(supabase, sources.map(source => source.id), ids);
+    const chatIds = collections.filter(({ source }) => ["chatgpt", "claude"].includes(source.kind))
+      .flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
+    const [contexts, digests, learning] = await Promise.all([loadConversationContexts(supabase, chatIds), loadLibraryDigests(supabase, ids),
+      form.get("learning") === "include" ? loadLearningSnapshot(supabase) : undefined]);
+    const manifest = prepareLibraryExport(collections, revisions, contexts, digests, learning);
+    const { error } = await supabase.rpc("save_library_export", { p_manifest: manifest });
+    if (error) throw new Error(`Could not save the Library snapshot: ${error.message}`);
+    exportId = manifest.export_id;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not prepare the Library snapshot. Try again." };
+  }
+  redirect(`/library/exports/${exportId}`);
 }
 
 export async function importLibraryDigest(_previous: { error?: string; saved?: number } | null, form: FormData): Promise<{ error?: string; saved?: number }> {

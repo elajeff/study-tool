@@ -53,7 +53,7 @@ export function parseCourse(input: unknown, manifest: ExportManifest): { course:
 const stepKinds = ["explain", "example", "trace", "build", "exercise", "debug", "interview", "review"] as const;
 export type ModuleStep = { id: string; kind: typeof stepKinds[number]; goal: string; sources: string[]; done_when: string };
 export type ModulePlan = { format: "study-module/1"; course_id: string; export_id: string; module: string; steps: ModuleStep[] };
-export type SavedCourseStep = ModuleStep & { row_id: string; module_key: string; position: number };
+export type SavedCourseStep = ModuleStep & { row_id: string; module_key: string; position: number; completed_at: string | null };
 
 export function parseModule(raw: string, courseId: string, course: Course, moduleId: string, manifest: ExportManifest): ModulePlan {
   if (raw.length > 100000) throw new Error("Module text exceeds 100,000 characters.");

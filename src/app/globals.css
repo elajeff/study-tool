@@ -293,6 +293,32 @@ textarea.input { resize: vertical; }
 .review-actions { display: flex; gap: 8px; margin-top: 14px; }
 .assessment-history { border-top: 1px solid var(--border); padding: 11px 0; }
 
+/* Course outline */
+.course-path { --done: #206e59; --done-bg: #edf7f2; scroll-margin-top: 24px; }
+:root[data-theme="dark"] .course-path { --done: #92d8bd; --done-bg: #20352e; }
+.course-modules { padding: 0; margin: 20px 0; list-style: none; display: grid; gap: 14px; isolation: isolate; }
+.course-module { position: relative; }
+.course-module:not(:last-child)::after { content: ""; position: absolute; left: 39px; top: 55px; bottom: -15px; width: 2px; background: var(--border); z-index: -1; }
+.course-module > details { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.course-module.is-current > details { border-color: var(--accent-border); }
+.course-module summary { list-style: none; display: flex; align-items: center; gap: 14px; padding: 18px 20px; cursor: pointer; border-radius: 10px; }
+.course-module summary::-webkit-details-marker { display: none; }
+.course-module summary:hover { background: var(--hover); }
+.module-number { width: 38px; height: 38px; display: grid; place-items: center; flex-shrink: 0; border-radius: 10px; background: var(--code-bg); color: var(--muted); font-weight: 650; font-variant-numeric: tabular-nums; }
+.is-current > details > summary .module-number { background: var(--accent-soft); color: var(--accent); }
+.is-done > details > summary .module-number { background: var(--done-bg); color: var(--done); }
+.module-name { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.module-name strong { font-size: 14px; line-height: 1.4; font-weight: 600; }
+.module-name > span { font-size: 12px; color: var(--muted); }
+.module-chevron { color: var(--muted); flex-shrink: 0; }
+.course-module details[open] > summary .module-chevron { transform: rotate(180deg); }
+.module-content { padding: 0 20px 20px; }
+@media (max-width: 600px) {
+  .course-module summary { gap: 10px; padding: 14px; }
+  .module-content { padding: 0 14px 14px; }
+  .course-module:not(:last-child)::after { left: 33px; }
+}
+
 /* Settings */
 .settings-stack { display: grid; gap: 16px; max-width: 830px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 14px 0; border-top: 1px solid var(--border); }

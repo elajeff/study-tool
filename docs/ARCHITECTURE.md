@@ -1,6 +1,6 @@
 # Architecture
 
-Study Tool is a Next.js application backed by Supabase. Each account has its own profile, imported notes, and assessment receipts. Supabase Auth handles sign-in; row-level security limits database access to the owning account.
+Study Tool is a Next.js application backed by Supabase. Each account owns its imported sources, editable notes, Library snapshots, courses and assessment receipts. Supabase Auth handles sign-in; row-level security limits database access to the owning account. Importing, organizing and planning require no AI API or local instruction model.
 
 ## Data
 
@@ -17,14 +17,14 @@ Sources and artifacts also have short reading references, such as `R1/F001`. Mig
 
 Conversation imports use the provider's conversation ID within a selected source. Migration 008 accepts prepared transcripts and UTF-8 message offsets in one transaction. The RPC checks ownership, provider, message boundaries and expected saved revisions before publishing. Each accepted import keeps its metadata even when unchanged text reuses an existing revision. ChatGPT sources use `C` references, Claude sources use `K`, and conversations use `T` references. Saved conversations do not create editable notes or assessment evidence.
 
-The Obsidian importer publishes source records and editable notes together. Repository imports save source files without creating notes. A conversation adapter is not implemented.
+The Obsidian importer publishes source records and editable notes together. Repository and conversation imports save source text without creating notes. Conversation readers reconstruct the selected ChatGPT branch or Claude messages, preserve code and mathematics, and report omitted content. Reading pages break before user turns; they do not replace the saved transcript.
 
 - `sources` identifies one owner's vault, repository, or conversation collection. Reimports must reuse this UUID; the display name is not an identity.
 - `source_artifacts` identifies a file or conversation within that source. Its UUID stays the same across content updates. Paths and external IDs are unique within a source, so separate sources can both contain `README.md`.
 - `source_revisions` stores full text and its SHA-256 hash. Identical content reuses a revision of the same artifact, including a return to older content. Matching content across different artifacts does not merge them.
 - `source_imports` records accepted batches. `source_import_items` records each batch's artifact, revision, and path, including unchanged content and renames. A revision points to the batch that first accepted that content.
 
-Authenticated owners can create sources and change their names. Repository and conversation source writes go through `accept_source_import(source_id, entries)`, which accepts 1–2,000 text entries and returns the batch UUID. Repository entries require the preview references described below; conversation foundation calls retain optional external IDs. Vaults use the preview-checked Obsidian function. Both call `publish_source_import`, the shared publishing function that clients cannot execute directly.
+Authenticated owners can create sources and change their names. Repository writes use `accept_repository_import` to retain commit and exclusion metadata alongside the preview-checked source import. Conversations use `accept_conversation_import` to publish text, message offsets and reconstruction context together. Vaults use `accept_obsidian_import`. These functions reach `publish_source_import`, the shared publisher that clients cannot execute directly.
 
 The shared publisher limits JSON batches to 35 MiB and content to 500,000 characters per entry. Optional paths and external IDs must be strings or null, with at most 1,024 UTF-8 bytes each. Repository imports additionally require a path, preview references, and at most 500,000 UTF-8 bytes per file. Oversized or malformed input rejects the batch. Adapters also limit input before constructing requests.
 
@@ -50,7 +50,7 @@ Clients can edit note bodies but cannot directly change source links, import bas
 
 ### Database checks
 
-After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql -f supabase/tests/source_relationships.sql -f supabase/tests/repository_import.sql -f supabase/tests/library_codes.sql -f supabase/tests/conversation_imports.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, repository and conversation imports, path history, reading references, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
+After applying all migrations to a disposable development database, run each file in `supabase/tests/` using `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f <script>`. The scripts check source identity, revision reuse, stale previews, ownership, frozen Library context, courses, lesson plans, summaries, repository origins and atomic Inbox imports. They roll back their test users and imports. They need an administrative connection to create users and switch roles. These database integration checks are separate from ordinary CI.
 
 ## Explicit connections and provenance
 
@@ -64,9 +64,23 @@ Migration `005` adds only `source_path_aliases`, a read-only security-invoker vi
 
 Repositories reuse sources, artifacts, revisions, and import runs. Files are source material only; the importer never creates editable notes or curriculum entries. The existing source reader displays current or retained revisions as escaped text. Vault note relationships stay scoped to their vault; no cross-source code connections are inferred.
 
-`readImportFiles` shares ZIP streaming, text limits, hashing, and safe path handling with Obsidian. `matchImportFiles` shares identity matching and collision checks. Repository ZIPs keep their archive-relative paths; filenames determine supported formats and exclusions. The preview keeps incoming text in browser memory until acceptance. Local checks block known token/private-key patterns and leave uncertain credential values unselected. These advisory checks are not an exhaustive or server-side secret scanner.
+`readImportFiles` shares ZIP streaming, text limits, hashing, and safe path handling with Obsidian. `matchImportFiles` shares identity matching and collision checks. Local ZIPs keep their archive-relative paths. Public GitHub URLs resolve to a fixed commit before downloading, and their archive wrapper is removed. Downloads allow only GitHub's API and archive hosts, with a 30-second timeout and 20 MiB ZIP cap. Files are never executed.
 
-Migration `006` requires owned repository calls to `accept_source_import` to supply preview artifact IDs, previous paths, and revision IDs. The source lock and all-entry checks reject stale previews, conflicting identities, and unsafe paths before the existing atomic publisher runs. Callers cannot bypass these checks through an older repository RPC; conversation-source publication retains its foundation contract for a later adapter. No tables or dependencies are added.
+The preview keeps incoming text in browser memory until acceptance. Known token/private-key patterns are blocked; uncertain credential values stay selected with a warning so examples remain readable. Users can deselect files. These advisory checks can miss secrets. Conversation reconstruction redacts recognized keys and tokens in derived text; original export files are not rewritten.
+
+Repository calls supply preview artifact IDs, previous paths and revision IDs. The source lock and all-entry checks reject stale previews, conflicting identities and unsafe paths before publication. Saved origins describe the import that first stored each revision, not a verified current checkout. A collection can span imports; a local ZIP without recorded GitHub metadata has an unknown commit.
+
+## Library snapshots and courses
+
+`library_exports` stores an immutable manifest of selected source revisions, reading maps, accepted conversation context and recorded repository origins. Later imports do not change it. `source_digests` holds unverified navigation summaries; reuse requires matching text, path and reconstruction context. Matching summaries are frozen into new manifests. Learning history is included only when selected explicitly.
+
+`buildLibraryFiles` renders that manifest and the exact source text with authoring instructions. It bounds files by UTF-8 bytes, keeps source items whole, and supplies an index when several data files are needed. Byte and character estimates are not a guarantee that an AI model reads every item. Downloading does not upload anything; users upload the files to ChatGPT themselves.
+
+ChatGPT is asked to inspect maps and relevant source items, use general knowledge beyond the Library, and return a complete course outline. The app does not infer semantic prerequisites from keywords or certify AI explanations. Optional review requests check the original learning goal, prerequisite preparation and independent proofs. Portfolio requests prepare one course per repository, then combine selected courses from the same snapshot.
+
+`courses` retains the returned outline and export reference. `course_modules` stores imported module plans; `course_steps` gives each lesson a persistent UUID. The Inbox parses supported response blocks, loads owned snapshots and course identities, and validates references, prerequisite order and required fields before one atomic save. A malformed block rejects the whole response. Identical reimports preserve existing identities; different saved module plans are rejected rather than replacing progress.
+
+Lesson requests carry those saved identities, relevant source references and the latest approved assessment. ChatGPT teaches externally. Done/Reopen changes only `course_steps.completed_at`; continuation follows the first unfinished lesson and stops at modules without plans. The progress bar counts saved lessons, with unplanned modules reported separately. Assessment receipts begin pending and affect mastery only after owner review.
 
 ## Tutor handoff
 
@@ -74,8 +88,8 @@ The browser copies context when someone opens ChatGPT Web or Codex. Neither serv
 
 ## Import boundaries
 
-Imported Markdown is treated as data, not instructions. Files from `.obsidian/`, chat archives, and generated progress folders are skipped. Raw HTML in Markdown is not executed. Imports and exported notes are scoped to the signed-in user.
+Imported content is treated as data, not instructions. The Obsidian reader skips `.obsidian/`, raw chat archives and generated progress folders; conversation exports use their dedicated importer. ChatBridge references are checked against saved conversation identities to identify overlap. Raw HTML in Markdown is not executed. Imports and exported notes are scoped to the signed-in user.
 
 ## Known limits
 
-There is no live Obsidian sync or automated model grading. Evidence is reviewed by the account owner. External AI models and hosted authentication would need their own supported integration and permission checks.
+There is no live Obsidian sync, supported ChatGPT Web automation or automated grading. Evidence is reviewed by the account owner. Structure and source accounting do not prove curriculum completeness or correct teaching. ChatGPT's upload allowance and retrieval behavior depend on the user's account and service; the app cannot guarantee access to every uploaded item. Supabase stores account data under the deployment's configuration and policies; this is not a local-only application.

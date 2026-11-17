@@ -6,6 +6,8 @@ import { conversationContextText } from "@/lib/conversation-context";
 import { inspectImportText } from "@/lib/import-privacy";
 import { buildLibraryFiles, LibraryFileSizeError } from "@/lib/library-files";
 import { DigestImporter } from "@/components/DigestImporter";
+import { CourseLessonCard } from "@/components/CourseLessonCard";
+import { librarySuggestionsPrompt } from "@/lib/library-suggestions";
 
 export default async function ExportPage({ params }: { params: Promise<{ id: string }> }) {
   const { supabase } = await requireAccount();
@@ -45,6 +47,10 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
       {blocked && <p>Known credential patterns were found. Sanitize the source and prepare a new snapshot before downloading.</p>}
       <details><summary>View study-library.md</summary><pre className="library-text">{files[0].text}</pre></details>
       <p><Link href="/courses">Import the returned course</Link></p>
+      <details><summary>Find learning directions</summary>
+        <p>Ask ChatGPT to inspect relevant source items and suggest five directions before creating a course.</p>
+        <CourseLessonCard text={librarySuggestionsPrompt(manifest.export_id)} />
+      </details>
       <details><summary>Import source summaries</summary>
         <p>Paste the study-digest block for this snapshot. Summaries are unverified navigation aids; they do not replace source text.</p>
         <DigestImporter exportId={manifest.export_id} />

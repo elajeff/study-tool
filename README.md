@@ -110,6 +110,8 @@ New snapshots contain a compact Library card with source counts and navigation h
 
 From the saved page, download `study-library.md` and upload it to a ChatGPT Project. The same file includes authoring instructions, maps, exact source text and saved conversation context. Ask ChatGPT to follow those instructions for your learning request. It should inspect relevant items itself, use general knowledge where needed and name anything it cannot retrieve.
 
+If you have not chosen a subject, open **Find learning directions** on the snapshot page and copy its request into ChatGPT. It asks for five source-backed suggestions and a starting point, without starting a course or lesson. Subjects outside the Library remain available.
+
 Larger libraries download as `study-library.zip`. Extract it and upload every included Markdown file to the same Project. The core file holds instructions, maps and an item-to-file index. Data files keep whole source items together. Each Markdown file is limited to 1,500,000 UTF-8 bytes; this is a packaging budget, not a measured model token limit. An item or index that cannot fit is reported without shortening it. Check the displayed file count against your account allowance.
 
 The instructions request a complete course outline as downloadable JSON, with a JSON block as fallback. ChatGPT Web still requires manual file upload and response transfer. Study Tool does not automate its website or require a paid AI API. Upload limits and reading behavior depend on the account and model; including text does not prove ChatGPT read it.

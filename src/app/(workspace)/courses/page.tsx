@@ -9,6 +9,9 @@ import { modulePlanningCard } from "@/lib/module-request";
 import { lessonStudyCard } from "@/lib/lesson-request";
 import { markCourseStep } from "@/app/course-actions";
 import { nextCourseLesson } from "@/lib/course";
+import { loadAssessments } from "@/lib/assessment-queries";
+import { latestApproved } from "@/lib/progress";
+import { LessonControls } from "@/components/LessonControls";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string }> }) {
   const { supabase } = await requireAccount();
@@ -23,6 +26,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const steps = allSteps.filter(step => step.module_key === selected?.id).sort((a, b) => a.position - b.position);
   const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps.find(step => !step.completed_at) ?? steps[0];
   const next = result ? nextCourseLesson(result.course, allSteps) : null;
+  const assessmentTopic = currentStep ? `course-step:${currentStep.row_id}` : undefined;
+  const assessment = assessmentTopic ? latestApproved(await loadAssessments(supabase, "approved", assessmentTopic)).get(assessmentTopic) : undefined;
   return <>
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
@@ -73,7 +78,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <input type="hidden" name="state" value={currentStep.completed_at ? "reopen" : "studied"} />
         <button className="button button-light">{currentStep.completed_at ? "Reopen" : "Mark done"} {currentStep.id}</button>
       </form>
-      <CourseLessonCard key={currentStep.row_id} text={lessonStudyCard(query.id, result.course, selected, currentStep)} />
+      <CourseLessonCard key={currentStep.row_id} text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
+      <LessonControls assessment={assessment} />
     </section>}
   </>;
 }

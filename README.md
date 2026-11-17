@@ -134,6 +134,8 @@ At the end of a tutoring session, get a `study-evidence` receipt using the forma
 
 Saved lesson requests supply a persistent `step` UUID and matching `course-step:<UUID>` topic for receipts. The app accepts only lesson IDs in your account and shows their goals during review. Repeat imports keep the existing receipt and review decision. Existing note-topic receipts remain supported. A receipt reports demonstrated work; importing it does not independently verify that work.
 
+Each saved lesson shows its latest approved assessment and review date, or **Not assessed**. The copied study request includes that assessment's task, evidence, hints and remaining practice. Pending and rejected receipts do not affect this display. A later approved assessment can lower the score.
+
 Levels run from 0 (unfamiliar) to 5 (able to transfer the skill to a new problem). Level 3 or higher requires independent work. An assessment can lower an earlier score; the most recent approved assessment is used.
 
 ## Tutor modes

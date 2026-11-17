@@ -49,3 +49,30 @@ export function parseCourse(input: unknown, manifest: ExportManifest): { course:
     assumed_level: text(value.assumed_level), modules, not_covered, open_questions: strings(value.open_questions) },
     unassigned: [...known].filter((id) => !used.has(id) && !omitted.has(id)) };
 }
+
+const stepKinds = ["explain", "example", "trace", "build", "exercise", "debug", "interview", "review"] as const;
+export type ModuleStep = { id: string; kind: typeof stepKinds[number]; goal: string; sources: string[]; done_when: string };
+export type ModulePlan = { format: "study-module/1"; course_id: string; export_id: string; module: string; steps: ModuleStep[] };
+export type SavedCourseStep = ModuleStep & { row_id: string; module_key: string; position: number };
+
+export function parseModule(raw: string, courseId: string, course: Course, moduleId: string, manifest: ExportManifest): ModulePlan {
+  if (raw.length > 100000) throw new Error("Module text exceeds 100,000 characters.");
+  const blocks = [...raw.matchAll(/^```(?:study-module|json)\s*\r?\n([\s\S]*?)^```\s*$/gm)];
+  if (blocks.length > 1) throw new Error("Import one complete module at a time.");
+  const value = object(JSON.parse(blocks.length ? blocks[0][1] : raw));
+  if (value.format !== "study-module/1" || value.course_id !== courseId || value.export_id !== course.export_id
+    || course.export_id !== manifest.export_id || value.module !== moduleId || !course.modules.some(module => module.id === moduleId))
+    throw new Error("Module, course or export identity does not match this outline.");
+  if (!Array.isArray(value.steps) || !value.steps.length || value.steps.length > 12) throw new Error("Provide between 1 and 12 ordered steps.");
+  const known = new Set(manifest.items.map(item => item.id));
+  const steps = value.steps.map((rawStep, index) => {
+    const entry = object(rawStep), sources = strings(entry.sources);
+    if (entry.id !== `${moduleId}.S${index + 1}`) throw new Error("Step IDs must follow the module order: .S1, .S2 and so on.");
+    if (!stepKinds.includes(entry.kind as ModuleStep["kind"])) throw new Error("Unknown lesson step kind.");
+    if (!sources.length || sources.some(source => source !== "general" && !known.has(source))) throw new Error("A step cites an unknown Library item.");
+    const goal = text(entry.goal), done_when = text(entry.done_when);
+    if (goal.length > 3000 || done_when.length > 3000) throw new Error("Step text fields cannot exceed 3,000 characters.");
+    return { id: entry.id, kind: entry.kind as ModuleStep["kind"], goal, sources, done_when };
+  });
+  return { format: "study-module/1", course_id: courseId, export_id: course.export_id, module: moduleId, steps };
+}

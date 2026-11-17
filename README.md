@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `018` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `018` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `017` already applied needs only `018`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `019` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `019` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `018` already applied needs only `019`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -63,6 +63,8 @@ The note editor shows explicit links, prerequisites, and recommendations. Source
 Files flagged for possible credential values stay selected and show a warning. Deselect anything you do not want to import. Private keys and known token patterns remain blocked.
 
 Repository imports include reStructuredText documentation, `.conf`, `.cfg` and `.ini` configuration, Windows scripts, and the `mvnw` and `gradlew` build scripts. These are imported as text.
+
+New repository imports record skipped and deselected paths. ZIP imports leave the original commit unknown. Library snapshots record the import in which each revision was first saved, including its available origin and exclusions. Unchanged reimports do not relabel old text as a newer checkout. A collection may span imports; it is not a verified current repository checkout. Older imports without this metadata remain unknown.
 
 Create or select a repository on the Repositories page, then preview a ZIP of its contents. Paths are relative to the archive root; enclosing folders are kept. Reuse the same repository when reimporting. Review the file list and text, deselect anything unwanted, then accept the selected files. Confirm renames by selecting the existing saved file; equal text alone does not establish identity. Missing files remain saved.
 

@@ -8,6 +8,7 @@ import { buildLibraryFiles, LibraryFileSizeError } from "@/lib/library-files";
 import { DigestImporter } from "@/components/DigestImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { librarySuggestionsPrompt } from "@/lib/library-suggestions";
+import { repositoryOriginText } from "@/lib/repository-origin";
 
 export default async function ExportPage({ params }: { params: Promise<{ id: string }> }) {
   const { supabase } = await requireAccount();
@@ -60,6 +61,9 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
       <p>This snapshot retains the selected revisions and import context. Later imports do not update it. Original collection omissions remain unknown.</p>
       <ul>{manifest.sources.map(source => <li key={source.id}>{source.short_code} · {source.name} ({source.kind})</li>)}</ul>
       <h2>Saved items</h2>
+      {!!manifest.origins?.length && <details><summary>Repository origins and exclusions</summary>
+        {manifest.origins.map(origin => <pre className="library-text" key={origin.import_id}>{repositoryOriginText(origin)}</pre>)}
+      </details>}
       {manifest.items.length ? <ul>{manifest.items.map(item => <li key={item.id}>
         <Link href={`/sources/revisions/${item.revision_id}`}>{item.id} · {item.path}</Link>
         {item.conversation && <details><summary>Snapshot conversation context</summary><pre className="source-context">{conversationContextText(item.conversation)}</pre></details>}

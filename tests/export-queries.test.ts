@@ -12,10 +12,15 @@ test("revision loading batches selected IDs and enforces a combined UTF-8 byte l
       if (fail) return new Response('{"message":"unavailable"}', { status: 500 });
       const selected = url.searchParams.get("id")!.slice(4, -1).split(",");
       return Response.json(selected.map((id, index) => ({ id, artifact_id: `artifact-${id}`, content_hash: "fixture",
-        content: large && index === 0 ? "π".repeat(9 * 1024 * 1024) : "small" })));
+        content: large && index === 0 ? "π".repeat(9 * 1024 * 1024) : "small", import_id: "first-run",
+        import: index === 0 ? { repository_origin: { format: "study-repository/1", kind: "archive", url: null, commit: null, excluded: ["generated.log"] } } : null })));
     },
   } });
-  assert.deepEqual((await loadExportRevisions(client, ["repository", "notes"], ids)).map(row => row.id), ids);
+  const loaded = await loadExportRevisions(client, ["repository", "notes"], ids);
+  assert.deepEqual(loaded.map(row => row.id), ids);
+  assert.equal(loaded[0].import_id, "first-run");
+  assert.deepEqual(loaded[0].repository_origin?.excluded, ["generated.log"]);
+  assert.equal(loaded[1].repository_origin, null);
   assert.deepEqual(requests.map(url => url.searchParams.get("id")!.slice(4, -1).split(",").length), [100, 100, 100, 100, 100, 1]);
   assert.ok(requests.every(url => url.searchParams.get("source_id") === "in.(repository,notes)"));
   large = true;

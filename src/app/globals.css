@@ -227,6 +227,7 @@ textarea.input { resize: vertical; }
 .profile-import { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
 .profile-repositories { max-height: 400px; overflow: auto; margin: 16px 0; }
 .repository-queue { margin-bottom: 20px; overflow-wrap: anywhere; }
+.repository-github-form { margin-bottom: 20px; }
 .vault-import > p, .import-preview > p { color: var(--muted); font-size: 12px; }
 .vault-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 16px 0; }
 .vault-controls label, .import-row label { display: block; font-size: 12px; margin-bottom: 5px; }

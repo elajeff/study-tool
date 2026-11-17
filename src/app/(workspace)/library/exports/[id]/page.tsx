@@ -31,7 +31,10 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
   return <>
     <Link className="back-link" href="/library">Back to Library</Link>
     <div className="page-heading"><h1>Library snapshot</h1><p>Collections: {manifest.sources.length} · Items: {manifest.items.length}</p></div>
-    <section className="panel"><h2>ChatGPT file</h2>
+    <section className="panel"><h2>Export for ChatGPT</h2>
+      <form action={`/library/exports/${manifest.export_id}/download`} method="POST">
+        <p><button className="button button-dark" disabled={blocked}>Download Study Library</button></p>
+      </form>
       {manifest.card && <details><summary>Library card</summary><pre className="library-text">{manifest.card}</pre></details>}
       <p>{characters.toLocaleString()} characters · approximately {Math.ceil(characters / 4).toLocaleString()} tokens (characters ÷ 4; estimate only).</p>
       {files.length === 1
@@ -42,9 +45,6 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
       <p>Ask ChatGPT to follow the authoring instructions when creating your course. It chooses relevant material and returns a complete course JSON file, or a JSON block if file creation is unavailable.</p>
       <p>Downloading does not upload anything. ChatGPT receives the file when you upload it, under your account and data settings.</p>
       {!!warnings.length && <ul>{warnings.map(warning => <li key={warning.id}>{warning.id}: {warning.text}</li>)}</ul>}
-      <form action={`/library/exports/${manifest.export_id}/download`} method="POST">
-        <p><button className="button button-dark" disabled={blocked}>Download Study Library</button></p>
-      </form>
       {blocked && <p>Known credential patterns were found. Sanitize the source and prepare a new snapshot before downloading.</p>}
       <details><summary>View study-library.md</summary><pre className="library-text">{files[0].text}</pre></details>
       <p><Link href="/courses">Import the returned course</Link></p>

@@ -160,7 +160,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
         <input id="repository-name" className="input" value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} disabled={busy} />
         <button className="button button-light" disabled={busy}>Create repository</button>
       </div></form></div>
-    <form onSubmit={prepareGitHub} className="stack">
+    <form onSubmit={prepareGitHub} className="stack repository-github-form">
       <label htmlFor="github-url">Public GitHub repository URL</label>
       <input id="github-url" className="input" type="url" value={url} onChange={event => setUrl(event.target.value)} required disabled={busy || !sourceId} placeholder="https://github.com/owner/repository" />
       <label htmlFor="github-ref">Branch, tag or commit</label>

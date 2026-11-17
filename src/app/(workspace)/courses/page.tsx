@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
 import { InboxImporter } from "@/components/InboxImporter";
-import { ModuleImporter } from "@/components/ModuleImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard } from "@/lib/module-request";
 import { lessonStudyCard } from "@/lib/lesson-request";
@@ -66,7 +65,9 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       </> : <><p>Request a plan from ChatGPT, then import its JSON here. Preparing or importing a plan does not demonstrate mastery.</p>
         <CourseLessonCard key={`${query.id}/${selected.id}`} text={modulePlanningCard(query.id, result.course, selected)} />
       </>}
-      <details open={!steps.length}><summary>Import a plan</summary><ModuleImporter key={`${query.id}/${selected.id}`} courseId={query.id} moduleId={selected.id} /></details>
+      <details open={!steps.length}><summary>Import a plan</summary>
+        <InboxImporter key={`${query.id}/${selected.id}`} openCourse moduleScope={{ courseId: query.id, moduleId: selected.id }} />
+      </details>
     </section>}
     {result && query.id && selected && query.step && !currentStep && <p role="status">Lesson not found in this module.</p>}
     {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Study request</h2>

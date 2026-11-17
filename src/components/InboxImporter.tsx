@@ -3,7 +3,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useId, useState } from "react";
 import { importInbox } from "@/app/inbox-actions";
 
-export function InboxImporter({ openCourse = false }: { openCourse?: boolean }) {
+export function InboxImporter({ openCourse = false, moduleScope }: { openCourse?: boolean; moduleScope?: { courseId: string; moduleId: string } }) {
   const [state, action, pending] = useActionState(importInbox, null);
   const id = useId();
   const [response, setResponse] = useState(""), [fileError, setFileError] = useState("");
@@ -13,10 +13,12 @@ export function InboxImporter({ openCourse = false }: { openCourse?: boolean }) 
     setFileError("");
     const form = new FormData();
     form.set("response_file", file); form.set("open_course", "true");
+    if (moduleScope) { form.set("course_id", moduleScope.courseId); form.set("module", moduleScope.moduleId); }
     startTransition(() => action(form));
   }
   return <form action={action} aria-busy={pending}>
     <input type="hidden" name="open_course" value={String(openCourse)} />
+    {moduleScope && <><input type="hidden" name="course_id" value={moduleScope.courseId} /><input type="hidden" name="module" value={moduleScope.moduleId} /></>}
     <label htmlFor={`${id}-file`}>Import ChatGPT file</label>
     <p>Choose the downloaded JSON or text file. It is checked and saved automatically.</p>
     <input id={`${id}-file`} type="file" accept=".json,.txt,.md" disabled={pending}

@@ -22,7 +22,7 @@ function parseJson(raw: string): unknown {
   return JSON.parse(clean);
 }
 
-export function parseInbox(raw: string): { blocks: InboxBlock[]; ignored: number } {
+export function parseInbox(raw: string, expected?: { courseId: string; moduleId: string }): { blocks: InboxBlock[]; ignored: number } {
   if (new TextEncoder().encode(raw).length > 1024 * 1024) throw new Error("Import at most 1 MiB of response text.");
   const blocks: InboxBlock[] = [];
   let ignored = 0;
@@ -66,5 +66,12 @@ export function parseInbox(raw: string): { blocks: InboxBlock[]; ignored: number
       throw new Error("A Study Tool fence is not closed. Nothing was saved.");
   }
   if (!blocks.length) throw new Error("No supported blocks found. Paste course, module, digest or assessment JSON from Study Tool instructions.");
+  if (expected) {
+    const plan = blocks.find(block => block.kind === "module");
+    if (!plan || blocks.some(block => block.kind === "module"
+      ? block.value.course_id !== expected.courseId || block.value.module !== expected.moduleId
+      : block.kind !== "digest" || block.value.export_id !== plan.value.export_id))
+      throw new Error("Choose the lesson-plan file for this course and module. Nothing was saved. Other responses can be imported in Inbox.");
+  }
   return { blocks, ignored };
 }

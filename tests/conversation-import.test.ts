@@ -51,6 +51,8 @@ test("Claude mixed blocks exclude tools and thinking without falling back to dup
   assert.deepEqual(result.conversations[0].messages.map(item => item.text), ["Question", "Real answer"]);
   const branch = { ...rows[1], uuid: "c" };
   assert.equal(parseConversationExport(JSON.stringify([{ uuid: "claude", chat_messages: [...rows, branch] }]), "claude").rejected.length, 1);
+  const legacy = { uuid: "duplicate-message", sender: "human", text: "Question" };
+  assert.equal(parseConversationExport(JSON.stringify([{ uuid: "claude", chat_messages: [legacy, legacy] }]), "claude").rejected.length, 1);
 });
 
 test("reading pages retain every character and split only before a new user turn", () => {

@@ -43,11 +43,11 @@ function claudeNodes(record: Row, excluded: Record<string, number>): { id: strin
   if (!Array.isArray(record.chat_messages)) throw new ConversationFormatError("Missing Claude messages.");
   const messages = record.chat_messages.map((value, index) => ({ id: typeof row(value).uuid === "string" ? identifier(row(value).uuid) : `index:${index}`, message: row(value) }));
   if (!messages.length) return [];
+  const byId = new Map(messages.map(item => [item.id, item]));
+  if (byId.size !== messages.length) throw new ConversationFormatError("Duplicate Claude message identity.");
   if (messages.every(item => item.message.parent_message_uuid === undefined)) {
     excluded.unavailable_branch_metadata = 1; return messages;
   }
-  const byId = new Map(messages.map(item => [item.id, item]));
-  if (byId.size !== messages.length) throw new ConversationFormatError("Duplicate Claude message identity.");
   const parents = new Set(messages.map(item => item.message.parent_message_uuid));
   const leaves = messages.filter(item => !parents.has(item.id));
   if (leaves.length !== 1) throw new ConversationFormatError("Claude export has ambiguous branches; no active branch was specified.");

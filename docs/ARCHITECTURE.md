@@ -15,6 +15,8 @@ The curriculum is computed from editable notes. Existing topic keys are retained
 
 Sources and artifacts also have short reading references, such as `R1/F001`. Migration 007 assigns them to existing records and new imports. They stay with the same record through content updates and confirmed renames; the UUIDs remain the database identities. Each owner's source numbering is separate.
 
+Conversation imports use the provider's conversation ID within a selected source. Migration 008 accepts prepared transcripts and UTF-8 message offsets in one transaction. The RPC checks ownership, provider, message boundaries and expected saved revisions before publishing. Each accepted import keeps its metadata even when unchanged text reuses an existing revision. ChatGPT sources use `C` references, Claude sources use `K`, and conversations use `T` references. Saved conversations do not create editable notes or assessment evidence.
+
 The Obsidian importer publishes source records and editable notes together. Repository imports save source files without creating notes. A conversation adapter is not implemented.
 
 - `sources` identifies one owner's vault, repository, or conversation collection. Reimports must reuse this UUID; the display name is not an identity.
@@ -48,7 +50,7 @@ Clients can edit note bodies but cannot directly change source links, import bas
 
 ### Database checks
 
-After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql -f supabase/tests/source_relationships.sql -f supabase/tests/repository_import.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, repository imports, path history, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
+After applying all migrations to a disposable development database, run `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/source_identities.sql -f supabase/tests/obsidian_reimport.sql -f supabase/tests/source_relationships.sql -f supabase/tests/repository_import.sql -f supabase/tests/library_codes.sql -f supabase/tests/conversation_imports.sql`. The scripts check identity, revision reuse, local edits, stale previews, legacy assessment references, repository and conversation imports, path history, reading references, and ownership, then roll back their synthetic users and imports. They need an administrative connection to create the test users and switch roles. These integration checks are separate from ordinary CI.
 
 ## Explicit connections and provenance
 

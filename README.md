@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `007` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `007` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `006` already applied needs only `007`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `008` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `008` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `007` already applied needs only `008`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -82,7 +82,7 @@ Repository source readers include a syntax outline for supported text formats. T
 
 ## Conversations
 
-On Conversations, choose ChatGPT or Claude, then select a conversations JSON export of at most 100 MiB and preview it in the browser. This preview does not save or upload the conversation text. The selected branch retains visible user and assistant messages; hidden reasoning, tool output and other branches are excluded. Missing branch nodes and cycles are reported instead of guessed. Attachments are marked but not analyzed.
+On Conversations, choose ChatGPT or Claude, then select a conversations JSON export of at most 100 MiB and preview it in the browser. Previewing does not upload the conversation text. The selected branch retains visible user and assistant messages; hidden reasoning, tool output and other branches are excluded. Missing branch nodes and cycles are reported instead of guessed. Attachments are marked but not analyzed.
 
 Claude exports without parent metadata retain their supplied message order and report that branch metadata is unavailable. Parent-linked exports must form one unambiguous chain. Mixed content blocks retain visible text without also copying duplicate legacy text.
 
@@ -91,6 +91,10 @@ Long conversations use reading pages split before a new user turn after roughly 
 Select multiple JSON export files together when an export is split into shards, within 100 MiB combined. Identical copies are counted once. Conflicting versions of the same conversation are rejected rather than merged; select one version to resolve the conflict.
 
 Recognizable tokens and private keys are removed from the derived preview. Other credential-like values remain with warnings; these checks can miss secrets or flag examples. Original exports are unchanged. Code and mathematics are retained as text, not executed or checked for correctness.
+
+Create or select a saved conversation source matching the export format, then preview and save. Reuse that source for later imports. The preview shows new, updated and unchanged conversations. Provider IDs keep conversations separate; titles and matching text do not establish identity. Changed text creates a revision, and missing conversations remain saved. If saved data changes after preview, preview again before retrying.
+
+Saving accepts 1–2,000 conversations within 35 MiB of prepared JSON and 500,000 characters per conversation. Text is rejected rather than shortened when it exceeds the limit. Library shows the saved text separately from editable notes and assessments.
 
 ## Assessments
 

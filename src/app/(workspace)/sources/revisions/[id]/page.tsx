@@ -12,13 +12,17 @@ export default async function SourceRevisionPage({ params, searchParams }: {
   const { line: requestedLine } = await searchParams;
   const revision = await loadSourceRevision(supabase, id);
   if (!revision) notFound();
+  const back = revision.source.kind === "repository"
+    ? { href: `/repositories?source=${revision.source_id}`, label: "Back to repository" }
+    : ["chatgpt", "claude"].includes(revision.source.kind)
+      ? { href: `/conversations?source=${revision.source_id}`, label: "Back to conversations" }
+      : { href: "/notes", label: "Back to notes" };
   const outline = revision.source.kind === "repository" ? repositoryOutline(revision.path ?? "", revision.content) : null;
   const lines = revision.content.split(/\r?\n/);
   const line = Math.min(lines.length, Math.max(1, Number.parseInt(requestedLine ?? "1", 10) || 1));
   const start = Math.max(0, line - 4);
   return <>
-    <Link className="back-link" href={revision.source.kind === "repository" ? `/repositories?source=${revision.source_id}` : "/notes"}>
-      {revision.source.kind === "repository" ? "Back to repository" : "Back to notes"}</Link>
+    <Link className="back-link" href={back.href}>{back.label}</Link>
     <div className="page-heading"><h1>Source text</h1><p>{revision.source.name} · {revision.path ?? "Unnamed source"}</p></div>
     <section className="panel markdown-preview">
       {revision.current_revision_id !== revision.id && <p role="status">Historical revision. The current import may contain different connections.</p>}

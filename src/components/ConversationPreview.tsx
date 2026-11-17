@@ -9,12 +9,13 @@ export function ConversationPreview() {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ReturnType<typeof parseConversationExport> | null>(null);
   const [selected, setSelected] = useState(0);
+  const [page, setPage] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function preview() {
     if (!file) return;
-    setBusy(true); setError(""); setResult(null); setSelected(0);
+    setBusy(true); setError(""); setResult(null); setSelected(0); setPage(0);
     try {
       if (file.size > 100 * 1024 * 1024) throw new Error("Select an export smaller than 100 MiB.");
       setResult(parseConversationExport(await file.text(), provider));
@@ -25,6 +26,7 @@ export function ConversationPreview() {
   }
 
   const conversation = result?.conversations[selected];
+  const slice = conversation?.pages[page];
   const credentialWarning = conversation ? inspectImportText(conversation.text).review : null;
   return <>
     <section className="panel"><h2>Preview an export</h2>
@@ -48,14 +50,16 @@ export function ConversationPreview() {
       {!!result.rejected.length && <details><summary>Rejected records</summary><ul>{result.rejected.map(item =>
         <li key={item.index}>Record {item.index + 1}: {item.reason}</li>)}</ul></details>}
       {!!result.conversations.length && <><label htmlFor="chat-conversation">Conversation</label>
-        <select id="chat-conversation" className="input" value={selected} onChange={event => setSelected(Number(event.target.value))}>
+        <select id="chat-conversation" className="input" value={selected} onChange={event => { setSelected(Number(event.target.value)); setPage(0); }}>
           {result.conversations.map((item, index) => <option key={item.id} value={index}>{item.title}</option>)}
         </select></>}
-      {conversation && <>
+      {conversation && slice && <>
         {credentialWarning && <p role="note">{credentialWarning}</p>}
-        <p>Visible messages: {conversation.messages.length}.</p>
+        <p>Visible messages: {conversation.messages.length} · Page {page + 1} / {conversation.pages.length}. Large turns remain intact.</p>
         <details><summary>Excluded content counts</summary><pre>{JSON.stringify(conversation.excluded, null, 2)}</pre></details>
-        <pre className="library-text">{conversation.text}</pre>
+        <pre className="library-text">{conversation.text.slice(slice.start, slice.end)}</pre>
+        <button className="button button-light" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous page</button>{" "}
+        <button className="button button-light" disabled={page + 1 === conversation.pages.length} onClick={() => setPage(page + 1)}>Next page</button>
       </>}
     </section>}
   </>;

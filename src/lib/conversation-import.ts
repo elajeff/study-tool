@@ -5,7 +5,7 @@ export type ChatProvider = "chatgpt" | "claude";
 type SourceTime = string | number | null;
 export type ConversationMessage = { id: string; role: "user" | "assistant"; text: string; start: number; end: number; created_at: SourceTime };
 export type ImportedConversation = { id: string; provider: ChatProvider; title: string; text: string; messages: ConversationMessage[];
-  created_at: SourceTime; updated_at: SourceTime; excluded: Record<string, number>; redactions: number };
+  created_at: SourceTime; updated_at: SourceTime; excluded: Record<string, number>; redactions: number; pages: { start: number; end: number }[] };
 class ConversationFormatError extends Error {}
 type Row = Record<string, unknown>;
 function row(value: unknown): Row {
@@ -81,7 +81,7 @@ export function parseConversationExport(raw: string, provider: ChatProvider = "c
       const nodes = provider === "chatgpt" ? chatgptNodes(record, excluded) : claudeNodes(record, excluded);
       const title = redactConversationText(typeof (record.title ?? record.name) === "string" ? String(record.title ?? record.name) : "Untitled conversation");
       let redactions = title.redactions, text = `# ${JSON.stringify(title.text)}\n`;
-      const messages: ConversationMessage[] = [];
+      const messages: ConversationMessage[] = [], pages: { start: number; end: number }[] = [];
       for (const node of nodes) {
         const message = node.message, author = message.author && typeof message.author === "object" ? row(message.author) : {};
         const role = provider === "chatgpt" ? author.role : message.sender === "human" ? "user" : message.sender;
@@ -125,6 +125,13 @@ export function parseConversationExport(raw: string, provider: ChatProvider = "c
           created_at: sourceTime(provider === "chatgpt" ? message.create_time : message.created_at) });
       }
       if (!messages.length) { empty++; continue; }
+      // Pages are navigation offsets, never replacements for the full transcript.
+      let start = 0;
+      for (let i = 0; i < messages.length; i++) {
+        const boundary = i + 1 < messages.length && messages[i + 1].role === "user";
+        if (boundary && messages[i].end - start >= 20000) { pages.push({ start, end: messages[i].end }); start = messages[i].end; }
+      }
+      if (start < text.length) pages.push({ start, end: text.length });
       const created_at = sourceTime(provider === "chatgpt" ? record.create_time : record.created_at);
       const updated_at = sourceTime(provider === "chatgpt" ? record.update_time : record.updated_at);
       const signature = JSON.stringify([title.text, created_at, updated_at, messages.map(item => [item.id, item.role, item.text, item.created_at])]);
@@ -140,7 +147,7 @@ export function parseConversationExport(raw: string, provider: ChatProvider = "c
         duplicates++; continue;
       }
       identities.set(id, { signature, index });
-      conversations.push({ id, provider, title: title.text, text, messages, created_at, updated_at, excluded, redactions });
+      conversations.push({ id, provider, title: title.text, text, messages, created_at, updated_at, excluded, redactions, pages });
     } catch (error) {
       if (!(error instanceof ConversationFormatError)) throw error;
       rejected.push({ index, reason: error.message });

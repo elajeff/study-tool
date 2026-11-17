@@ -52,3 +52,16 @@ test("Claude mixed blocks exclude tools and thinking without falling back to dup
   const branch = { ...rows[1], uuid: "c" };
   assert.equal(parseConversationExport(JSON.stringify([{ uuid: "claude", chat_messages: [...rows, branch] }]), "claude").rejected.length, 1);
 });
+
+test("reading pages retain every character and split only before a new user turn", () => {
+  const rows = ["question " + "π".repeat(24000), "answer one", "question two", "```txt\n" + "x".repeat(24000) + "\n```", "question three", "answer three"];
+  const mapping = Object.fromEntries(rows.map((text, index) => [`m${index}`, {
+    parent: index ? `m${index - 1}` : null,
+    message: message(index % 2 ? "assistant" : "user", "text", [text]),
+  }]));
+  const chat = parseConversationExport(JSON.stringify([{ id: "long-chat", current_node: "m5", mapping }])).conversations[0];
+  assert.equal(chat.pages.length, 3);
+  assert.equal(chat.pages.map(page => chat.text.slice(page.start, page.end)).join(""), chat.text);
+  for (const page of chat.pages.slice(1)) assert.ok(chat.messages.some(item => item.role === "user" && item.start === page.start));
+  for (const item of chat.messages) assert.ok(chat.pages.some(page => page.start <= item.start && page.end >= item.end));
+});

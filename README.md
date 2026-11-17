@@ -86,6 +86,8 @@ On Conversations, choose ChatGPT or Claude, then select a conversations JSON exp
 
 Claude exports without parent metadata retain their supplied message order and report that branch metadata is unavailable. Parent-linked exports must form one unambiguous chain. Mixed content blocks retain visible text without also copying duplicate legacy text.
 
+Long conversations use reading pages split before a new user turn after roughly 20,000 characters. A large turn can exceed that size. Pages retain the complete text and never split a message; selecting another conversation starts at its first page.
+
 Recognizable tokens and private keys are removed from the derived preview. Other credential-like values remain with warnings; these checks can miss secrets or flag examples. Original exports are unchanged. Code and mathematics are retained as text, not executed or checked for correctness.
 
 ## Assessments

@@ -42,6 +42,7 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
       </form>
       {blocked && <p>Known credential patterns were found. Sanitize the source and prepare a new snapshot before downloading.</p>}
       <details><summary>View study-library.md</summary><pre className="library-text">{files[0].text}</pre></details>
+      <p><Link href="/courses">Import the returned course</Link></p>
     </section>
     <section className="panel"><p>Saved reference: <code>{manifest.export_id}</code></p>
       <p>This snapshot retains the selected revisions and import context. Later imports do not update it. Original collection omissions remain unknown.</p>

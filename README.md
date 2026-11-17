@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `010` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `010` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `009` already applied needs only `010`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `011` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `011` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `010` already applied needs only `011`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -113,6 +113,12 @@ Larger libraries download as `study-library.zip`. Extract it and upload every in
 The instructions request a complete course outline as downloadable JSON, with a JSON block as fallback. ChatGPT Web still requires manual file upload and response transfer. Study Tool does not automate its website or require a paid AI API. Upload limits and reading behavior depend on the account and model; including text does not prove ChatGPT read it.
 
 The download page flags uncertain credential values without removing them. Known token/private-key patterns block the download. These checks do not identify all private information; review the selected material before sharing it.
+
+## Courses
+
+Ask ChatGPT for a course using your uploaded Library, then paste the returned `study-course/1` JSON in **Courses**. The app detects its export reference and requires that snapshot in your account. It checks module prerequisites, item references, exclusions and required fields before saving. Reimporting an unchanged outline opens the same course.
+
+Courses show the outline, independent proofs, source accounting, exclusions and open questions. Unassigned sources are reported rather than treated as covered. These checks validate structure and references; they do not verify explanations, lesson quality or mastery.
 
 ## Assessments
 

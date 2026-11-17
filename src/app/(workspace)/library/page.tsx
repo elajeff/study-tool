@@ -12,6 +12,9 @@ export default async function LibraryPage({ searchParams }: {
 }) {
   const { supabase } = await requireAccount();
   const query = await searchParams;
+  const { data: snapshots, error: snapshotError } = await supabase.from("library_exports").select("id,created_at")
+    .order("created_at", { ascending: false }).order("id").limit(20);
+  if (snapshotError) throw new Error("Could not load saved Library snapshots.");
   const sources = (await loadLibrarySources(supabase))
     .sort((a, b) => a.short_code.localeCompare(b.short_code, undefined, { numeric: true }));
   const source = query.source ? sources.find(row => row.short_code === query.source) : sources[0];
@@ -29,7 +32,6 @@ export default async function LibraryPage({ searchParams }: {
         <Link href={{ pathname: "/library", query: { source: source.short_code } }}>
           {source.short_code} · {source.name}</Link> · {source.kind.replaceAll("_", " ")}
       </li>)}</ul> : <p>No sources imported yet.</p>}
-      <p><Link href="/notes">Import notes</Link> · <Link href="/repositories">Import a repository</Link></p>
       {!!sources.length && <form action={prepareProjectExport}>
         <fieldset><legend>Include in snapshot</legend>
           {sources.map(source => <label key={source.id} style={{ display: "block" }}>
@@ -38,9 +40,16 @@ export default async function LibraryPage({ searchParams }: {
         </fieldset>
         <p><label><input type="checkbox" name="learning" value="include" /> Include learning history</label></p>
         <p>Adds saved course titles and reviewed assessment summaries from this account. Leave unchecked to export only the selected sources.</p>
-        <p><button className="button button-light">Save Library snapshot</button></p>
+        <p>Save a snapshot, then download its Study Library files for ChatGPT.</p>
+        <p><button className="button button-dark">Save snapshot and open export</button></p>
       </form>}
       {query.source && !source && <p role="status">Source not found in your Library.</p>}
+    </section>
+    <section className="panel library-source"><h2>Saved snapshots</h2>
+      <p>Open a snapshot to download its Study Library files. The 20 most recent snapshots are shown.</p>
+      {snapshots.length ? <ul>{snapshots.map(snapshot => <li key={snapshot.id}>
+        <Link href={`/library/exports/${snapshot.id}`}>Export snapshot · {new Date(snapshot.created_at).toLocaleString("en-GB", { timeZone: "UTC" })} UTC · {snapshot.id.slice(0, 9)}</Link>
+      </li>)}</ul> : <p>No snapshots saved yet.</p>}
     </section>
     {source && <section className="panel library-source"><h2>{source.short_code} · {source.name} ({artifacts.length})</h2>
       <p>Read saved import text. Editable notes remain separate.</p>

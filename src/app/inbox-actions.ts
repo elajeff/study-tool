@@ -12,7 +12,9 @@ export async function importInbox(_previous: { error?: string; results?: InboxRe
   try {
     const file = form.get("response_file");
     if (file instanceof File && file.size > 1024 * 1024) throw new Error("Import at most 1 MiB of response text.");
-    parsed = parseInbox(file instanceof File ? await file.text() : String(form.get("response") ?? ""));
+    const courseId = String(form.get("course_id") ?? ""), moduleId = String(form.get("module") ?? "");
+    if (!!courseId !== !!moduleId) throw new Error("Supply both the course and module for a scoped import.");
+    parsed = parseInbox(file instanceof File ? await file.text() : String(form.get("response") ?? ""), courseId ? { courseId, moduleId } : undefined);
     const topics = new Set<string>();
     if (parsed.blocks.some(block => block.kind === "evidence" && !block.value.step))
       (await loadStudy()).lessons.forEach(lesson => topics.add(lesson.topic));

@@ -9,6 +9,16 @@ const course = { format: "study-course/1", export_id: exportId, title: "Seeds", 
  modules: [{ id: "M01", title: "First", outcome: "Sow", proof: "Sow alone", needs: [], sources: ["V1/N001"], steps_estimate: 3 }], not_covered: [], open_questions: [] };
 const digest = { format: "study-digest/1", export_id: exportId, items: [{ id: "V1/N001", summary: 'Keep the exact punctuation ,} and \"quotes\".' }] };
 
+test("module intake accepts its own plan and summaries while rejecting a different workflow or identity", () => {
+ const expected = { courseId: "saved-course", moduleId: "M01" };
+ const plan = { format: "study-module/1", course_id: expected.courseId, module: "M01", export_id: exportId };
+ const fence = (value: unknown) => `\`\`\`json\n${JSON.stringify(value)}\n\`\`\``;
+ assert.deepEqual(parseInbox(fence(plan) + "\n" + fence(digest), expected).blocks.map(block => block.kind), ["module", "digest"]);
+ for (const wrong of [course, { ...plan, course_id: "other-course" }, { ...plan, module: "M02" }])
+  assert.throws(() => parseInbox(fence(wrong), expected), /Nothing was saved/);
+ assert.throws(() => parseInbox(fence(plan) + "\n" + fence({ ...digest, export_id: "other" }), expected), /Nothing was saved/);
+});
+
 test("Inbox finds multiple supported fences and removes trailing commas without altering quoted text", () => {
  const raw = `Prose\n\`\`\`json\n${JSON.stringify(course)}\n\`\`\`\n\`\`\`study-digest\n${JSON.stringify(digest).replace(/}$/, ',}')}\n\`\`\`\n\`\`\`json\n{"ordinary":1}\n\`\`\``;
  const parsed = parseInbox(raw);

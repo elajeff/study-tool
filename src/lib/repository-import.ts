@@ -2,6 +2,11 @@ import { matchImportFiles, type ImportFile } from "./import-files.ts";
 
 export type RepositoryFile = { artifact_id: string; path: string | null; revision_id: string | null; content_hash: string | null };
 
+export function repositoryArchiveRoot(paths: string[]): string | null {
+  const root = paths[0]?.split("/")[0];
+  return root && paths.every(path => path.startsWith(`${root}/`)) ? root : null;
+}
+
 export function shouldImportRepositoryFile(path: string) {
   if (/(^|\/)(\.git|node_modules|vendor|dist|build|target|out|coverage|\.next|\.venv|venv|__pycache__|\.idea)(\/|$)/i.test(path)) return false;
   const name = path.split("/").at(-1)!;

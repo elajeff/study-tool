@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { readImportFiles, type ImportFile } from "@/lib/import-files";
-import { inspectRepositoryText, previewRepository, shouldImportRepositoryFile, type RepositoryFile } from "@/lib/repository-import";
+import { inspectRepositoryText, repositoryArchiveRoot, previewRepository, shouldImportRepositoryFile, type RepositoryFile } from "@/lib/repository-import";
 import { loadRepositoryFiles } from "@/lib/source-queries";
 import type { RepositoryOrigin } from "@/lib/repository-origin";
 
@@ -13,6 +13,8 @@ type ReviewedFile = ImportFile & ReturnType<typeof inspectRepositoryText>;
 
 export function RepositoryImporter({ repositories, sourceId }: { repositories: Repository[]; sourceId: string }) {
   const router = useRouter();
+  const [url, setUrl] = useState(""), [ref, setRef] = useState("");
+  const [githubSnapshot, setGitHubSnapshot] = useState<{ url: string; commit: string } | null>(null);
   const [name, setName] = useState("");
   const [files, setFiles] = useState<ReviewedFile[]>([]);
   const [skipped, setSkipped] = useState<string[]>([]);
@@ -36,17 +38,31 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
     finally { setBusy(false); }
   }
 
-  async function prepare(file: File | undefined) {
+  async function prepare(file: File | undefined, snapshot?: { url: string; commit: string }) {
     if (!file) return;
-    setBusy(true); setMessage(""); setFiles([]); setSkipped([]);
+    setBusy(true); setMessage(""); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
     try {
       if (!file.name.toLowerCase().endsWith(".zip")) throw new Error("Select a ZIP archive.");
-      const parsed = await readImportFiles([file], shouldImportRepositoryFile);
+      const parsed = await readImportFiles([file], shouldImportRepositoryFile, snapshot ? repositoryArchiveRoot : undefined);
       const current = await loadRepositoryFiles(createClient(), sourceId);
       const reviewed = parsed.files.map((file) => ({ ...file, ...inspectRepositoryText(file.body) }));
       setState(current); setBindings({}); setFiles(reviewed); setSkipped(parsed.skipped);
+      setGitHubSnapshot(snapshot ?? null);
       setSelected(new Set(reviewed.filter((file) => !file.blocked).map((file) => file.path)));
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the archive."); }
+    finally { setBusy(false); }
+  }
+
+  async function prepareGitHub(event: React.FormEvent) {
+    event.preventDefault(); setBusy(true); setMessage(""); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
+    try {
+      const form = new FormData(); form.set("url", url); form.set("ref", ref);
+      const response = await fetch("/api/repositories/github", { method: "POST", body: form });
+      if (!response.ok) throw new Error(await response.text());
+      const savedUrl = response.headers.get("X-Repository-URL"), commit = response.headers.get("X-Repository-Commit");
+      if (!savedUrl || !commit) throw new Error("Download has no repository identity.");
+      await prepare(new File([await response.blob()], "github.zip", { type: "application/zip" }), { url: savedUrl, commit });
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the repository."); }
     finally { setBusy(false); }
   }
 
@@ -74,11 +90,11 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       const entries = rows.map((row) => ({ artifact_id: row.previous?.artifact_id ?? null, path: row.file.path, content: row.file.body,
         expected_path: row.previous?.path ?? null, expected_revision_id: row.previous?.revision_id ?? null }));
       if (new Blob([JSON.stringify(entries)]).size > 35 * 1024 * 1024) throw new Error("The import exceeds 35 MiB of JSON. Select fewer files.");
-      const origin: RepositoryOrigin = { format: "study-repository/1", kind: "archive", url: null, commit: null,
+      const origin: RepositoryOrigin = { format: "study-repository/1", kind: githubSnapshot ? "github" : "archive", url: githubSnapshot?.url ?? null, commit: githubSnapshot?.commit ?? null,
         excluded: [...skipped, ...files.filter(file => !selected.has(file.path)).map(file => file.path)] };
       const { error } = await createClient().rpc("accept_repository_import", { p_source_id: sourceId, p_entries: entries, p_origin: origin });
       if (error) throw new Error(error.message);
-      setFiles([]); setSkipped([]); setMessage("Import accepted."); router.refresh();
+      setFiles([]); setSkipped([]); setGitHubSnapshot(null); setMessage("Import accepted."); router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import could not be confirmed. Select the ZIP again before retrying."); }
     finally { setBusy(false); }
   }
@@ -96,6 +112,14 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
         <input id="repository-name" className="input" value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} disabled={busy} />
         <button className="button button-light" disabled={busy}>Create repository</button>
       </div></form></div>
+    <form onSubmit={prepareGitHub} className="stack">
+      <label htmlFor="github-url">Public GitHub repository URL</label>
+      <input id="github-url" className="input" type="url" value={url} onChange={event => setUrl(event.target.value)} required disabled={busy || !sourceId} placeholder="https://github.com/owner/repository" />
+      <label htmlFor="github-ref">Branch, tag or commit</label>
+      <input id="github-ref" className="input" value={ref} onChange={event => setRef(event.target.value)} maxLength={200} disabled={busy || !sourceId} placeholder="Default branch" />
+      <button className="button button-light" disabled={busy || !sourceId}>Preview GitHub repository</button>
+    </form>
+    {githubSnapshot && <p>Downloaded {githubSnapshot.url} at commit {githubSnapshot.commit}. Paths use the repository root. Existing ZIP imports may include an outer folder; compare paths before saving.</p>}
     <div className="import-actions"><label className={`button button-dark ${busy || !sourceId ? "disabled" : ""}`}>Preview ZIP
       <input className="import-file" type="file" accept=".zip,application/zip" disabled={busy || !sourceId}
         onChange={(event) => { void prepare(event.target.files?.[0]); event.target.value = ""; }} /></label></div>
@@ -121,7 +145,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
         </article>;
       })}
       <div className="import-actions"><button className="button button-dark" disabled={busy || !rows.length || rows.some((row) => row.identityConflict)} onClick={() => void accept()}>Accept selected files ({rows.length})</button>
-        <button className="button button-light" disabled={busy} onClick={() => { setFiles([]); setSkipped([]); setMessage(""); }}>Cancel preview</button></div>
+        <button className="button button-light" disabled={busy} onClick={() => { setFiles([]); setSkipped([]); setGitHubSnapshot(null); setMessage(""); }}>Cancel preview</button></div>
     </div>}
   </section>;
 }

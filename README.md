@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `012` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `012` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `011` already applied needs only `012`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `013` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `013` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `012` already applied needs only `013`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -123,6 +123,8 @@ Courses show the outline, independent proofs, source accounting, exclusions and 
 Open a module's lesson plan and copy its request into the ChatGPT Project containing that Library version. Paste the returned `study-module/1` JSON into the module's import form. The app checks the course, export, module, ordered step IDs and source references. Saved plans retain their lesson identities on repeat import. A different plan for the same module is rejected rather than replacing existing lessons.
 
 Select a saved lesson to copy its study request. It includes the lesson's goal, source references, completion condition and saved identities. ChatGPT teaches that step using relevant Library material and general knowledge. Copying the request does not record completion or mastery.
+
+Use **Mark done** after studying a lesson, or **Reopen** to clear that mark. This records study activity only; approved assessments still determine mastery. Reimporting the same lesson plan retains these marks.
 
 ## Assessments
 

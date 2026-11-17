@@ -24,7 +24,7 @@ export async function loadCourseSteps(client: SupabaseClient, courseId: string):
   for (let start = 0; start < ids.length; start += 100) {
     for (let offset = 0; ; offset += 500) {
       const { data, error } = await client.from("course_steps")
-        .select("row_id:id,id:key,module_id,position,kind,goal,sources,done_when")
+        .select("row_id:id,id:key,module_id,position,kind,goal,sources,done_when,completed_at")
         .in("module_id", ids.slice(start, start + 100)).order("id").range(offset, offset + 499);
       if (error) throw new Error("Could not load saved lesson steps.");
       steps.push(...data.map(({ module_id, ...row }) => ({ ...row, module_key: modules.get(module_id)! })));

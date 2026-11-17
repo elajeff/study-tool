@@ -33,6 +33,16 @@ begin
   assert public.save_course_module(course_id,plan)=module_uuid;
   assert exists(select 1 from public.course_steps where id=first_step);
   assert (select count(*)=5 from public.course_steps);
+  assert (select completed_at is null from public.course_steps where id=first_step);
+  update public.course_steps set completed_at='2026-11-17T12:00:00Z' where id=first_step;
+  perform public.save_course_module(course_id,plan);
+  assert (select completed_at='2026-11-17T12:00:00Z' from public.course_steps where id=first_step);
+  update public.course_steps set completed_at=null where id=first_step;
+  assert (select completed_at is null from public.course_steps where id=first_step);
+  begin
+    update public.course_steps set goal='Replace goal' where id=first_step;
+    raise exception 'Lesson text updated directly';
+  exception when insufficient_privilege then null; end;
   for changed in select value from jsonb_array_elements(jsonb_build_array(
     jsonb_set(plan,'{course_id}',to_jsonb(other_course)),jsonb_set(plan,'{steps,0,id}','"M01.S2"'),
     jsonb_set(plan,'{steps,0,sources}','["R1/F999"]'))) loop
@@ -51,9 +61,13 @@ begin
   assert (select count(*)=17 from public.course_steps);
   perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
   assert not exists(select 1 from public.course_modules) and not exists(select 1 from public.course_steps);
+  update public.course_steps set completed_at=now() where id=first_step;
+  assert not found, 'Foreign progress was updated';
   begin
     perform public.save_course_module(course_id,plan);
     raise exception 'Foreign course accepted';
   exception when insufficient_privilege then null; end;
+  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000100',true);
+  assert (select completed_at is null from public.course_steps where id=first_step);
 end $$;
 rollback;

@@ -7,7 +7,7 @@ test("lesson requests identify one saved step, its sources and prerequisites wit
   const course: Course = { format: "study-course/1", export_id: "X" + "a".repeat(64), title: "Ratios", goal: "Understand ratios", target: "Solve independently", assumed_level: "Beginner",
     modules: ["M01", "M02"].map((id, index) => ({ id, title: `Module ${index + 1}`, outcome: "Explain units", proof: "Solve a changed problem", needs: index ? ["M01"] : [], sources: ["general"], steps_estimate: 5 })),
     not_covered: [], open_questions: [] };
-  const step: SavedCourseStep = { id: "M02.S2", row_id: "00000000-0000-4000-8000-000000000002", module_key: "M02", position: 2,
+  const step: SavedCourseStep = { id: "M02.S2", row_id: "00000000-0000-4000-8000-000000000002", module_key: "M02", position: 2, completed_at: null,
     kind: "exercise", goal: "Compare two ratios", sources: ["V1/N001", "general"], done_when: "Explain the comparison without hints" };
   const card = lessonStudyCard("course-id", course, course.modules[1], step);
   const context = JSON.parse(card.split("REFERENCE DATA (JSON):\n")[1]);

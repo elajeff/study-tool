@@ -60,6 +60,8 @@ The note editor shows explicit links, prerequisites, and recommendations. Source
 
 ## Repositories
 
+For a course about each repository, open Portfolio from Courses or a saved Library snapshot. Copy a repository request into the ChatGPT Project containing that snapshot, then import the returned course through Inbox. Each request keeps its repository scope and exact Library version.
+
 Create or select a repository, then preview a ZIP or enter a public GitHub URL. You can choose a branch, tag or commit; leaving it blank uses the default branch. URL previews resolve a fixed commit before downloading, then use the same file review and import checks as ZIPs. GitHub's archive wrapper is removed; local ZIP paths stay as stored. Private repositories require a local ZIP. No GitHub token is required, and public request limits can require waiting or using ZIP instead.
 
 Files flagged for possible credential values stay selected and show a warning. Deselect anything you do not want to import. Private keys and known token patterns remain blocked.

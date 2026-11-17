@@ -48,6 +48,7 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
       {blocked && <p>Known credential patterns were found. Sanitize the source and prepare a new snapshot before downloading.</p>}
       <details><summary>View study-library.md</summary><pre className="library-text">{files[0].text}</pre></details>
       <p><Link href="/courses">Import the returned course</Link></p>
+      {manifest.sources.some(source => source.kind === "repository") && <p><Link href={`/portfolio?export=${manifest.export_id}`}>Plan repository courses from this snapshot</Link></p>}
       <details><summary>Find learning directions</summary>
         <p>Ask ChatGPT to inspect relevant source items and suggest five directions before creating a course.</p>
         <CourseLessonCard text={librarySuggestionsPrompt(manifest.export_id)} />

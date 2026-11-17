@@ -31,7 +31,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
       <p>Import the returned file or paste its response. The Library version is detected automatically.</p><InboxImporter openCourse />
-      <p><Link href="/library">Prepare a Library snapshot</Link></p>
+      <p><Link href="/library">Prepare a Library snapshot</Link> · <Link href="/portfolio">Plan repository courses</Link></p>
     </details></section>
     <section className="panel"><h2>Recent courses</h2>
       {recent.length ? <ul>{recent.map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title}</Link></li>)}</ul> : <p>No courses saved yet.</p>}

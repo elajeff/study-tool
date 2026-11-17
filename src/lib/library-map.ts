@@ -35,7 +35,7 @@ function pages(prefix: string, heading: string, entries: MapEntry[]): LibraryMap
   });
 }
 
-export function buildLibraryMaps(source: LibrarySource, artifacts: LibraryArtifact[]): LibraryMap[] {
+export function buildLibraryMaps(source: LibrarySource, artifacts: LibraryArtifact[], summaries = new Map<string, string>()): LibraryMap[] {
   const folders = new Map<string, LibraryArtifact[]>();
   for (const artifact of artifacts) {
     const path = artifact.path ?? "";
@@ -50,7 +50,8 @@ export function buildLibraryMaps(source: LibrarySource, artifacts: LibraryArtifa
     const maps = pages(prefix, `Folder ${label(folder || "/")}. Shortened labels can be opened in full.`,
       files.sort((a, b) => a.short_code.localeCompare(b.short_code, undefined, { numeric: true })).map(artifact => ({
         id: `${source.short_code}/${artifact.short_code}`,
-        label: label(artifact.path ?? artifact.external_id ?? "(no path)") + (artifact.current_revision_id ? "" : " [no saved text]"),
+        label: label(artifact.path ?? artifact.external_id ?? "(no path)") + (artifact.current_revision_id ? "" : " [no saved text]")
+          + (summaries.has(artifact.id) ? ` — AI summary, unverified: ${JSON.stringify(summaries.get(artifact.id))}` : ""),
         artifact,
       })));
     directoryEntries.push({ id: maps[0].id, label: `${label(folder || "/")} — items: ${files.length}; pages: ${maps.length}` });

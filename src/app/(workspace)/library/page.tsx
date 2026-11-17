@@ -19,7 +19,8 @@ export default async function LibraryPage({ searchParams }: {
   const revisionIds = artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []);
   const contexts = source && ["chatgpt", "claude"].includes(source.kind) ? await loadConversationContexts(supabase, revisionIds) : new Map();
   const digests = currentLibraryDigests(artifacts, contexts, await loadLibraryDigests(supabase, revisionIds));
-  const maps = source ? buildLibraryMaps(source, artifacts) : [];
+  const summaries = new Map([...digests].map(([id, digest]) => [id, digest.summary]));
+  const maps = source ? buildLibraryMaps(source, artifacts, summaries) : [];
   const map = query.map ? maps.find(row => row.id === query.map) : maps[0];
   return <>
     <div className="page-heading"><h1>Library</h1><p>Your imported collections and their reading references.</p></div>
@@ -51,7 +52,6 @@ export default async function LibraryPage({ searchParams }: {
             : { pathname: "/library", query: { source: source.short_code, map: entry.id } };
           return <li key={entry.id}>{href ? <Link href={href}>{entry.id} · {entry.label}</Link>
             : <span>{entry.id} · {entry.label}</span>}
-            {entry.artifact && digests.has(entry.artifact.id) && <p>AI summary, unverified: {digests.get(entry.artifact.id)!.summary}</p>}
           </li>;
         })}</ul>
         {!map.entries.length && <p>No saved items in this source.</p>}

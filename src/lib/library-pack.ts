@@ -3,6 +3,7 @@ import { buildLibraryMaps } from "./library-map.ts";
 import type { LibrarySource, LibraryArtifact } from "./library-queries.ts";
 import { conversationContextText, type ConversationContext } from "./conversation-context.ts";
 import { inspectImportText } from "./import-privacy.ts";
+import { currentLibraryDigests, type LibraryDigest, type ExportDigest } from "./library-digest.ts";
 
 export type ExportItem = {
   id: string; source_id: string; artifact_id: string; revision_id: string;
@@ -10,11 +11,11 @@ export type ExportItem = {
 };
 export type ExportManifest = {
   format: "study-export/3"; export_id: string; sources: LibrarySource[];
-  items: ExportItem[]; maps: { id: string; text: string }[];
+  items: ExportItem[]; maps: { id: string; text: string }[]; digests?: ExportDigest[];
 };
 export type ExportRevision = { id: string; artifact_id: string; content: string; content_hash: string };
 
-export function prepareLibraryExport(collections: { source: LibrarySource; artifacts: LibraryArtifact[] }[], revisions: ExportRevision[], contexts: Map<string, ConversationContext>): ExportManifest {
+export function prepareLibraryExport(collections: { source: LibrarySource; artifacts: LibraryArtifact[] }[], revisions: ExportRevision[], contexts: Map<string, ConversationContext>, candidates: LibraryDigest[] = []): ExportManifest {
   if (!collections.length || new Set(collections.map(({ source }) => source.id)).size !== collections.length
     || new Set(collections.map(({ source }) => source.short_code)).size !== collections.length)
     throw new Error("Select distinct Library sources with unique codes.");
@@ -33,8 +34,14 @@ export function prepareLibraryExport(collections: { source: LibrarySource; artif
       revision_id: revision.id, path: artifact.path ?? artifact.external_id ?? "(no path)", content_hash: revision.content_hash,
       ...(conversation ? { conversation } : {}) };
   })).sort((a, b) => a.id.localeCompare(b.id));
-  const maps = ordered.flatMap(({ source, artifacts }) => buildLibraryMaps(source, artifacts).map(({ id, text }) => ({ id, text })));
-  const payload = { format: "study-export/3" as const, sources: ordered.map(({ source }) => source), items, maps };
+  const selected = currentLibraryDigests(ordered.flatMap(collection => collection.artifacts), contexts, candidates);
+  const digests = items.flatMap(item => {
+    const digest = selected.get(item.artifact_id);
+    return digest ? [{ id: item.id, digest_id: digest.id, summary: digest.summary }] : [];
+  });
+  const summaries = new Map([...selected].map(([artifactId, digest]) => [artifactId, digest.summary]));
+  const maps = ordered.flatMap(({ source, artifacts }) => buildLibraryMaps(source, artifacts, summaries).map(({ id, text }) => ({ id, text })));
+  const payload = { format: "study-export/3" as const, sources: ordered.map(({ source }) => source), items, maps, ...(digests.length ? { digests } : {}) };
   return { ...payload, export_id: "X" + createHash("sha256").update(JSON.stringify(payload)).digest("hex") };
 }
 

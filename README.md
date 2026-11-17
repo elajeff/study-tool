@@ -98,6 +98,8 @@ Saving accepts 1–2,000 conversations within 35 MiB of prepared JSON and 500,00
 
 Previews show source-reported dates. Saved conversation readers also show the accepted import, visible message count and recorded omissions. Unchanged text uses the newest accepted import metadata for that revision. Older imports without metadata are labelled as unavailable. These dates and counts do not verify correctness, completeness or mastery.
 
+Obsidian previews recognize ChatBridge frontmatter when its conversation URL and UUID agree. Matching saved chats link to their current source revision; multiple copies remain listed. This matches identity, not identical text or branches. Generated `AI Chats/` files remain outside note imports, while annotated notes elsewhere are preserved.
+
 ## Assessments
 
 At the end of a tutoring session, get a `study-evidence` receipt using the format in the assessment page. Paste or import the receipt, review the original work, and approve or reject it. Only approved receipts affect the current mastery level and review schedule. A topic with no approved assessment remains **Not assessed**, not level 0.

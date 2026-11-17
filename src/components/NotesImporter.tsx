@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { matchChatReferences, type ChatReferenceMatch } from "@/lib/chatbridge";
 import { useState } from "react";
 import JSZip from "jszip";
 import { Download, FileUp } from "lucide-react";
@@ -16,6 +18,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   const [vaultState, setVaultState] = useState<VaultState[]>([]);
   const [bindings, setBindings] = useState<Record<string, string>>({});
   const [choices, setChoices] = useState<Record<string, "keep" | "replace" | "">>({});
+  const [chatMatches, setChatMatches] = useState<ChatReferenceMatch[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const rows = previewImport(files, vaultState, bindings);
@@ -44,17 +47,18 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       const { data, error } = await supabase.from("sources").insert({ user_id: user.id, kind: "obsidian", name: name.trim() })
         .select("id,name,kind").single();
       if (error) throw new Error("Could not create this vault. Enter a name between 1 and 160 characters.");
-      setVaults([...vaults, data as Vault]); setSourceId(data.id); setName(""); setFiles([]);
+      setVaults([...vaults, data as Vault]); setSourceId(data.id); setName(""); setFiles([]); setChatMatches([]);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not create vault."); }
     finally { setBusy(false); }
   }
 
   async function prepare(selected: FileList | null) {
     if (!selected?.length) return;
-    setBusy(true); setMessage(""); setFiles([]);
+    setBusy(true); setMessage(""); setFiles([]); setChatMatches([]);
     try {
       const parsed = await readMarkdownFiles(Array.from(selected));
-      const state = await loadState(parsed.files.map((file) => file.path));
+      const state = parsed.files.length ? await loadState(parsed.files.map((file) => file.path)) : [];
+      setChatMatches(await matchChatReferences(createClient(), parsed.chatReferences));
       setVaultState(state); setBindings({}); setChoices({}); setFiles(parsed.files);
       setMessage(`${parsed.files.length} ${parsed.files.length === 1 ? "file" : "files"} ready for preview.${parsed.skipped
         ? ` ${parsed.skipped} unsupported, generated, or oversized ${parsed.skipped === 1 ? "file" : "files"} skipped.` : ""}`);
@@ -123,7 +127,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
     <p>Choose the same vault when reimporting. Preview files before accepting them. Original files are not changed.</p>
     <div className="vault-controls">
       <div><label htmlFor="import-vault">Vault</label><select className="input" id="import-vault" value={sourceId} disabled={busy}
-        onChange={(event) => { setSourceId(event.target.value); setFiles([]); setMessage(""); }}>
+        onChange={(event) => { setSourceId(event.target.value); setFiles([]); setMessage(""); setChatMatches([]); }}>
         <option value="">All notes (export only)</option><option value="manual">Manual notes (export only)</option>
         {vaults.map((vault) => <option value={vault.id} key={vault.id}>{vault.name}{vaults.some((other) => other.id !== vault.id && other.name === vault.name) ? ` (${vault.id})` : ""}{vault.kind === "legacy_notes" ? " (legacy snapshots)" : ""}</option>)}
       </select></div>
@@ -137,6 +141,14 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
         disabled={busy || !canImport} onChange={(event) => { void prepare(event.target.files); event.target.value = ""; }} /></label>
       <button className="button button-light" disabled={busy} type="button" onClick={() => void exportNotes()}><Download size={16} /> Export ZIP</button></div>
     {message && <p role="status" className="import-message">{message}</p>}
+    {!!chatMatches.length && <details><summary>Conversation references ({chatMatches.length})</summary>
+      <p>Provider URLs and IDs identify related saved chats. They do not prove equal text or branches. AI Chats files remain outside note imports; notes elsewhere are kept.</p>
+      <ul>{chatMatches.map(reference => <li key={reference.path}>{reference.path}: {reference.items.length === 0 ? "No saved conversation found" : <>
+        {reference.items.length > 1 && "Multiple saved copies: "}{reference.items.map(item => <span key={item.reference}>
+          {item.revisionId ? <Link href={`/sources/revisions/${item.revisionId}`}>{item.reference}</Link> : `${item.reference} (no saved revision)`}{" "}
+        </span>)}
+      </>}</li>)}</ul>
+    </details>}
     {files.length > 0 && <div className="import-preview"><h3>Preview ({rows.length})</h3>
       <p>Files missing from this import are not deleted. Confirm renames by selecting the existing note. Older imported notes may need review.</p>
       {rows.map((row) => <article className="import-row" key={row.file.path}>
@@ -163,7 +175,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
         </details>
       </article>)}
       <div className="import-actions"><button className="button button-dark" disabled={busy || unresolved} type="button" onClick={() => void accept()}>Accept import</button>
-        <button className="button button-light" disabled={busy} type="button" onClick={() => { setFiles([]); setMessage(""); }}>Cancel preview</button></div>
+        <button className="button button-light" disabled={busy} type="button" onClick={() => { setFiles([]); setMessage(""); setChatMatches([]); }}>Cancel preview</button></div>
     </div>}
   </section>;
 }

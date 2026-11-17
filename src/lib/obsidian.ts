@@ -1,3 +1,4 @@
+import { chatBridgeReference, type ChatReference } from "./chatbridge.ts";
 import { cleanNotePath, shouldImportNote, vaultRoot } from "./notes.ts";
 import { readImportFiles, matchImportFiles, type ImportFile } from "./import-files.ts";
 
@@ -21,8 +22,14 @@ export type ImportPreview = {
 
 export async function readMarkdownFiles(selected: File[]) {
   // Non-Markdown archive metadata must not change vault-root detection.
-  const result = await readImportFiles(selected, shouldImportNote, (paths) => vaultRoot(paths.filter((path) => cleanNotePath(path))));
-  return { files: result.files, skipped: result.skipped.length };
+  const result = await readImportFiles(selected, (path) => shouldImportNote(path) || (!!cleanNotePath(path) && /^ai chats\//i.test(path)), (paths) => vaultRoot(paths.filter((path) => cleanNotePath(path))));
+  const chatReferences: ChatReference[] = [];
+  for (const file of result.files) {
+    const reference = chatBridgeReference(file.body);
+    if (reference) chatReferences.push({ path: file.path, ...reference });
+  }
+  const files = result.files.filter(file => shouldImportNote(file.path));
+  return { files, chatReferences, skipped: result.skipped.length + result.files.length - files.length };
 }
 
 export function previewImport(files: ImportFile[], state: VaultState[], bindings: Record<string, string> = {}): ImportPreview[] {

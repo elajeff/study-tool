@@ -1,14 +1,16 @@
 # Study Tool
 
-Study Tool turns Markdown notes into a study roadmap. It supports Obsidian vault imports, practice topics, reviewed assessments, and handoffs to ChatGPT Web or Codex.
+Study Tool organizes Obsidian notes, repositories and exported ChatGPT/Claude conversations into a versioned study library. ChatGPT Web creates courses and teaches lessons; the app validates returned files, shows learning paths and tracks study activity and reviewed assessments.
 
-The roadmap follows the material each person imports. No standard course is assigned to every account.
+Imported material provides familiar examples without restricting the subjects someone can learn. Core imports and planning require no paid AI API or local model download.
 
 ## Features
 
 - Email sign-in and private workspaces using Supabase Auth and row-level security.
 - Markdown import, editing, and export.
-- Local repository ZIP previews and source-file browsing.
+- Repository ZIP and public GitHub previews, plus ChatGPT and Claude conversation imports.
+- Versioned Library downloads with source references and ChatGPT authoring instructions.
+- Course and lesson-plan imports, repository journey requests, and selectable lesson cards.
 - Study topics and prerequisite links drawn from source notes.
 - Progress and review reminders based on approved assessments.
 - ChatGPT Web as the default tutor, with an optional Codex handoff. Both open in their official sites.

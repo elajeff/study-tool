@@ -11,9 +11,10 @@ export async function loadExportManifest(client: SupabaseClient, id: string): Pr
 export async function loadExportRevisions(client: SupabaseClient, sourceIds: string[], ids: string[]): Promise<ExportRevision[]> {
   const revisions: ExportRevision[] = [];
   let bytes = 0;
-  for (let offset = 0; offset < ids.length; offset += 500) {
+  // UUID filters must also fit HTTP request-line limits.
+  for (let offset = 0; offset < ids.length; offset += 100) {
     const { data, error } = await client.from("source_revisions").select("id,artifact_id,content,content_hash")
-      .in("source_id", sourceIds).in("id", ids.slice(offset, offset + 500));
+      .in("source_id", sourceIds).in("id", ids.slice(offset, offset + 100));
     if (error) throw new Error("Could not load the selected export revisions.");
     for (const row of data) bytes += Buffer.byteLength(row.content, "utf8");
     if (bytes > 35 * 1024 * 1024) throw new Error("The selected sources exceed 35 MiB. Select fewer sources.");

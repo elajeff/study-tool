@@ -16,7 +16,7 @@ test("revision loading batches selected IDs and enforces a combined UTF-8 byte l
     },
   } });
   assert.deepEqual((await loadExportRevisions(client, ["repository", "notes"], ids)).map(row => row.id), ids);
-  assert.equal(requests.length, 2);
+  assert.deepEqual(requests.map(url => url.searchParams.get("id")!.slice(4, -1).split(",").length), [100, 100, 100, 100, 100, 1]);
   assert.ok(requests.every(url => url.searchParams.get("source_id") === "in.(repository,notes)"));
   large = true;
   await assert.rejects(loadExportRevisions(client, ["repository", "notes"], ids), /35 MiB/);

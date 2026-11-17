@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAccount } from "@/lib/auth";
 import { loadLibrarySources, loadLibraryArtifacts } from "@/lib/library-queries";
 import { buildLibraryMaps } from "@/lib/library-map";
-import { prepareProjectExport } from "@/app/library-actions";
+import { LibrarySnapshotForm } from "@/components/LibrarySnapshotForm";
 import { loadConversationContexts } from "@/lib/conversation-queries";
 import { loadLibraryDigests } from "@/lib/digest-queries";
 import { currentLibraryDigests } from "@/lib/library-digest";
@@ -32,17 +32,7 @@ export default async function LibraryPage({ searchParams }: {
         <Link href={{ pathname: "/library", query: { source: source.short_code } }}>
           {source.short_code} · {source.name}</Link> · {source.kind.replaceAll("_", " ")}
       </li>)}</ul> : <p>No sources imported yet.</p>}
-      {!!sources.length && <form action={prepareProjectExport}>
-        <fieldset><legend>Include in snapshot</legend>
-          {sources.map(source => <label key={source.id} style={{ display: "block" }}>
-            <input type="checkbox" name="source" value={source.id} defaultChecked /> {source.short_code} · {source.name}
-          </label>)}
-        </fieldset>
-        <p><label><input type="checkbox" name="learning" value="include" /> Include learning history</label></p>
-        <p>Adds saved course titles and reviewed assessment summaries from this account. Leave unchecked to export only the selected sources.</p>
-        <p>Save a snapshot, then download its Study Library files for ChatGPT.</p>
-        <p><button className="button button-dark">Save snapshot and open export</button></p>
-      </form>}
+      {!!sources.length && <LibrarySnapshotForm sources={sources} />}
       {query.source && !source && <p role="status">Source not found in your Library.</p>}
     </section>
     <section className="panel library-source"><h2>Saved snapshots</h2>

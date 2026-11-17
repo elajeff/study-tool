@@ -1,5 +1,34 @@
 export const GITHUB_ARCHIVE_LIMIT = 20 * 1024 * 1024;
 
+export type GitHubPublicRepository = { name: string; url: string; description: string | null; fork: boolean; archived: boolean };
+
+export function parseGitHubProfile(raw: string) {
+  let url: URL;
+  try { url = new URL(raw); } catch { throw new Error("Enter a public GitHub profile URL."); }
+  const match = url.pathname.match(/^\/([a-z0-9-]{1,39})\/?$/i);
+  if (url.protocol !== "https:" || url.hostname !== "github.com" || url.port || url.username || url.password || url.search || url.hash || !match)
+    throw new Error("Use https://github.com/username without a repository path or query.");
+  return match[1];
+}
+
+export async function listGitHubRepositories(raw: string, page: number, fetcher: typeof fetch = fetch) {
+  const owner = parseGitHubProfile(raw);
+  if (!Number.isSafeInteger(page) || page < 1) throw new Error("Invalid repository list page.");
+  const response = await fetcher(`https://api.github.com/users/${owner}/repos?type=owner&sort=full_name&per_page=100&page=${page}`, {
+    headers: { Accept: "application/vnd.github+json", "User-Agent": "Study-Tool", "X-GitHub-Api-Version": "2026-03-10" },
+    redirect: "error", signal: AbortSignal.timeout(30000), cache: "no-store",
+  });
+  if (response.status === 404) throw new Error("GitHub profile not found.");
+  if (response.status === 403 || response.status === 429) throw new Error("GitHub limited this public request. Try later or import a ZIP.");
+  if (!response.ok) throw new Error(`Could not list repositories (HTTP ${response.status}).`);
+  const items: { name: string; full_name: string; private: boolean; description: string | null; fork: boolean; archived: boolean }[] = await response.json();
+  const repositories: GitHubPublicRepository[] = items.filter(item => !item.private).map(item => ({
+    name: item.full_name, url: parseGitHubRepository(`https://github.com/${item.full_name}`).url,
+    description: item.description, fork: item.fork, archived: item.archived,
+  }));
+  return { repositories, nextPage: items.length === 100 ? page + 1 : null };
+}
+
 export function parseGitHubRepository(raw: string) {
   let url: URL;
   try { url = new URL(raw); } catch { throw new Error("Enter a public GitHub repository URL."); }

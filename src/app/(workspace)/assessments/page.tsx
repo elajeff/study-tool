@@ -15,6 +15,12 @@ export default async function AssessmentsPage() {
   ]);
   if (error) throw new Error("Could not load assessment history.");
   const reviewed = (history ?? []) as Assessment[];
+  const stepIds = [...new Set([...pending, ...reviewed].flatMap(record => record.step_id ? [record.step_id] : []))];
+  for (let start = 0; start < stepIds.length; start += 100) {
+    const { data, error } = await supabase.from("course_steps").select("id,key,goal").in("id", stepIds.slice(start, start + 100));
+    if (error) throw new Error("Could not load assessment lesson labels.");
+    data.forEach(step => labels.set(`course-step:${step.id}`, `${step.key} · ${step.goal}`));
+  }
   return <>
     <div className="page-heading">
       <h1>Assessments</h1>

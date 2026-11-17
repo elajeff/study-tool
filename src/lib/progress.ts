@@ -16,6 +16,7 @@ export type Assessment = {
   status: "pending" | "approved" | "rejected";
   submitted_at: string;
   reviewed_at: string | null;
+  step_id?: string | null;
 };
 
 export function latestApproved(records: Assessment[]) {

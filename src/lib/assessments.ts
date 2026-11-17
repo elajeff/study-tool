@@ -10,6 +10,7 @@ export type Evidence = {
   hints: "none" | "minor" | "major" | "solution";
   artifact: string;
   next_step: string;
+  step?: string;
 };
 
 const blocks = /^```study-evidence\s*\r?\n([\s\S]*?)^```\s*$/gm;
@@ -41,7 +42,12 @@ export function validateEvidence(value: unknown): Evidence {
     throw new Error("Level 3 requires independent work without a supplied solution.");
   if ((item.level as number) >= 4 && (item.hints !== "none" || !(item.artifact as string).trim()))
     throw new Error("Level 4 or 5 requires an artifact and no hints.");
-  return Object.fromEntries(["topic", "date", "level", ...fields, "independent", "hints"].map((key) => [key, item[key]])) as Evidence;
+  if (item.step !== undefined && (typeof item.step !== "string" || !/^[a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}$/.test(item.step)))
+    throw new Error("Use the persistent step ID supplied in the lesson card.");
+  if (item.step !== undefined ? item.topic !== `course-step:${item.step}` : item.topic.startsWith("course-step:"))
+    throw new Error("A course receipt's topic must match its persistent step ID.");
+  const receipt = Object.fromEntries(["topic", "date", "level", ...fields, "independent", "hints"].map((key) => [key, item[key]])) as Evidence;
+  return item.step === undefined ? receipt : { ...receipt, step: item.step };
 }
 
 export function parseEvidence(text: string) {

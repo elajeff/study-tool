@@ -20,4 +20,6 @@ test("lesson requests identify one saved step, its sources and prerequisites wit
   assert.match(card, /Wait for an attempt before giving its solution/);
   assert.match(card, /includes no assessment records/);
   assert.match(card, /Do not claim Study Tool has recorded completion/);
+  assert.match(card, /app imports receipts as pending review/);
+  assert.ok(card.includes(`topic "course-step:${step.row_id}", step "${step.row_id}"`));
 });

@@ -27,6 +27,17 @@ test("independent work is required for level 3 and an artifact for level 4", () 
   assert.throws(() => validateEvidence({ ...evidence, level: 6 }), /Mastery/);
 });
 
+test("course receipts bind the topic to a persistent lesson and retain legacy fingerprints", () => {
+  const step = "00000000-0000-4000-8000-000000000001";
+  const receipt = { ...evidence, topic: `course-step:${step}`, step };
+  assert.deepEqual(validateEvidence(receipt), receipt);
+  assert.throws(() => validateEvidence({ ...receipt, step: "M01.S1" }), /persistent step ID/);
+  assert.throws(() => validateEvidence({ ...receipt, topic: "course-step:other" }), /topic must match/);
+  assert.throws(() => validateEvidence({ ...receipt, step: undefined }), /topic must match/);
+  assert.equal(evidenceFingerprint(validateEvidence(evidence)), evidenceFingerprint(validateEvidence({ ...evidence, step: undefined })));
+  assert.equal(evidenceFingerprint(validateEvidence(receipt)), evidenceFingerprint(validateEvidence({ ...receipt, status: "approved" })));
+});
+
 test("only approved records determine mastery, including a later lower score", () => {
   const pending = record("3", "pending", "2026-11-12", 5);
   const earlier = record("1", "approved", "2026-11-10", 4);

@@ -3,11 +3,37 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { prepareLibraryExport, projectInstructions } from "../src/lib/library-pack.ts";
 import { buildLibraryFiles, LIBRARY_FILE_BYTES, LibraryFileSizeError } from "../src/lib/library-files.ts";
+import { MAP_CHARACTER_LIMIT } from "../src/lib/library-map.ts";
 
 const source = { id: "repository", short_code: "R1", kind: "repository", name: "Synthetic project" };
 const artifact = { id: "file", short_code: "F001", path: "example.py", external_id: null, current_revision_id: "revision" };
 const content = "# π\r\ndef add(a, b): return a + b\r\n";
 const revision = { id: "revision", artifact_id: "file", content, content_hash: createHash("sha256").update(content).digest("hex") };
+
+test("exported summaries freeze matching versions without replacing source text or changing empty-cache snapshots", () => {
+  const collections = [{ source, artifacts: [artifact] }];
+  const original = prepareLibraryExport(collections, [revision], new Map());
+  assert.equal(prepareLibraryExport(collections, [revision], new Map(), []).export_id, original.export_id);
+  const candidates = [{ id: "summary-1", revision_id: revision.id, path: artifact.path, context: null, summary: "An unverified arithmetic function." }];
+  const saved = prepareLibraryExport(collections, [revision], new Map(), candidates);
+  assert.notEqual(saved.export_id, original.export_id);
+  assert.equal(saved.digests?.[0].digest_id, "summary-1");
+  assert.ok(saved.maps.some(map => map.text.includes("AI summary, unverified")));
+  assert.ok(buildLibraryFiles(saved, [revision]).some(file => file.text.includes(content)));
+  assert.ok(!original.maps.some(map => map.text.includes(candidates[0].summary)));
+  candidates.unshift({ ...candidates[0], id: "summary-2", summary: "Corrected navigation." });
+  assert.equal(prepareLibraryExport(collections, [revision], new Map(), candidates).digests?.[0].digest_id, "summary-2");
+  assert.equal(saved.digests?.[0].digest_id, "summary-1");
+});
+
+test("long Unicode summaries keep all items reachable within map size limits", () => {
+  const artifacts = Array.from({ length: 100 }, (_, i) => ({ ...artifact, id: `a-${i}`, short_code: `F${i+1}`, current_revision_id: `r-${i}` }));
+  const revisions = artifacts.map(item => ({ ...revision, id: item.current_revision_id, artifact_id: item.id }));
+  const digests = artifacts.map(item => ({ id: `d-${item.id}`, revision_id: item.current_revision_id, path: item.path, context: null, summary: "😀".repeat(200) }));
+  const saved = prepareLibraryExport([{ source, artifacts }], revisions, new Map(), digests);
+  assert.ok(saved.maps.every(map => map.text.length <= MAP_CHARACTER_LIMIT));
+  for (const item of saved.items) assert.ok(saved.maps.some(map => map.text.includes(item.id + "  ")));
+});
 
 test("snapshots keep mixed-source identities and hashes stable regardless of selection order", () => {
   const notes = { ...source, id: "notes", short_code: "V1", kind: "obsidian" };

@@ -5,6 +5,7 @@ import { inspectImportText } from "./import-privacy.ts";
 
 export type DigestContext = ConversationContext["metadata"];
 export type LibraryDigest = { id: string; revision_id: string; path: string; context: DigestContext; summary: string };
+export type ExportDigest = { id: string; digest_id: string; summary: string };
 export type DigestBlock = { format: "study-digest/1"; export_id: string; items: { id: string; summary: string }[] };
 
 function digestContextKey(context: DigestContext): string {

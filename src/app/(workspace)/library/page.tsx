@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAccount } from "@/lib/auth";
 import { loadLibrarySources, loadLibraryArtifacts } from "@/lib/library-queries";
 import { buildLibraryMaps } from "@/lib/library-map";
+import { prepareProjectExport } from "@/app/library-actions";
 
 export default async function LibraryPage({ searchParams }: {
   searchParams: Promise<{ source?: string; map?: string }>;
@@ -22,6 +23,14 @@ export default async function LibraryPage({ searchParams }: {
           {source.short_code} · {source.name}</Link> · {source.kind.replaceAll("_", " ")}
       </li>)}</ul> : <p>No sources imported yet.</p>}
       <p><Link href="/notes">Import notes</Link> · <Link href="/repositories">Import a repository</Link></p>
+      {!!sources.length && <form action={prepareProjectExport}>
+        <fieldset><legend>Include in snapshot</legend>
+          {sources.map(source => <label key={source.id} style={{ display: "block" }}>
+            <input type="checkbox" name="source" value={source.id} defaultChecked /> {source.short_code} · {source.name}
+          </label>)}
+        </fieldset>
+        <p><button className="button button-light">Save Library snapshot</button></p>
+      </form>}
       {query.source && !source && <p role="status">Source not found in your Library.</p>}
     </section>
     {source && <section className="panel library-source"><h2>{source.short_code} · {source.name} ({artifacts.length})</h2>

@@ -35,11 +35,14 @@ export default async function LibraryPage({ searchParams }: {
       {!!sources.length && <LibrarySnapshotForm sources={sources} />}
       {query.source && !source && <p role="status">Source not found in your Library.</p>}
     </section>
-    <section className="panel library-source"><h2>Saved snapshots</h2>
-      <p>Open a snapshot to download its Study Library files. The 20 most recent snapshots are shown.</p>
-      {snapshots.length ? <ul>{snapshots.map(snapshot => <li key={snapshot.id}>
-        <Link href={`/library/exports/${snapshot.id}`}>Export snapshot · {new Date(snapshot.created_at).toLocaleString("en-GB", { timeZone: "UTC" })} UTC · {snapshot.id.slice(0, 9)}</Link>
-      </li>)}</ul> : <p>No snapshots saved yet.</p>}
+    <section className="panel library-source"><h2>Download your Study Library</h2>
+      <p>Download a saved snapshot, then upload its files to your ChatGPT Project. The 20 most recent snapshots are shown.</p>
+      {snapshots.length ? <div className="saved-exports">{snapshots.map(snapshot => <article className="saved-export" key={snapshot.id}>
+        <p>Saved {new Date(snapshot.created_at).toLocaleString("en-GB", { timeZone: "UTC" })} UTC · {snapshot.id.slice(0, 9)}</p>
+        <div className="import-actions"><form action={`/library/exports/${snapshot.id}/download`} method="POST">
+          <button className="button button-dark">Download Study Library</button>
+        </form><Link className="button button-light" href={`/library/exports/${snapshot.id}`}>View details</Link></div>
+      </article>)}</div> : <p>No snapshots saved yet.</p>}
     </section>
     {source && <section className="panel library-source"><h2>{source.short_code} · {source.name} ({artifacts.length})</h2>
       <p>Read saved import text. Editable notes remain separate.</p>

@@ -7,6 +7,7 @@ import { prepareConversationEntries, loadConversationState } from "@/lib/convers
 import { createClient } from "@/lib/supabase/client";
 import type { LibrarySource } from "@/lib/library-queries";
 import { inspectImportText } from "@/lib/import-privacy";
+import { sourceTimeText } from "@/lib/conversation-context";
 
 export function ConversationPreview({ sources, sourceId }: { sources: LibrarySource[]; sourceId: string }) {
   const router = useRouter(), source = sources.find(item => item.id === sourceId);
@@ -89,6 +90,7 @@ export function ConversationPreview({ sources, sourceId }: { sources: LibrarySou
       {conversation && slice && <>
         {credentialWarning && <p role="note">{credentialWarning}</p>}
         <p>Visible messages: {conversation.messages.length} · Page {page + 1} / {conversation.pages.length}. Large turns remain intact.</p>
+        <p>Source-reported dates · Created: {sourceTimeText(conversation.created_at)} · Updated: {sourceTimeText(conversation.updated_at)}.</p>
         <details><summary>Excluded content counts</summary><pre>{JSON.stringify(conversation.excluded, null, 2)}</pre></details>
         <pre className="library-text">{conversation.text.slice(slice.start, slice.end)}</pre>
         <button className="button button-light" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous page</button>{" "}

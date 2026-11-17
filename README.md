@@ -140,6 +140,8 @@ New snapshots include matching summaries in their navigation maps. The snapshot 
 
 ## Courses
 
+Saved courses include an optional outline-review request for ChatGPT. Add your original learning request when needed so the review checks your intended scope. Import a revised outline through Inbox; existing lessons and progress stay with the original course.
+
 Ask ChatGPT for a course using your uploaded Library, then import the returned file in **Courses**. The app detects its export reference and requires that snapshot in your account. It checks module prerequisites, item references, exclusions and required fields before saving. Reimporting an unchanged outline opens the same course.
 
 Courses show the outline, independent proofs, source accounting, exclusions and open questions. Unassigned sources are reported rather than treated as covered. These checks validate structure and references; they do not verify explanations, lesson quality or mastery.

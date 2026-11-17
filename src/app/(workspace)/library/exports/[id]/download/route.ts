@@ -21,6 +21,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     "Content-Disposition": 'attachment; filename="study-library.md"', "Cache-Control": "no-store" } });
   const zip = new JSZip();
   for (const file of files) zip.file(file.name, file.text);
-  return new Response(await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" }), { headers: {
+  const archive = await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+  return new Response(new Blob([archive]).stream(), { headers: {
     "Content-Type": "application/zip", "Content-Disposition": 'attachment; filename="study-library.zip"', "Cache-Control": "no-store" } });
 }

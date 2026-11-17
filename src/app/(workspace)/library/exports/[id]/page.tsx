@@ -29,6 +29,7 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
     <Link className="back-link" href="/library">Back to Library</Link>
     <div className="page-heading"><h1>Library snapshot</h1><p>Collections: {manifest.sources.length} · Items: {manifest.items.length}</p></div>
     <section className="panel"><h2>ChatGPT file</h2>
+      {manifest.card && <details><summary>Library card</summary><pre className="library-text">{manifest.card}</pre></details>}
       <p>{characters.toLocaleString()} characters · approximately {Math.ceil(characters / 4).toLocaleString()} tokens (characters ÷ 4; estimate only).</p>
       {files.length === 1
         ? <p>Download study-library.md and upload it to your ChatGPT Project. It includes source text and authoring instructions. No separate instructions file is needed.</p>

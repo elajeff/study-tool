@@ -20,9 +20,9 @@ Requires Node.js 22.13 or newer within the Node 22 release line, or Node.js 24+,
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `016` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `016` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `015` already applied needs only `016`.
+   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `017` from `supabase/`, in order.
+   - **Upgrade from v0.1:** run numbered migrations `002` through `017` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
+   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `016` already applied needs only `017`.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -105,6 +105,8 @@ Obsidian previews recognize ChatBridge frontmatter when its conversation URL and
 In Library, select collections and choose **Save Library snapshot**. The saved page links to the selected source revisions and records their paths, hashes, maps and accepted conversation context. Reimporting a source does not update an existing snapshot. Repeating the same selection without changes reuses its reference.
 
 Snapshots contain saved imports, which may omit parts of the original collections. Preparing a snapshot does not send it to an AI service. Selected source text is limited to 35 MiB; larger libraries need separate selections.
+
+New snapshots contain a compact Library card with source counts and navigation hints from chat titles, file extensions and note folders. These hints are not extracted concepts or prerequisites. **Include learning history** is unchecked by default. Selecting it adds account-wide saved course titles and recent reviewed assessment summaries; the snapshot page shows the card before download.
 
 From the saved page, download `study-library.md` and upload it to a ChatGPT Project. The same file includes authoring instructions, maps, exact source text and saved conversation context. Ask ChatGPT to follow those instructions for your learning request. It should inspect relevant items itself, use general knowledge where needed and name anything it cannot retrieve.
 

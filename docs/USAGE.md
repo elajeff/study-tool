@@ -2,6 +2,14 @@
 
 Detailed import rules, file limits and course handoffs. For installation, see the [README](../README.md).
 
+## Dashboard
+
+Dashboard follows the course selected in the current browser session, or the newest saved course. It shows module and lesson completion, approved assessment counts, and a link to the next lesson or module plan. Marking a lesson done records activity, not mastery.
+
+Time remaining uses unfinished planned lessons plus the outline's lesson-count estimates for unplanned modules. The default assumption is 30 minutes per lesson; change it on Dashboard. Calendar days use the weekly hours in Settings, spread evenly across the week. These are planning estimates, not measured durations or guaranteed deadlines.
+
+The separate note-based roadmap is available through **Browse note topics** on Notes. Imported ChatGPT courses do not change that view.
+
 ## Obsidian
 
 Create or select a vault on the Notes page, then preview `.md` files or a ZIP containing Markdown. Reuse that vault when reimporting; its UUID identifies the collection independently of its name. Different vaults can contain the same path. The app uses these folders when present:

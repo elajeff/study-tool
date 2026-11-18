@@ -19,7 +19,7 @@ export function CourseModules({ courseId, course, steps, selectedModule, nextMod
         </summary>
         <div className="module-content"><p>{module.outcome}</p>
           <p>Prerequisites: {module.needs.join(", ") || "None"}. Estimated steps: {module.steps_estimate}.</p>
-          <p>Sources: {module.sources.join(", ")}.</p><p>Independent proof: {module.proof}</p>
+          <details><summary>Sources and independent proof</summary><p>Sources: {module.sources.join(", ")}.</p><p>{module.proof}</p></details>
           {!!saved.length && <ol className="lesson-grid">{saved.map((lesson, lessonIndex) => {
             const isNext = nextStep === lesson.row_id, isSelected = selectedStep === lesson.row_id;
             return <li key={lesson.row_id} className={`lesson-tile${lesson.completed_at ? " is-done" : ""}${isNext ? " is-next" : ""}${isSelected ? " is-selected" : ""}`}>
@@ -28,13 +28,13 @@ export function CourseModules({ courseId, course, steps, selectedModule, nextMod
                 <span className="lesson-tile-top"><span className="lesson-number">{lesson.completed_at ? <Check size={16} /> : lessonIndex + 1}</span>
                   <span className="lesson-kind">{lesson.kind}</span>{isNext && <span className="path-badge">Next</span>}</span>
                 <strong>Lesson {lessonIndex + 1}</strong><p className="lesson-tile-goal">{lesson.goal}</p>
-                <span className="lesson-open">{lesson.completed_at ? "Revisit lesson" : "Open lesson"}<ArrowRight size={14} /></span>
+                <span className="lesson-open">{lesson.completed_at ? "Revisit lesson" : "Start lesson"}<ArrowRight size={14} /></span>
               </Link>
               <div className="lesson-tile-footer"><span className="lesson-status">{lesson.completed_at ? "Done" : "Not started"}</span>
                 <CourseStepAction courseId={courseId} step={lesson} /></div>
             </li>;
           })}</ol>}
-          <Link href={{ pathname: "/courses", query: { id: courseId, module: module.id }, hash: "module-plan" }}>Open lesson plan</Link>
+          <Link className="button button-light" href={{ pathname: "/courses", query: { id: courseId, module: module.id }, hash: "module-plan" }}>{saved.length ? "View lesson plan" : "Prepare lesson plan"}</Link>
         </div>
       </details>
     </li>;

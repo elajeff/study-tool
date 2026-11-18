@@ -7,6 +7,7 @@ import { courseOverview } from "@/lib/course-overview";
 import { loadAssessments } from "@/lib/assessment-queries";
 import { latestApproved } from "@/lib/progress";
 import { ProgressExport } from "@/components/ProgressExport";
+import { savedCoursePosition } from "@/lib/course-position";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ minutes?: string }> }) {
   const { supabase, user } = await requireAccount();
@@ -29,7 +30,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const steps = await loadCourseSteps(supabase, courseId);
   const hoursPerWeek = profile.data?.hours_per_week ?? null;
   const overview = courseOverview(saved.course, steps, minutesPerLesson, hoursPerWeek);
-  const next = nextCourseLesson(saved.course, steps);
+  const next = savedCoursePosition((await cookies()).get(`study-position-${user.id}`)?.value, courseId, saved.course, steps) ?? nextCourseLesson(saved.course, steps);
   const assessments = latestApproved(await loadAssessments(supabase, "approved"));
   const assessed = steps.filter(step => assessments.has(`course-step:${step.row_id}`)).length;
   const nextQuery = new URLSearchParams({ id: courseId });
@@ -40,7 +41,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <progress className="course-progress" aria-label="Course modules completed" value={overview.completedModules} max={saved.course.modules.length} />
       <p>{overview.completedModules} of {saved.course.modules.length} modules finished · {overview.completedLessons} of {overview.plannedLessons} planned lessons done</p>
       <div className="import-actions"><Link className="button button-dark" href={`/courses?${nextQuery}#${next?.step ? "lesson-focus" : next ? "module-plan" : "course-path"}`}>
-        {next ? next.step ? `Continue ${next.step.id}` : `Plan ${next.module.id} lessons` : "View completed course"}
+        {next ? "Continue studying" : "View completed course"}
       </Link><Link className="button button-light" href={`/courses?id=${courseId}`}>Open roadmap</Link></div>
       {next && <p>Next: {next.step?.goal ?? next.module.title}</p>}
     </section>

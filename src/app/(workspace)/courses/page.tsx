@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
 import { InboxImporter } from "@/components/InboxImporter";
@@ -13,15 +14,22 @@ import { LessonControls } from "@/components/LessonControls";
 import { CourseReviewCard } from "@/components/CourseReviewCard";
 import { CourseModules } from "@/components/CourseModules";
 import { CourseStepAction } from "@/components/CourseStepAction";
+import { RememberCourse } from "@/components/RememberCourse";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string }> }) {
-  const { supabase } = await requireAccount();
-  const query = await searchParams;
+  const { supabase, user } = await requireAccount();
+  const requested = await searchParams;
+  const query = { ...requested };
   const { data: recent, error } = await supabase.from("courses").select("id,title:raw_block->>title")
     .order("created_at", { ascending: false }).limit(20);
   if (error) throw new Error("Could not load courses. Check migration 011.");
-  const result = query.id ? await loadCourse(supabase, query.id) : null;
-  if (query.id && !result) notFound();
+  if (!query.id) query.id = (await cookies()).get(`study-course-${user.id}`)?.value ?? recent[0]?.id;
+  let result = query.id ? await loadCourse(supabase, query.id) : null;
+  if (requested.id && !result) notFound();
+  if (!result && !requested.id && recent.length) {
+    query.id = recent[0].id;
+    result = await loadCourse(supabase, recent[0].id);
+  }
   const selected = result?.course.modules.find(item => item.id === query.module);
   const allSteps = query.id && result ? await loadCourseSteps(supabase, query.id) : [];
   const steps = allSteps.filter(step => step.module_key === selected?.id).sort((a, b) => a.position - b.position);
@@ -32,6 +40,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const assessmentTopic = currentStep ? `course-step:${currentStep.row_id}` : undefined;
   const assessment = assessmentTopic ? latestApproved(await loadAssessments(supabase, "approved", assessmentTopic)).get(assessmentTopic) : undefined;
   return <>
+    {result && query.id && <RememberCourse userId={user.id} courseId={query.id} />}
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
       <p>Import the returned file or paste its response. The Library version is detected automatically.</p><InboxImporter openCourse />

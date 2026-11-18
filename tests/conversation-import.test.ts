@@ -2,6 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseConversationExport } from "../src/lib/conversation-import.ts";
 
+test("malformed conversation shards identify the file that needs replacing", () => {
+  assert.throws(() => parseConversationExport(["[]", "broken"], "chatgpt", ["first.json", "second.json"]), /second.json: invalid JSON/);
+  assert.throws(() => parseConversationExport("{}", "claude", ["account.json"]), /account.json: select a conversations JSON array/);
+});
+
 const message = (role: string, content_type: string, parts: unknown[], extra = {}) => ({ author: { role }, content: { content_type, parts }, ...extra });
 const record = { id: "conversation", title: "Synthetic branch", current_node: "answer", mapping: {
   root: { parent: null, message: null },
@@ -77,6 +82,6 @@ test("overlapping shards deduplicate identical copies and reject conflicting ver
   const conflict = parseConversationExport([raw, changed, raw]);
   assert.equal(conflict.conversations.length, 0);
   assert.equal(conflict.rejected.length, 3);
-  assert.throws(() => parseConversationExport([raw, "{}"]), /JSON arrays/);
+  assert.throws(() => parseConversationExport([raw, "{}"]), /JSON array/);
   assert.throws(() => parseConversationExport([raw, "not JSON"]), SyntaxError);
 });

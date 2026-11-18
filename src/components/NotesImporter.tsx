@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { matchChatReferences, type ChatReferenceMatch } from "@/lib/chatbridge";
 import { useState } from "react";
 import JSZip from "jszip";
@@ -11,6 +12,7 @@ import { previewImport, readMarkdownFiles, type Vault, type VaultState } from "@
 import type { ImportFile } from "@/lib/import-files";
 
 export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
+  const router = useRouter();
   const [vaults, setVaults] = useState(initialVaults);
   const [sourceId, setSourceId] = useState(initialVaults[0]?.id ?? "");
   const [name, setName] = useState("");
@@ -54,9 +56,10 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
 
   async function prepare(selected: FileList | null) {
     if (!selected?.length) return;
-    setBusy(true); setMessage(""); setFiles([]); setChatMatches([]);
+    setBusy(true); setMessage("Reading selected notes and archives…"); setFiles([]); setChatMatches([]);
     try {
       const parsed = await readMarkdownFiles(Array.from(selected));
+      setMessage("Checking saved notes for changes and conflicts…");
       const state = parsed.files.length ? await loadState(parsed.files.map((file) => file.path)) : [];
       setChatMatches(await matchChatReferences(createClient(), parsed.chatReferences));
       setVaultState(state); setBindings({}); setChoices({}); setFiles(parsed.files);
@@ -83,7 +86,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   }
 
   async function accept() {
-    setBusy(true); setMessage("");
+    setBusy(true); setMessage("Saving reviewed notes…");
     try {
       const entries = rows.map((row) => ({
         artifact_id: row.previous?.artifact_id ?? null, path: row.file.path, content: row.file.body,
@@ -93,7 +96,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       if (new Blob([JSON.stringify(entries)]).size > 35 * 1024 * 1024) throw new Error("The import exceeds 35 MiB of JSON. Select fewer files.");
       const { error } = await createClient().rpc("accept_obsidian_import", { p_source_id: sourceId, p_entries: entries });
       if (error) throw new Error(error.message);
-      window.location.reload();
+      setFiles([]); setChatMatches([]); setMessage(`${entries.length} notes saved. Open Library to include them in a snapshot.`); router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import could not be confirmed. Refresh before retrying."); }
     finally { setBusy(false); }
   }

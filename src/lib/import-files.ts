@@ -56,21 +56,25 @@ export async function readImportFiles(selected: File[], include: (path: string) 
     if (files.length > 2000) throw new Error("Import at most 2000 files at a time.");
   }
   for (const file of selected) {
-    if (file.name.toLowerCase().endsWith(".zip")) {
-      if (file.size > 20 * 1024 * 1024) throw new Error("A ZIP exceeds the 20 MiB import limit.");
-      const zip = await JSZip.loadAsync(file);
-      if (Object.keys(zip.files).length > 4000) throw new Error("The archive contains too many files.");
-      const names = Object.values(zip.files).map((entry) => entry.unsafeOriginalName ?? entry.name);
-      const root = findRoot?.(names.filter((name) => cleanSourcePath(name)));
-      for (const entry of Object.values(zip.files)) {
-        if (entry.dir) continue;
-        const raw = entry.unsafeOriginalName ?? entry.name;
-        if (!cleanSourcePath(raw)) { skipped.push(raw); continue; }
-        await add(root && raw.startsWith(`${root}/`) ? raw.slice(root.length + 1) : raw, 0, () => readZipText(entry));
+    try {
+      if (file.name.toLowerCase().endsWith(".zip")) {
+        if (file.size > 20 * 1024 * 1024) throw new Error("A ZIP exceeds the 20 MiB import limit.");
+        const zip = await JSZip.loadAsync(file);
+        if (Object.keys(zip.files).length > 4000) throw new Error("The archive contains too many files.");
+        const names = Object.values(zip.files).map((entry) => entry.unsafeOriginalName ?? entry.name);
+        const root = findRoot?.(names.filter((name) => cleanSourcePath(name)));
+        for (const entry of Object.values(zip.files)) {
+          if (entry.dir) continue;
+          const raw = entry.unsafeOriginalName ?? entry.name;
+          if (!cleanSourcePath(raw)) { skipped.push(raw); continue; }
+          await add(root && raw.startsWith(`${root}/`) ? raw.slice(root.length + 1) : raw, 0, () => readZipText(entry));
+        }
+      } else {
+        const raw = file.webkitRelativePath || file.name;
+        await add(plainRoot && raw.startsWith(`${plainRoot}/`) ? raw.slice(plainRoot.length + 1) : raw, file.size, () => file.text());
       }
-    } else {
-      const raw = file.webkitRelativePath || file.name;
-      await add(plainRoot && raw.startsWith(`${plainRoot}/`) ? raw.slice(plainRoot.length + 1) : raw, file.size, () => file.text());
+    } catch (error) {
+      throw new Error(`${file.name}: ${error instanceof Error ? error.message : "Could not read this file."}`);
     }
   }
   if (!files.length) throw new Error("No supported text files were found.");

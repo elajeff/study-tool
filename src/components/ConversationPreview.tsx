@@ -23,10 +23,10 @@ export function ConversationPreview({ sources, sourceId }: { sources: LibrarySou
     try {
       if (files.reduce((size, file) => size + file.size, 0) > 100 * 1024 * 1024) throw new Error("Select JSON shards smaller than 100 MiB combined.");
       const texts = []; for (const file of files) texts.push(await file.text());
-      const parsed = parseConversationExport(texts, provider); setResult(parsed);
+      const parsed = parseConversationExport(texts, provider, files.map(file => file.name)); setResult(parsed);
       if (parsed.conversations.length)
         setEntries(await prepareConversationEntries(parsed.conversations, await loadConversationState(createClient(), sourceId)));
-    } catch (error) { setError(error instanceof SyntaxError ? "This file is not valid JSON." : error instanceof Error ? error.message : "Could not read the file."); }
+    } catch (error) { setError(error instanceof Error ? error.message : "Could not read the file."); }
     finally { setBusy(false); }
   }
   async function createSource(event: React.FormEvent) {
@@ -77,6 +77,8 @@ export function ConversationPreview({ sources, sourceId }: { sources: LibrarySou
         onChange={event => { setFiles(Array.from(event.target.files ?? [])); setResult(null); setEntries([]); setError(""); setSaved(false); }} />
       <p><button className="button button-dark" disabled={!canImport || !files.length || busy} onClick={() => void preview()}>{busy ? "Working…" : "Review selected files"}</button></p>
       <p>Choosing and reviewing files does not save them. Use the save bar after the review to add them to your Library.</p>
+      {!!files.length && <p>Selected: {files.map(file => file.name).join(", ")}</p>}
+      {busy && <p role="status">Working. Keep this page open until the result appears.</p>}
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">Conversations saved. <Link href="/library">Open Library</Link></p>}
     </section>

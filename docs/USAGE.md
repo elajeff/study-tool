@@ -6,7 +6,7 @@ Detailed import rules, file limits and course handoffs. For installation, see th
 
 Dashboard follows the course selected in the current browser session, or the newest saved course. It shows module and lesson completion, approved assessment counts, and a link to the next lesson or module plan. Marking a lesson done records activity, not mastery.
 
-Time remaining uses unfinished planned lessons plus the outline's lesson-count estimates for unplanned modules. The default assumption is 30 minutes per lesson; change it on Dashboard. Calendar days use the weekly hours in Settings, spread evenly across the week. These are planning estimates, not measured durations or guaranteed deadlines.
+Time remaining uses unfinished planned lessons plus the outline's lesson-count estimates for unplanned modules. The default assumption is 30 minutes per lesson and the weekly hours in Settings. On Dashboard, save hours per study day, study days per week and minutes per lesson to override those defaults for this account in this browser. The preference persists across visits. Calendar days spread the weekly budget evenly; study days use your daily hours. These are planning estimates, not measured durations or guaranteed deadlines.
 
 The separate note-based roadmap is available through **Browse note topics** on Notes. Imported ChatGPT courses do not change that view.
 

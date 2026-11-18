@@ -30,7 +30,7 @@ export default function HowToUsePage() {
         </li>
         <li><h2>Prepare a module and study</h2>
           <p>In <Link href="/courses">Courses</Link>, choose a module. Copy its lesson-plan request into ChatGPT, then import the returned JSON using <strong>Import a plan</strong> in that module.</p>
-          <p>Choose a lesson, copy its study request into the same ChatGPT Project, and work through the explanation and exercises there.</p>
+          <p>Click <strong>Start lesson</strong>, then <strong>Copy lesson request</strong>. Paste it into the same ChatGPT Project and work through the explanation and exercises there. <strong>Continue studying</strong> on Dashboard returns to your saved place.</p>
         </li>
         <li><h2>Record progress and continue</h2>
           <p>Return to <Link href="/courses">Courses</Link> and mark completed lessons done. Study Tool cannot see your ChatGPT activity automatically.</p>

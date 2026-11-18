@@ -53,16 +53,18 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
 
   async function prepare(file: File | undefined, snapshot?: { url: string; commit: string }, targetSourceId = sourceId) {
     if (!file) return;
-    setBusy(true); setMessage(""); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
+    setBusy(true); setMessage(`Reading ${file.name}…`); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
     try {
       if (!file.name.toLowerCase().endsWith(".zip")) throw new Error("Select a ZIP archive.");
       const parsed = await readImportFiles([file], shouldImportRepositoryFile, snapshot ? repositoryArchiveRoot : undefined);
+      setMessage("Comparing files with the saved repository…");
       const current = targetSourceId ? await loadRepositoryFiles(createClient(), targetSourceId) : [];
       const reviewed = parsed.files.map((file) => ({ ...file, ...inspectRepositoryText(file.body) }));
       setState(current); setBindings({}); setFiles(reviewed); setSkipped(parsed.skipped);
       setDestinationId(targetSourceId);
       setGitHubSnapshot(snapshot ?? null);
       setSelected(new Set(reviewed.filter((file) => !file.blocked).map((file) => file.path)));
+      setMessage(`${reviewed.length} files ready for review. Nothing has been saved yet.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the archive."); }
     finally { setBusy(false); }
   }

@@ -7,8 +7,10 @@ export function InboxImporter({ openCourse = false, moduleScope }: { openCourse?
   const [state, action, pending] = useActionState(importInbox, null);
   const id = useId();
   const [response, setResponse] = useState(""), [fileError, setFileError] = useState("");
+  const [fileName, setFileName] = useState("");
   function importFile(file: File | undefined) {
     if (!file) return;
+    setFileName(file.name);
     if (file.size > 1024 * 1024) { setFileError("Select a response file of at most 1 MiB."); return; }
     setFileError("");
     const form = new FormData();
@@ -25,12 +27,13 @@ export function InboxImporter({ openCourse = false, moduleScope }: { openCourse?
       onChange={event => { importFile(event.target.files?.[0]); event.target.value = ""; }} />
     <details><summary>Paste a response instead</summary>
       <label htmlFor={id}>ChatGPT response</label>
-      <textarea id={id} name="response" className="input" rows={10} required maxLength={1048576} value={response} onChange={event => { setResponse(event.target.value); setFileError(""); }} disabled={pending} />
+      <textarea id={id} name="response" className="input" rows={10} required maxLength={1048576} value={response} onChange={event => { setResponse(event.target.value); setFileError(""); setFileName(""); }} disabled={pending} />
       <p>Paste the full response, keeping its code fences. Up to 20 blocks and 1 MiB.</p>
       <button className="button button-light" disabled={pending}>{pending ? "Checking and saving…" : "Import response"}</button>
     </details>
-    {pending && <p role="status">Checking and saving…</p>}
+    {pending && <p role="status">Checking and saving{fileName ? ` ${fileName}` : " your response"}… Keep this page open.</p>}
     {(fileError || state?.error) && !pending && <p role="alert">{fileError || state?.error}</p>}
+    {(fileError || state?.error) && !pending && <p>Correct the reported issue, then choose the file again or paste the corrected response. Previously saved imports are kept.</p>}
     {state?.results && !pending && !fileError && <div role="status"><p>Response saved. Repeated outlines, summaries and assessments are kept without duplicates.</p>
       {!!state.ignored && <p>{state.ignored} unrelated JSON blocks ignored.</p>}
       <ul>{state.results.map((result, index) => <li key={index}>

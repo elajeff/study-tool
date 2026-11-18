@@ -8,9 +8,10 @@ import { prepareInboxImport, type InboxResult } from "@/lib/inbox-import";
 
 export async function importInbox(_previous: { error?: string; results?: InboxResult[]; ignored?: number } | null, form: FormData) {
   const { supabase } = await requireAccount();
+  const file = form.get("response_file");
+  const sourceName = file instanceof File ? file.name : "Pasted response";
   let parsed, prepared;
   try {
-    const file = form.get("response_file");
     if (file instanceof File && file.size > 1024 * 1024) throw new Error("Import at most 1 MiB of response text.");
     const courseId = String(form.get("course_id") ?? ""), moduleId = String(form.get("module") ?? "");
     if (!!courseId !== !!moduleId) throw new Error("Supply both the course and module for a scoped import.");
@@ -19,7 +20,7 @@ export async function importInbox(_previous: { error?: string; results?: InboxRe
     if (parsed.blocks.some(block => block.kind === "evidence" && !block.value.step))
       (await loadStudy()).lessons.forEach(lesson => topics.add(lesson.topic));
     prepared = await prepareInboxImport(supabase, parsed.blocks, topics);
-  } catch (error) { return { error: error instanceof Error ? error.message : "Could not validate this response." }; }
+  } catch (error) { return { error: `${sourceName}: ${error instanceof Error ? error.message : "Could not validate this response."} Nothing from this response was saved.` }; }
   const { data, error } = await supabase.rpc("save_study_inbox", { p_blocks: prepared });
   if (error) return { error: error.code === "23505" ? "A module already has a different saved plan. Nothing from this response was saved."
     : "Nothing from this response was saved. " + error.message };

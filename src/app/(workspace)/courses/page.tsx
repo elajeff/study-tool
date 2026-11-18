@@ -58,7 +58,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <p>Target: {result.course.target}</p><p>Starting level: {result.course.assumed_level}</p>
       <p><Link href={`/library/exports/${result.course.export_id}`}>Saved Library snapshot</Link></p>
       <p>Source items without a module or exclusion: {result.unassigned.length}. This is file accounting, not a check of teaching completeness.</p>
-      <div className="course-progress-heading"><p>{result.course.modules.length} modules · {completed} of {allSteps.length} planned lessons done</p>
+      <div className="course-progress-heading"><p><strong>{unplanned === result.course.modules.length ? "Outline imported · Prepare a lesson plan to start" : completed === allSteps.length && !unplanned ? "Done · All planned lessons finished" : "Ready to study"}</strong></p><p>{result.course.modules.length} modules · {completed} of {allSteps.length} planned lessons done</p>
         <progress className="course-progress" aria-label="Planned lessons completed" value={completed} max={allSteps.length || 1} />
         <p>{unplanned ? `${unplanned} modules still need a lesson plan.` : "All modules have lesson plans."}</p>
         <p>Done records study activity. Approved assessments track demonstrated knowledge separately.</p>
@@ -93,7 +93,10 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <h3>After studying</h3><p>Finish the explanation and exercises in ChatGPT, then mark this lesson done here to continue.</p>
       <p>Status: {currentStep.completed_at ? "Done" : "Not started"}. Marking a lesson done records study activity, not mastery.</p>
       <CourseStepAction courseId={query.id} step={currentStep} />
-      <LessonControls assessment={assessment} />
+      <details className="optional-assessment"><summary>{assessment ? "Assessment and review" : "Optional: assess your understanding"}</summary>
+        <p>Use this after practicing independently. If ChatGPT returns an assessment receipt, import it through <Link className="text-link" href="/inbox">Inbox</Link>, then review it in <Link className="text-link" href="/assessments">Assessments</Link>. You can continue studying without an assessment.</p>
+        <LessonControls assessment={assessment} />
+      </details>
     </section>}
   </>;
 }

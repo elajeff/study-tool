@@ -14,7 +14,7 @@ export function CourseModules({ courseId, course, steps, selectedModule, nextMod
       <details open={selectedModule === module.id || current}>
         <summary><span className="module-number">{finished ? <Check size={18} aria-label="Lessons done" /> : String(index + 1).padStart(2, "0")}</span>
           <span className="module-name"><strong>{module.id} · {module.title}</strong>
-            <span>{saved.length ? `${done} / ${saved.length} lessons done` : "Lesson plan not prepared"}{current ? " · Up next" : ""}</span>
+            <span>{finished ? "Done" : saved.length ? "Ready to study" : "Lesson plan needed"} · {saved.length ? `${done} / ${saved.length} lessons done` : "Outline imported"}{current ? " · Up next" : ""}</span>
           </span><ChevronDown size={17} className="module-chevron" />
         </summary>
         <div className="module-content"><p>{module.outcome}</p>

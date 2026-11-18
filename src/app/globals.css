@@ -238,6 +238,13 @@ textarea.input { resize: vertical; }
 .import-row .file-choice { display: flex; align-items: start; gap: 8px; }
 .repository-files a { min-width: 0; overflow-wrap: anywhere; }
 .library-source { overflow-wrap: anywhere; }
+.usage-guide { max-width: 820px; }
+.usage-guide > ol { margin: 0; padding-left: 24px; }
+.usage-guide > ol > li { padding-left: 8px; margin-bottom: 24px; }
+.usage-guide h2 { margin: 0 0 8px; }
+.usage-guide p { margin: 8px 0; }
+.usage-guide a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.usage-guide blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--accent-border); background: var(--code-bg); }
 .saved-exports { display: grid; gap: 12px; }
 .saved-export { border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
 .saved-export > p { margin: 0 0 12px; }

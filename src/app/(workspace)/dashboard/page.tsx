@@ -8,11 +8,13 @@ import { loadAssessments } from "@/lib/assessment-queries";
 import { latestApproved } from "@/lib/progress";
 import { ProgressExport } from "@/components/ProgressExport";
 import { savedCoursePosition } from "@/lib/course-position";
+import { parseStudyPace } from "@/lib/study-pace";
+import { StudyPaceForm } from "@/components/StudyPaceForm";
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ minutes?: string }> }) {
+export default async function DashboardPage() {
   const { supabase, user } = await requireAccount();
-  const minutes = Number((await searchParams).minutes ?? 30);
-  const minutesPerLesson = Number.isInteger(minutes) && minutes >= 5 && minutes <= 240 ? minutes : 30;
+  const pace = parseStudyPace((await cookies()).get(`study-pace-${user.id}`)?.value);
+  const minutesPerLesson = pace?.minutesPerLesson ?? 30;
   const [courses, profile] = await Promise.all([
     supabase.from("courses").select("id,title:raw_block->>title").order("created_at", { ascending: false }).limit(20),
     supabase.from("study_profiles").select("hours_per_week").eq("user_id", user.id).maybeSingle(),
@@ -28,7 +30,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     </section>
   </>;
   const steps = await loadCourseSteps(supabase, courseId);
-  const hoursPerWeek = profile.data?.hours_per_week ?? null;
+  const hoursPerWeek = pace ? pace.hoursPerDay * pace.daysPerWeek : profile.data?.hours_per_week ?? null;
   const overview = courseOverview(saved.course, steps, minutesPerLesson, hoursPerWeek);
   const next = savedCoursePosition((await cookies()).get(`study-position-${user.id}`)?.value, courseId, saved.course, steps) ?? nextCourseLesson(saved.course, steps);
   const assessments = latestApproved(await loadAssessments(supabase, "approved"));
@@ -54,10 +56,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <section className="panel"><h2>Estimated time remaining</h2>
         <p><strong>{Math.ceil(overview.remainingHours * 10) / 10} hours</strong>{overview.calendarDays !== null ? ` · about ${overview.calendarDays} calendar days at ${hoursPerWeek} hours/week` : " · Set weekly hours to estimate days."}</p>
         <p>Based on {overview.remainingLessons} remaining lessons at {minutesPerLesson} minutes each. Unplanned modules use the outline&apos;s lesson-count estimates.</p>
-        <form method="GET" className="stack"><label htmlFor="lesson-minutes">Estimated minutes per lesson</label>
-          <input id="lesson-minutes" className="input" name="minutes" type="number" min={5} max={240} defaultValue={minutesPerLesson} required />
-          <button className="button button-light">Update estimate</button>
-        </form>
+        {pace && <p>About {Math.ceil(overview.remainingHours / pace.hoursPerDay)} study days at {pace.hoursPerDay} hours per day, {pace.daysPerWeek} days per week.</p>}
+        <StudyPaceForm pace={pace ?? { hoursPerDay: (profile.data?.hours_per_week ?? 5) / 5, daysPerWeek: 5, minutesPerLesson }} />
         <p><Link className="text-link" href="/settings">Change weekly study hours</Link></p>
         <p className="muted small">A planning estimate, not measured study time. Days assume your weekly hours are spread evenly. Practice, reviews and difficult lessons can take longer.</p>
       </section>

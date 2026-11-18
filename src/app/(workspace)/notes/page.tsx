@@ -15,7 +15,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   ]);
   if (error) throw new Error("Could not load vaults.");
   const filtered = notes.filter((note) => `${note.path} ${note.title}`.toLowerCase().includes(search.toLowerCase()));
-  return <><div className="page-heading"><h1>Notes</h1></div>
+  return <><div className="page-heading"><h1>Notes</h1><p><Link className="text-link" href="/curriculum">Browse note topics</Link> · For your ChatGPT learning roadmap, open <Link className="text-link" href="/courses">Courses</Link>.</p></div>
     <NotesImporter vaults={vaults as Vault[]} />
     <div className="notes-grid"><section className="panel"><div className="panel-head"><h2>Notes <span className="muted">({filtered.length})</span></h2></div>
       <form className="search-row" method="GET"><input name="search" className="input" placeholder="Filter by file name…" defaultValue={search} /><button className="button button-light" type="submit">Search</button></form>

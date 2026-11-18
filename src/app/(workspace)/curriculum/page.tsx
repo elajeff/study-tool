@@ -9,7 +9,7 @@ export default async function CurriculumPage() {
   const { supabase, profile, lessons, tracks, issues } = await loadStudy();
   const latest = latestApproved(await loadAssessments(supabase, "approved"));
   const demonstrated = demonstratedLessons(lessons, latest);
-  return <><div className="page-heading"><h1>Curriculum</h1>
+  return <><div className="page-heading"><h1>Note topics</h1><p>Topics organized from your saved notes. Your ChatGPT course roadmap is in <Link className="text-link" href="/courses">Courses</Link>.</p>
     <p>{profile ? `${profile.goals} · ${profile.hours_per_week} hours per week` : "Learning goals not set."}</p></div>
     {issues.length > 0 && <section className="panel" role="alert"><h2>Check your source notes</h2>
       {issues.map((issue) => <p key={issue}>{issue}</p>)}<Link href="/notes" className="text-link">Open notes</Link></section>}

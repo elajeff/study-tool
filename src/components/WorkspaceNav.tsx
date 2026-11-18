@@ -13,7 +13,6 @@ const links = [
   { href: "/repositories", label: "Repositories", mobileLabel: "Code", icon: FolderGit2 },
   { href: "/inbox", label: "Inbox", mobileLabel: "Inbox", icon: Inbox },
   { href: "/courses", label: "Courses", mobileLabel: "Courses", icon: BookOpen },
-  { href: "/curriculum", label: "Curriculum", mobileLabel: "Topics", icon: BookOpen },
   { href: "/assessments", label: "Assessments", mobileLabel: "Reviews", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", mobileLabel: "Settings", icon: Settings },
 ];

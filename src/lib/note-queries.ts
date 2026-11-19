@@ -1,6 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Note } from "./notes.ts";
 
+export async function loadNoteList(supabase: SupabaseClient) {
+  const notes: Pick<Note, "id" | "path" | "title" | "source_id">[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("notes").select("id,path,title,source_id")
+      .order("id").range(offset, offset + 499);
+    if (error) throw new Error("Could not load the note list.");
+    notes.push(...data);
+    if (data.length < 500) return notes;
+  }
+}
+
 export async function loadNotes(supabase: SupabaseClient, sourceId?: string | null): Promise<Note[]> {
   const notes: Note[] = [];
   for (let offset = 0; ; offset += 500) {

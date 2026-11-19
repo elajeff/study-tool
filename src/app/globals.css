@@ -291,7 +291,6 @@ textarea.input { resize: vertical; }
 .markdown-preview code, .markdown-body code, .new-note code { background: var(--code-bg); border-radius: 3px; padding: 1px 4px; font-family: Consolas, "Cascadia Code", monospace; }
 .markdown-preview pre code, .markdown-body pre code { background: none; padding: 0; }
 .markdown-preview a, .markdown-body a { text-decoration: underline; color: var(--accent); }
-.markdown-preview img, .markdown-body img { max-width: 100%; }
 .markdown-preview blockquote, .markdown-body blockquote { border-left: 2px solid var(--accent-border); margin-left: 0; padding-left: 14px; color: var(--quote); }
 .markdown-body h1 { font-size: 23px; }
 .markdown-body h2 { font-size: 18px; margin-top: 27px; }

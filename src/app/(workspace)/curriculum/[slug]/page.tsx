@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
+import { NoteMarkdown } from "@/components/NoteMarkdown";
 import { ArrowLeft, BookOpen, Lightbulb } from "lucide-react";
 import { loadStudy } from "@/lib/study";
 import { getLesson } from "@/lib/curriculum";
@@ -28,7 +28,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
       <article className="lesson-body">
         <section className="panel lesson-section">
           <div className="panel-kicker"><BookOpen size={17} /> Source note</div>
-          <div className="markdown-body"><ReactMarkdown>{lesson.sourceBody}</ReactMarkdown></div>
+          <div className="markdown-body"><NoteMarkdown body={lesson.sourceBody} /></div>
         </section>
         <section className="panel lesson-section">
           <div className="panel-kicker"><Lightbulb size={17} /> Practice</div>

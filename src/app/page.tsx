@@ -16,7 +16,7 @@ export default async function HomePage() {
       <div className="hero">
         <h1>Study Tool</h1>
         <p>Import Markdown notes, organize study topics, and track progress through approved assessments.</p>
-        <div className="hero-actions"><Link id="landing-primary-action" className="button button-dark button-large" href={href}>{label} <ArrowRight size={18} /></Link><a className="button button-light button-large" href="#how">Features</a></div>
+        <div className="hero-actions"><Link id="landing-primary-action" className="button button-dark button-large" href={href}>{label} <ArrowRight size={18} /></Link><Link className="button button-light button-large" href="/demo">Try the demo</Link></div>
         <div className="hero-foot"><CheckCircle2 size={16} /> No AI API key required.</div>
       </div>
       <section className="feature-section" id="how">

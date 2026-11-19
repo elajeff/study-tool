@@ -160,6 +160,8 @@ textarea.input { resize: vertical; }
 .stat strong small { color: var(--muted); font-size: 13px; font-weight: 400; }
 .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
 .course-dashboard-stats { margin-top: 16px; }
+.module-filters { flex-wrap: wrap; align-items: center; }
+.module-filters .input { flex: 1 1 240px; }
 .optional-assessment { margin-top: 24px; }
 .optional-assessment > summary { cursor: pointer; color: var(--muted); }
 .batch-modules { max-height: 16rem; overflow: auto; }

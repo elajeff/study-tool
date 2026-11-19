@@ -69,7 +69,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       {next ? <p><Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) }, hash: next.step ? "lesson-focus" : "module-plan" }}>
         {next.step ? `Continue at ${next.step.id}` : `Prepare ${next.module.id} lesson plan`}
       </Link></p> : <p>All course lessons are marked done. This does not establish mastery.</p>}
-      <CourseModules courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id} nextModule={next?.module.id} selectedStep={currentStep?.row_id} nextStep={next?.step?.row_id} />
+      <CourseModules key={query.id} courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id} nextModule={next?.module.id} selectedStep={currentStep?.row_id} nextStep={next?.step?.row_id} />
       <details><summary>Exclusions and open questions</summary>
         <ul>{result.course.not_covered.map(item => <li key={item.id}>{item.id}: {item.why}</li>)}</ul>
         <ul>{result.course.open_questions.map((question, index) => <li key={index}>{question}</li>)}</ul>

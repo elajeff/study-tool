@@ -93,3 +93,11 @@ Imported content is treated as data, not instructions. The Obsidian reader skips
 ## Known limits
 
 There is no live Obsidian sync, supported ChatGPT Web automation or automated grading. Evidence is reviewed by the account owner. Structure and source accounting do not prove curriculum completeness or correct teaching. ChatGPT's upload allowance and retrieval behavior depend on the user's account and service; the app cannot guarantee access to every uploaded item. Supabase stores account data under the deployment's configuration and policies; this is not a local-only application.
+
+## Hosted signup
+
+Supabase's default sender delivers sign-in links only to project team addresses. To invite external users, verify a sender domain with an SMTP provider and configure it in Supabase Auth. Keep email verification enabled, allowlist the production `/auth/confirm` URL, and turn off email link tracking. Set Auth rate limits for the beta. Integrate and test CAPTCHA before enabling it on Supabase, since the client needs to submit a CAPTCHA token.
+
+Use two external test accounts and sample imports. Verify first and returning sign-in, expired or used links, resend, and sign-out. In separate browser profiles, have each account import a sample, download its Library, save a course and mark a lesson done. Check that direct revision, snapshot, download and course URLs for account A fail under account B. Run the [database checks](#database-checks) for cross-account writes.
+
+Before inviting users to import real material, give them a clear privacy notice and deletion contact, and verify backup and restore.

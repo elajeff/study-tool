@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseModule, type Course, type ModulePlan } from "../src/lib/course.ts";
-import { modulePlanningCard } from "../src/lib/module-request.ts";
+import { modulePlanningCard, moduleReviewPrompt } from "../src/lib/module-request.ts";
 import type { ExportManifest } from "../src/lib/library-pack.ts";
 
 const courseId = "00000000-0000-4000-8000-000000000001";
@@ -35,4 +35,14 @@ test("module requests carry real identities and scope without inventing assessed
   assert.match(card, /retrieve relevant source items yourself/);
   assert.match(card, /Do not issue assessment receipts/);
   assert.match(card, /Existing code or notes do not establish mastery/);
+});
+
+test("module review includes the lesson goals and prerequisites without progress records", () => {
+  const saved = { ...plan.steps[0], row_id: "saved-lesson", completed_at: "2026-11-19", position: 1, module_key: "M01" };
+  const prompt = moduleReviewPrompt(course, course.modules[0], [saved]);
+  const context = JSON.parse(prompt.split("REFERENCE DATA (JSON):\n")[1]);
+  assert.equal(context.module.id, "M01");
+  assert.deepEqual(context.lessons, [plan.steps[0]]);
+  assert.equal(context.prerequisites.length, 0);
+  assert.doesNotMatch(prompt, /saved-lesson|2026-11-19/);
 });

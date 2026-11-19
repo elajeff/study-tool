@@ -22,7 +22,7 @@ test("vault preview reports raw chat provenance while preserving notes copied el
   zip.folder("Vault/.obsidian");
   zip.file("Vault/AI Chats/generated.md", header + "Raw chat");
   zip.file("Vault/Lessons/annotated.md", header + "My added notes");
-  const parsed = await readMarkdownFiles([new File([await zip.generateAsync({ type: "uint8array" })], "vault.zip")]);
+  const parsed = await readMarkdownFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "vault.zip")]);
   assert.deepEqual(parsed.files.map(file => file.path), ["Lessons/annotated.md"]);
   assert.ok(parsed.files[0].body.endsWith("My added notes"));
   assert.equal(parsed.chatReferences.length, 2);

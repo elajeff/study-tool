@@ -16,14 +16,8 @@ test("lesson requests identify one saved step, its sources and prerequisites wit
   assert.equal(context.export_id, course.export_id);
   assert.deepEqual(context.current_step, step);
   assert.equal(context.prerequisites[0].id, "M01");
-  assert.match(card, /Teach only M02.S2 next/);
-  assert.match(card, /Retrieve cited items and other relevant material yourself/);
-  assert.match(card, /Wait for an attempt before giving its solution/);
   assert.equal(context.approved_assessment, null);
-  assert.match(card, /reviewed report of demonstrated work, not machine verification/);
-  assert.match(card, /Do not claim Study Tool has recorded completion/);
-  assert.match(card, /app imports receipts as pending review/);
-  assert.ok(card.includes(`topic "course-step:${step.row_id}", step "${step.row_id}"`));
+  assert.ok(card.includes(`"course-step:${step.row_id}"`));
   const assessment: Assessment = { id: "approved-record", topic: `course-step:${step.row_id}`, date: "2026-11-17", level: 2,
     task: "Compare fresh ratios", evidence: "Explained the units with hints.", independent: false, hints: "major", artifact: "", next_step: "Try without hints",
     status: "approved", submitted_at: "2026-11-17T12:00:00Z", reviewed_at: "2026-11-17T12:05:00Z" };

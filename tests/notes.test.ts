@@ -9,12 +9,12 @@ test("note imports reject unsafe paths and non-Markdown files", () => {
   assert.equal(cleanNotePath("Secrets.txt"), null);
 });
 
-test("wikilinks find referenced notes, without creating duplicate targets", () => {
+test("wikilinks resolve a note by its path", () => {
   const result = resolveNoteLink("Java", [{ path: "Concepts/Java.md" }]);
   assert.equal(result.state === "resolved" && result.note.path, "Concepts/Java.md");
 });
 
-test("generated vault data and chat transcripts are excluded from import", async () => {
+test("the ChatBridge archive is excluded while ordinary folders are accepted", async () => {
   const { shouldImportNote } = await import("../src/lib/notes.ts");
   assert.equal(shouldImportNote("AI Chats/conversation.md"), false);
   assert.equal(shouldImportNote("Vault/AI Chats/conversation.md"), false);

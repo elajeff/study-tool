@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import type { Course, SavedCourseStep } from "@/lib/course";
 import { CourseStepAction } from "./CourseStepAction";
@@ -6,9 +9,23 @@ import { CourseStepAction } from "./CourseStepAction";
 export function CourseModules({ courseId, course, steps, selectedModule, nextModule, selectedStep, nextStep }: {
   courseId: string; course: Course; steps: SavedCourseStep[]; selectedModule?: string; nextModule?: string; selectedStep?: string; nextStep?: string;
 }) {
-  return <ol className="course-modules">{course.modules.map((module, index) => {
+  const [query, setQuery] = useState("");
+  const [readyOnly, setReadyOnly] = useState(false);
+  const search = query.trim().toLowerCase();
+  const visible = course.modules.map((module, index) => {
     const saved = steps.filter(step => step.module_key === module.id).sort((a, b) => a.position - b.position);
     const done = saved.filter(step => step.completed_at).length;
+    return { module, index, saved, done };
+  }).filter(({ module, saved, done }) => (!readyOnly || saved.length > done)
+    && `${module.id} ${module.title}`.toLowerCase().includes(search));
+  return <>
+    <div className="search-row module-filters">
+      <input type="search" className="input" aria-label="Search modules by title or ID" placeholder="Search modules by title or ID" value={query} onChange={event => setQuery(event.target.value)} />
+      <label><input type="checkbox" checked={readyOnly} onChange={event => setReadyOnly(event.target.checked)} /> Ready to study</label>
+    </div>
+    <p role="status" className="muted small">{visible.length} of {course.modules.length} modules shown</p>
+    {!visible.length && <p>No matching modules. Try changing the search or filter.</p>}
+    <ol className="course-modules">{visible.map(({ module, index, saved, done }) => {
     const finished = saved.length > 0 && done === saved.length, current = nextModule === module.id;
     return <li key={module.id} className={`course-module${finished ? " is-done" : ""}${current ? " is-current" : ""}`}>
       <details open={selectedModule === module.id || current}>
@@ -38,5 +55,5 @@ export function CourseModules({ courseId, course, steps, selectedModule, nextMod
         </div>
       </details>
     </li>;
-  })}</ol>;
+  })}</ol></>;
 }

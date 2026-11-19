@@ -87,15 +87,26 @@ export async function readImportFiles(selected: File[], include: (path: string) 
 }
 
 export function matchImportFiles<T extends { artifact_id: string; path: string | null }>(files: ImportFile[], state: T[], bindings: Record<string, string> = {}) {
+  const byId = new Map(state.map(row => [row.artifact_id, row]));
+  const byPath = new Map<string, T>();
+  const byLowerPath = new Map<string, T[]>();
+  for (const row of state) {
+    if (row.path === null) continue;
+    byPath.set(row.path, row);
+    const key = row.path.toLowerCase();
+    const matches = byLowerPath.get(key) ?? [];
+    matches.push(row);
+    byLowerPath.set(key, matches);
+  }
   const used = new Set<string>();
   return files.map((file) => {
-    const previous = bindings[file.path]
-      ? state.find((row) => row.artifact_id === bindings[file.path])
-      : state.find((row) => row.path === file.path);
-    if (bindings[file.path] && !previous) throw new Error("The selected file is no longer in this source.");
+    const binding = bindings[file.path];
+    const previous = binding ? byId.get(binding) : byPath.get(file.path);
+    if (binding && !previous) throw new Error("The selected file is no longer in this source.");
     if (previous && used.has(previous.artifact_id)) throw new Error("Two files cannot use the same artifact. Review the rename choices.");
     if (previous) used.add(previous.artifact_id);
-    const identityConflict = state.some((row) => row.path?.toLowerCase() === file.path.toLowerCase() && row.artifact_id !== previous?.artifact_id);
+    const matches = byLowerPath.get(file.path.toLowerCase()) ?? [];
+    const identityConflict = matches.some(row => row.artifact_id !== previous?.artifact_id);
     return { file, previous, identityConflict };
   });
 }

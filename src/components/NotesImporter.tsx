@@ -19,11 +19,13 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   const [files, setFiles] = useState<ImportFile[]>([]);
   const [vaultState, setVaultState] = useState<VaultState[]>([]);
   const [bindings, setBindings] = useState<Record<string, string>>({});
+  const [renamePath, setRenamePath] = useState("");
   const [choices, setChoices] = useState<Record<string, "keep" | "replace" | "">>({});
   const [chatMatches, setChatMatches] = useState<ChatReferenceMatch[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const rows = previewImport(files, vaultState, bindings);
+  const assigned = new Set(rows.map(row => row.previous?.artifact_id));
   const unresolved = rows.some((row) => row.identityConflict || !(choices[row.file.path] || row.decision));
   const canImport = vaults.some((vault) => vault.id === sourceId);
 
@@ -62,7 +64,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       setMessage("Checking saved notes for changes and conflicts…");
       const state = parsed.files.length ? await loadState(parsed.files.map((file) => file.path)) : [];
       setChatMatches(await matchChatReferences(createClient(), parsed.chatReferences));
-      setVaultState(state); setBindings({}); setChoices({}); setFiles(parsed.files);
+      setVaultState(state); setBindings({}); setChoices({}); setRenamePath(""); setFiles(parsed.files);
       setMessage(`${parsed.files.length} ${parsed.files.length === 1 ? "file" : "files"} ready for preview.${parsed.skipped
         ? ` ${parsed.skipped} unsupported, generated, or oversized ${parsed.skipped === 1 ? "file" : "files"} skipped.` : ""}`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview files."); }
@@ -160,15 +162,20 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       <p>Files missing from this import are not deleted. Confirm renames by selecting the existing note. Older imported notes may need review.</p>
       {rows.map((row) => <article className="import-row" key={row.file.path}>
         <strong>{row.file.path}</strong><span>{row.previous && row.previous.path !== row.file.path ? "Rename · " : ""}{row.status}</span>
-        {(!row.previous || row.previous.path !== row.file.path) && <label>Identity for {row.file.path}
-          <select className="input" value={bindings[row.file.path] ?? ""} disabled={busy}
-            onChange={(event) => void bind(row.file.path, event.target.value)}>
-            <option value="">New artifact</option>
-            {vaultState.map((previous) => <option value={previous.artifact_id} key={previous.artifact_id}
-              disabled={rows.some((other) => other.file.path !== row.file.path && other.previous?.artifact_id === previous.artifact_id)}>
-              Rename {previous.path ?? previous.artifact_id}
-            </option>)}
-          </select></label>}
+        {(!row.previous || row.previous.path !== row.file.path) && vaultState.length > 0 && <>
+          <button type="button" className="text-link" disabled={busy} aria-expanded={renamePath === row.file.path}
+            onClick={() => setRenamePath(renamePath === row.file.path ? "" : row.file.path)}>Match a renamed note</button>
+          {renamePath === row.file.path && <label>Saved note for {row.file.path}
+            <select className="input" value={bindings[row.file.path] ?? ""} disabled={busy}
+              onChange={event => void bind(row.file.path, event.target.value)}>
+              <option value="">New note</option>
+              {vaultState.map(previous => <option value={previous.artifact_id} key={previous.artifact_id}
+                disabled={assigned.has(previous.artifact_id) && row.previous?.artifact_id !== previous.artifact_id}>
+                {previous.path ?? previous.artifact_id}
+              </option>)}
+            </select>
+          </label>}
+        </>}
         {row.identityConflict && <p role="alert">This path is occupied. Select its existing artifact or rename the file before importing.</p>}
         {!row.identityConflict && row.decision === "" && <label>Decision for {row.file.path}
           <select className="input" value={choices[row.file.path] ?? ""} disabled={busy}

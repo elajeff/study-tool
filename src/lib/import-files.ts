@@ -31,13 +31,11 @@ function readZipText(entry: JSZip.JSZipObject): Promise<string | null> {
   });
 }
 
-export async function readImportFiles(selected: File[], include: (path: string) => boolean, findRoot?: (paths: string[]) => string | null) {
+export async function readImportFiles(selected: File[], include: (path: string) => boolean, findRoot?: (paths: string[], directories: string[]) => string | null) {
   const files: ImportFile[] = [];
   const skipped: string[] = [];
   let total = 0;
   const paths = new Set<string>();
-  const plain = selected.filter((file) => !file.name.toLowerCase().endsWith(".zip"));
-  const plainRoot = findRoot?.(plain.map((file) => file.webkitRelativePath || file.name));
   async function add(raw: string, bytes: number, read: () => Promise<string | null>) {
     const path = cleanSourcePath(raw);
     if (!path || !include(path) || bytes > 500000) { skipped.push(raw); return; }
@@ -61,17 +59,24 @@ export async function readImportFiles(selected: File[], include: (path: string) 
         if (file.size > 20 * 1024 * 1024) throw new Error("A ZIP exceeds the 20 MiB import limit.");
         const zip = await JSZip.loadAsync(file);
         if (Object.keys(zip.files).length > 4000) throw new Error("The archive contains too many files.");
-        const names = Object.values(zip.files).map((entry) => entry.unsafeOriginalName ?? entry.name);
-        const root = findRoot?.(names.filter((name) => cleanSourcePath(name)));
-        for (const entry of Object.values(zip.files)) {
+        const entries = Object.values(zip.files);
+        const directories: string[] = [];
+        const filePaths: string[] = [];
+        for (const entry of entries) {
+          const path = cleanSourcePath(entry.dir ? entry.name.replace(/\/$/, "") : entry.unsafeOriginalName ?? entry.name);
+          if (path) (entry.dir ? directories : filePaths).push(path);
+        }
+        const root = findRoot?.(filePaths, directories);
+        for (const entry of entries) {
           if (entry.dir) continue;
           const raw = entry.unsafeOriginalName ?? entry.name;
-          if (!cleanSourcePath(raw)) { skipped.push(raw); continue; }
-          await add(root && raw.startsWith(`${root}/`) ? raw.slice(root.length + 1) : raw, 0, () => readZipText(entry));
+          const path = cleanSourcePath(raw);
+          if (!path || (root && !path.startsWith(`${root}/`))) { skipped.push(raw); continue; }
+          await add(root ? path.slice(root.length + 1) : path, 0, () => readZipText(entry));
         }
       } else {
         const raw = file.webkitRelativePath || file.name;
-        await add(plainRoot && raw.startsWith(`${plainRoot}/`) ? raw.slice(plainRoot.length + 1) : raw, file.size, () => file.text());
+        await add(raw, file.size, () => file.text());
       }
     } catch (error) {
       throw new Error(`${file.name}: ${error instanceof Error ? error.message : "Could not read this file."}`);

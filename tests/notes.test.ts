@@ -18,14 +18,17 @@ test("wikilinks find referenced notes, without creating duplicate targets", () =
 test("generated vault data and chat transcripts are excluded from import", async () => {
   const { shouldImportNote } = await import("../src/lib/notes.ts");
   assert.equal(shouldImportNote("AI Chats/conversation.md"), false);
-  assert.equal(shouldImportNote("Progress/Dashboard.md"), false);
-  assert.equal(shouldImportNote("Tools/README.md"), false);
+  assert.equal(shouldImportNote("Vault/AI Chats/conversation.md"), false);
+  assert.equal(shouldImportNote("Progress/Dashboard.md"), true);
+  assert.equal(shouldImportNote("Tools/README.md"), true);
   assert.equal(shouldImportNote("Lessons/Java/06 Methods.md"), true);
 });
 
 test("vault ZIPs can have one surrounding directory without losing their note paths", async () => {
   const { vaultRoot } = await import("../src/lib/notes.ts");
-  assert.equal(vaultRoot(["nothingburger/Concepts/Java.md", "nothingburger/AI Chats/log.md"]), "nothingburger");
+  assert.equal(vaultRoot(["Vault/.obsidian", "Vault/Concepts/Plants.md", "README.md"]), "Vault");
+  assert.equal(vaultRoot(["Biology/Foundations/Cells.md", "Biology/Lab.md"]), null);
+  assert.throws(() => vaultRoot(["First/.obsidian", "Second/.obsidian"]), /multiple Obsidian vaults/);
   assert.equal(vaultRoot(["Concepts/Java.md", "DSA/Arrays.md"]), null);
   assert.equal(vaultRoot(["Notes/Java.md", "Notes/C.md"]), null);
 });

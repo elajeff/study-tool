@@ -118,6 +118,18 @@ begin
   assert (select body='Restored source' from public.notes where source_id=src);
 end $$;
 
+do $$
+declare src uuid := '70000000-0000-4000-8000-000000000001';
+begin
+  perform public.accept_obsidian_import(src,jsonb_build_array(pg_temp.preview_entry(src,'Tools/Calibration.md','Procedure','replace')));
+  assert exists(select 1 from public.notes where source_id=src and path='Tools/Calibration.md');
+  begin
+    perform public.accept_obsidian_import(src,jsonb_build_array(pg_temp.preview_entry(src,'Nested/AI Chats/Transcript.md','Example','replace')));
+    assert false,'Nested chat archives must not become editable notes';
+  exception when invalid_parameter_value then null;
+  end;
+end $$;
+
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000012',true);
 do $$
 begin

@@ -19,6 +19,7 @@ test("ChatBridge recognition requires agreeing provider URL and frontmatter ID",
 
 test("vault preview reports raw chat provenance while preserving notes copied elsewhere", async () => {
   const zip = new JSZip();
+  zip.folder("Vault/.obsidian");
   zip.file("Vault/AI Chats/generated.md", header + "Raw chat");
   zip.file("Vault/Lessons/annotated.md", header + "My added notes");
   const parsed = await readMarkdownFiles([new File([await zip.generateAsync({ type: "uint8array" })], "vault.zip")]);

@@ -40,14 +40,25 @@ test("ZIP preview preserves text and rejects traversal, private/generated folder
   zip.file("Vault/Progress/report.md", "Excluded");
   zip.file("Vault/.obsidian/config.md", "Excluded");
   zip.file("Vault/../escape.md", "Excluded");
-  zip.file("README.txt", "Archive packaging note");
+  zip.file("README.md", "Archive packaging note");
   zip.file(".hidden.md", "Excluded");
-  zip.file(".obsidian/config.md", "Excluded");
+  zip.file(".trash/config.md", "Excluded");
   const result = await readMarkdownFiles([new File([await zip.generateAsync({ type: "uint8array" })], "vault.zip")]);
-  assert.deepEqual(result.files.map((file) => file.path), ["Lessons/Java/Methods.md"]);
+  assert.deepEqual(result.files.map((file) => file.path), ["Lessons/Java/Methods.md", "Progress/report.md"]);
   assert.equal(result.files[0].body, "# Methods\r\n\r\nReturn π.");
-  assert.equal(result.skipped, 7);
+  assert.equal(result.skipped, 6);
   await assert.rejects(() => readMarkdownFiles([new File(["one"], "Topic.md"), new File(["two"], "topic.md")]), /Duplicate path/);
+});
+
+test("a ZIP without vault metadata keeps ordinary folders and omits nested chat transcripts", async () => {
+  const zip = new JSZip();
+  zip.file("README.md", "Introduction");
+  zip.file("Biology/Foundations/Cells.md", "Cells");
+  zip.file("Biology/AI Chats/transcript.md", "Chat");
+  const file = new File([await zip.generateAsync({ type: "arraybuffer" })], "notes.zip");
+  const result = await readMarkdownFiles([file]);
+  assert.deepEqual(result.files.map(note => note.path), ["README.md", "Biology/Foundations/Cells.md"]);
+  assert.equal(result.skipped, 1);
 });
 
 test("ZIP preview stops oversized decompression even when the archive understates its size", async () => {

@@ -35,7 +35,7 @@ You need Node.js 24+ (or Node.js 22.13+ within the Node 22 release line) and a S
 
 6. Run `npm run dev` and open `http://localhost:3000`.
 
-For deployment, configure the production site URL and redirect URL in Supabase, and set the same public environment variables on the Next.js host. Configure production SMTP, backups, rate limits, and a privacy notice before opening registration.
+For deployment, configure the production site URL and redirect URL in Supabase, and set the same public environment variables on the Next.js host. Follow the [hosted signup checks](docs/ARCHITECTURE.md#hosted-signup) before inviting users.
 
 ## Using it
 

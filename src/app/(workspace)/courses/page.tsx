@@ -5,7 +5,7 @@ import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
 import { InboxImporter } from "@/components/InboxImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
-import { modulePlanningCard } from "@/lib/module-request";
+import { modulePlanningCard, moduleReviewPrompt } from "@/lib/module-request";
 import { lessonStudyCard } from "@/lib/lesson-request";
 import { nextCourseLesson } from "@/lib/course";
 import { loadAssessments } from "@/lib/assessment-queries";
@@ -86,6 +86,10 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <details open={!steps.length}><summary>Import a plan</summary>
         <InboxImporter key={`${query.id}/${selected.id}`} openCourse moduleScope={{ courseId: query.id, moduleId: selected.id }} />
       </details>
+      {!!steps.length && <details><summary>Review lesson plan with ChatGPT</summary>
+        <p>Check for missing prerequisites, jumps in difficulty and exercises that need a better example. The review gives feedback for the tutor to use and leaves the saved plan and progress intact.</p>
+        <CourseLessonCard key={selected.id} label="Copy plan review request" text={moduleReviewPrompt(result.course, selected, steps)} />
+      </details>}
     </section>}
     {result && query.id && selected && query.step && !currentStep && <p role="status">Lesson not found in this module.</p>}
     {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Start lesson</h2>

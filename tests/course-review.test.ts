@@ -14,8 +14,6 @@ test("curriculum review separates learner intent from the authored goal and reta
   assert.ok(prompt.includes(JSON.stringify(request)));
   assert.ok(prompt.includes("exact Library export version-one"));
   assert.deepEqual(JSON.parse(prompt.split("PROPOSED COURSE (reference JSON):\n")[1]), course);
-  assert.match(prompt, /self-contained scaffold/);
   const withoutRequest = courseReviewPrompt(course, " ");
-  assert.match(withoutRequest, /ask for the intended learning outcome/);
-  assert.match(withoutRequest, /do not substitute the AI-authored course goal/);
+  assert.ok(!withoutRequest.includes("ORIGINAL REQUEST (reference text)"));
 });

@@ -33,7 +33,7 @@ test("equal content does not infer a rename; explicit reconciliation keeps the a
   assert.equal(previewImport([{ ...file, path: "topic.md" }], [current])[0].identityConflict, true);
 });
 
-test("ZIP preview preserves text and rejects traversal, private/generated folders, and colliding selected paths", async () => {
+test("ZIP preview finds a marked vault, preserves text, and skips unsafe or private paths", async () => {
   const zip = new JSZip();
   zip.file("Vault/Lessons/Java/Methods.md", "# Methods\r\n\r\nReturn π.");
   zip.file("Vault/AI Chats/private.md", "Excluded");
@@ -43,7 +43,7 @@ test("ZIP preview preserves text and rejects traversal, private/generated folder
   zip.file("README.md", "Archive packaging note");
   zip.file(".hidden.md", "Excluded");
   zip.file(".trash/config.md", "Excluded");
-  const result = await readMarkdownFiles([new File([await zip.generateAsync({ type: "uint8array" })], "vault.zip")]);
+  const result = await readMarkdownFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "vault.zip")]);
   assert.deepEqual(result.files.map((file) => file.path), ["Lessons/Java/Methods.md", "Progress/report.md"]);
   assert.equal(result.files[0].body, "# Methods\r\n\r\nReturn π.");
   assert.equal(result.skipped, 6);
@@ -65,10 +65,10 @@ test("ZIP preview stops oversized decompression even when the archive understate
   const zip = new JSZip();
   zip.file("Large.md", "x".repeat(8 * 1024 * 1024));
   zip.file("Small.md", "# Small\n\nKeep π and \uFEFF.");
-  const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
-  const view = new DataView(bytes.buffer);
+  const bytes = await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+  const view = new DataView(bytes);
   // The first central-directory entry and its local header falsely advertise one byte.
-  const central = view.getUint32(bytes.length - 22 + 16, true);
+  const central = view.getUint32(bytes.byteLength - 22 + 16, true);
   view.setUint32(central + 24, 1, true);
   view.setUint32(view.getUint32(central + 42, true) + 22, 1, true);
   const result = await readMarkdownFiles([new File([bytes], "understated.zip")]);

@@ -57,10 +57,6 @@ export function noteRelationships(markdown: string): NoteRelationship[] {
   return links;
 }
 
-export function wikiLinks(markdown: string): string[] {
-  return [...new Set(noteRelationships(markdown).map((link) => link.target))];
-}
-
 export function resolveNoteLink<T extends { path: string; artifact_id?: string | null }>(target: string, notes: T[], aliases: SourceAlias[] = []):
   { state: "resolved"; note: T } | { state: "missing" | "ambiguous" } {
   const normalized = target.replace(/\.md$/i, "").toLowerCase();

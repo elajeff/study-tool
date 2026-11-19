@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanNotePath, wikiLinks, noteRelationships, resolveNoteLink, type SourceAlias } from "../src/lib/notes.ts";
+import { cleanNotePath, noteRelationships, resolveNoteLink, type SourceAlias } from "../src/lib/notes.ts";
 
 test("note imports reject unsafe paths and non-Markdown files", () => {
   assert.equal(cleanNotePath("../notes.md"), null);
@@ -10,7 +10,6 @@ test("note imports reject unsafe paths and non-Markdown files", () => {
 });
 
 test("wikilinks find referenced notes, without creating duplicate targets", () => {
-  assert.deepEqual(wikiLinks("[[Java]] and [[Java|lang]] then [[Concepts/Arrays#Basics]]"), ["Java", "Concepts/Arrays"]);
   const result = resolveNoteLink("Java", [{ path: "Concepts/Java.md" }]);
   assert.equal(result.state === "resolved" && result.note.path, "Concepts/Java.md");
 });

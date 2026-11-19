@@ -32,8 +32,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         </section>
         <section className="panel lesson-section">
           <div className="panel-kicker"><Lightbulb size={17} /> Practice</div>
-          <p>{lesson.completion}</p>
-          <p className="muted small">The note is reference material. Demonstrate the skill with a new exercise before approving an assessment.</p>
+          <p>Demonstrate the skill with a new exercise before approving an assessment.</p>
         </section>
         <TutorHandoff lesson={lesson} topic={lesson.topic} profile={profile!}
           prerequisiteNames={lesson.prerequisites.map((id) => getLesson(lessons, id)?.title ?? id)} />

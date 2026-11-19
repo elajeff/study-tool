@@ -9,7 +9,7 @@ import type { ExportManifest } from "./library-pack.ts";
 export type InboxImport = { kind: "course"; course: Course } | { kind: "module"; course_id: string; plan: ModulePlan }
   | { kind: "digest"; export_id: string; items: DigestBlock["items"] }
   | { kind: "evidence"; receipt: Evidence; fingerprint: string };
-export type InboxResult = { kind: "course" | "module"; id: string; course_id: string; created?: boolean }
+export type InboxResult = { kind: "course" | "module"; id: string; course_id: string; created?: boolean; module?: string }
   | { kind: "digest"; export_id: string; new_items: number } | { kind: "evidence"; id: string; created: boolean };
 
 export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBlock[], legacyTopics: Set<string> = new Set()): Promise<InboxImport[]> {
@@ -39,7 +39,10 @@ export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBl
         courses.set(id, parseCourse(data.raw_block, await manifest(data.export_id)).course);
       }
       const course = courses.get(id)!;
-      prepared.push({ kind: "module", course_id: id, plan: parseModule(JSON.stringify(value), id, course, String(value.module ?? ""), await manifest(course.export_id)) });
+      const moduleId = String(value.module ?? "");
+      const snapshot = await manifest(course.export_id);
+      try { prepared.push({ kind: "module", course_id: id, plan: parseModule(JSON.stringify(value), id, course, moduleId, snapshot) }); }
+      catch (error) { throw new Error(`${moduleId || "Module plan"}: ${error instanceof Error ? error.message : "Invalid module plan."}`); }
     } else {
       const receipt = validateEvidence(value);
       prepared.push({ kind: "evidence", receipt, fingerprint: evidenceFingerprint(receipt) });

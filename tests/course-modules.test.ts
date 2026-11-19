@@ -25,8 +25,8 @@ test("module plans bind identities and ordered steps while allowing other releva
 });
 
 test("module requests carry real identities and scope without inventing assessed ability", () => {
-  const card = modulePlanningCard(courseId, course, course.modules[1]);
-  const schema = JSON.parse(card.split("\nSchema: ")[1].split(".\n")[0]);
+  const card = modulePlanningCard(courseId, course, [course.modules[1]]);
+  const schema = JSON.parse(card.split("\nExample object: ")[1].split(".\n")[0]);
   assert.equal(schema.course_id, courseId);
   assert.equal(schema.export_id, manifest.export_id);
   assert.equal(schema.module, "M02");

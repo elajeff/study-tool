@@ -22,15 +22,27 @@ function parseJson(raw: string): unknown {
   return JSON.parse(clean);
 }
 
-export function parseInbox(raw: string, expected?: { courseId: string; moduleId: string }): { blocks: InboxBlock[]; ignored: number } {
+export type ModuleImportScope = { courseId: string; moduleId: string } | { courseId: string; moduleIds: string[] };
+
+export function parseInbox(raw: string, expected?: ModuleImportScope): { blocks: InboxBlock[]; ignored: number } {
   if (new TextEncoder().encode(raw).length > 1024 * 1024) throw new Error("Import at most 1 MiB of response text.");
   const blocks: InboxBlock[] = [];
+  const batch = expected && "moduleIds" in expected ? expected : null;
   let ignored = 0;
+  function append(kind: InboxKind, value: Record<string, unknown>) {
+    blocks.push({ kind, value });
+    if (blocks.length > 20) throw new Error("Import at most 20 Study Tool blocks at once.");
+  }
   function add(body: string, label = "") {
     const explicit = label.startsWith("study-");
     let value: unknown;
     try { value = parseJson(body); }
     catch { if (explicit || /"format"\s*:\s*"study-/.test(body)) throw new Error("A Study Tool block is incomplete or invalid JSON. Nothing was saved."); ignored++; return; }
+    if (!explicit && Array.isArray(value) && (batch || value.some(item => item?.format === "study-module/1"))) {
+      if (!value.length || value.some(item => item?.format !== "study-module/1")) throw new Error("A lesson-plan batch must contain only study-module objects.");
+      for (const item of value) append("module", item);
+      return;
+    }
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       if (explicit) throw new Error("A Study Tool block must contain a JSON object. Nothing was saved.");
       ignored++; return;
@@ -44,10 +56,10 @@ export function parseInbox(raw: string, expected?: { courseId: string; moduleId:
       ignored++; return;
     }
     if (explicit && label !== `study-${kind}`) throw new Error("A block's fence label disagrees with its JSON format.");
-    blocks.push({ kind, value: record });
-    if (blocks.length > 20) throw new Error("Import at most 20 Study Tool blocks at once.");
+    append(kind, record);
   }
-  if (raw.trimStart().startsWith("{")) add(raw);
+  const start = raw.trimStart();
+  if (start.startsWith("{") || /^\[\s*(?:\{|\])/.test(start)) add(raw);
   else {
     let fence: { marker: string; label: string; lines: string[] } | null = null;
     for (const line of raw.split(/\r?\n/)) {
@@ -66,7 +78,18 @@ export function parseInbox(raw: string, expected?: { courseId: string; moduleId:
       throw new Error("A Study Tool fence is not closed. Nothing was saved.");
   }
   if (!blocks.length) throw new Error("No supported blocks found. Paste course, module, digest or assessment JSON from Study Tool instructions.");
-  if (expected) {
+  if (batch) {
+    const seen = new Set<string>();
+    for (const block of blocks) {
+      const id = block.value.module;
+      if (block.kind !== "module" || block.value.course_id !== batch.courseId || typeof id !== "string" || !batch.moduleIds.includes(id))
+        throw new Error("The batch contains a plan or response for a different course or module.");
+      if (seen.has(id)) throw new Error(`The batch contains more than one plan for ${id}.`);
+      seen.add(id);
+    }
+    const missing = batch.moduleIds.filter(id => !seen.has(id));
+    if (missing.length) throw new Error(`Missing plans for ${missing.join(", ")}. Ask ChatGPT to return the complete batch.`);
+  } else if (expected && "moduleId" in expected) {
     const plan = blocks.find(block => block.kind === "module");
     if (!plan || blocks.some(block => block.kind === "module"
       ? block.value.course_id !== expected.courseId || block.value.module !== expected.moduleId

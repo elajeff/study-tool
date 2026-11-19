@@ -14,6 +14,7 @@ import { LessonControls } from "@/components/LessonControls";
 import { CourseReviewCard } from "@/components/CourseReviewCard";
 import { CourseModules } from "@/components/CourseModules";
 import { CourseStepAction } from "@/components/CourseStepAction";
+import { BatchModulePlanner } from "@/components/BatchModulePlanner";
 import { RememberCourse } from "@/components/RememberCourse";
 import { savedCoursePosition } from "@/lib/course-position";
 
@@ -41,7 +42,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps.find(step => !step.completed_at) ?? steps[0];
   const next = result ? nextCourseLesson(result.course, allSteps) : null;
   const completed = allSteps.filter(step => step.completed_at).length;
-  const unplanned = result?.course.modules.filter(module => !allSteps.some(step => step.module_key === module.id)).length ?? 0;
+  const plannedIds = [...new Set(allSteps.map(step => step.module_key))];
+  const unplanned = result ? result.course.modules.length - plannedIds.length : 0;
   const assessmentTopic = currentStep ? `course-step:${currentStep.row_id}` : undefined;
   const assessment = assessmentTopic ? latestApproved(await loadAssessments(supabase, "approved", assessmentTopic)).get(assessmentTopic) : undefined;
   return <>
@@ -54,6 +56,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     <section className="panel"><h2>Recent courses</h2>
       {recent.length ? <ul>{recent.map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title}</Link></li>)}</ul> : <p>No courses saved yet.</p>}
     </section>
+    {result && query.id && <BatchModulePlanner key={query.id} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
     {result && query.id && <section className="panel course-path" id="course-path"><h2>{result.course.title}</h2><p>{result.course.goal}</p>
       <p>Target: {result.course.target}</p><p>Starting level: {result.course.assumed_level}</p>
       <p><Link href={`/library/exports/${result.course.export_id}`}>Saved Library snapshot</Link></p>
@@ -78,7 +81,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && query.id && selected && <section className="panel" id="module-plan"><h2>{selected.id} · {steps.length ? "Lesson plan ready" : "Prepare lesson plan"}</h2>
       {steps.length ? <p>Choose a lesson in the roadmap to start studying. You do not need to import this plan again.</p>
       : <><p>Request a plan from ChatGPT, then import its JSON here. Preparing or importing a plan does not demonstrate mastery.</p>
-        <CourseLessonCard key={`${query.id}/${selected.id}`} text={modulePlanningCard(query.id, result.course, selected)} />
+        <CourseLessonCard key={`${query.id}/${selected.id}`} text={modulePlanningCard(query.id, result.course, [selected])} />
       </>}
       <details open={!steps.length}><summary>Import a plan</summary>
         <InboxImporter key={`${query.id}/${selected.id}`} openCourse moduleScope={{ courseId: query.id, moduleId: selected.id }} />

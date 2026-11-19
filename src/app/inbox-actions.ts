@@ -14,8 +14,12 @@ export async function importInbox(_previous: { error?: string; results?: InboxRe
   try {
     if (file instanceof File && file.size > 1024 * 1024) throw new Error("Import at most 1 MiB of response text.");
     const courseId = String(form.get("course_id") ?? ""), moduleId = String(form.get("module") ?? "");
-    if (!!courseId !== !!moduleId) throw new Error("Supply both the course and module for a scoped import.");
-    parsed = parseInbox(file instanceof File ? await file.text() : String(form.get("response") ?? ""), courseId ? { courseId, moduleId } : undefined);
+    const moduleIds = form.getAll("batch_module").map(String);
+    if (moduleIds.length && (!courseId || moduleId || moduleIds.length < 2 || moduleIds.length > 5 || new Set(moduleIds).size !== moduleIds.length))
+      throw new Error("Select 2 to 5 different modules from the course.");
+    if (!moduleIds.length && !!courseId !== !!moduleId) throw new Error("Supply both the course and module for a scoped import.");
+    const scope = moduleIds.length ? { courseId, moduleIds } : courseId ? { courseId, moduleId } : undefined;
+    parsed = parseInbox(file instanceof File ? await file.text() : String(form.get("response") ?? ""), scope);
     const topics = new Set<string>();
     if (parsed.blocks.some(block => block.kind === "evidence" && !block.value.step))
       (await loadStudy()).lessons.forEach(lesson => topics.add(lesson.topic));
@@ -34,5 +38,9 @@ export async function importInbox(_previous: { error?: string; results?: InboxRe
       redirect(`/courses?${query}#${savedModule ? "lesson-focus" : "course-path"}`);
     }
   }
-  return { results: data as InboxResult[], ignored: parsed.ignored };
+  const results = (data as InboxResult[]).map((result, index) => {
+    const block = prepared[index];
+    return result.kind === "module" && block.kind === "module" ? { ...result, module: block.plan.module } : result;
+  });
+  return { results, ignored: parsed.ignored };
 }

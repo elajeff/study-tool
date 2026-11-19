@@ -19,6 +19,19 @@ test("module intake accepts its own plan and summaries while rejecting a differe
  assert.throws(() => parseInbox(fence(plan) + "\n" + fence({ ...digest, export_id: "other" }), expected), /Nothing was saved/);
 });
 
+test("lesson-plan batches accept raw or fenced arrays and name missing or duplicate modules", () => {
+ const scope = { courseId: "saved-course", moduleIds: ["M01", "M02"] };
+ const first = { format: "study-module/1", course_id: scope.courseId, export_id: exportId, module: "M01" };
+ const second = { ...first, module: "M02" };
+ const raw = JSON.stringify([first, second]);
+ assert.equal(parseInbox(raw, scope).blocks.length, 2);
+ assert.equal(parseInbox("[Download]\n```json\n" + raw + "\n```", scope).blocks.length, 2);
+ assert.throws(() => parseInbox(JSON.stringify([first]), scope), /Missing plans for M02/);
+ assert.throws(() => parseInbox(JSON.stringify([first, first]), scope), /more than one plan for M01/);
+ assert.throws(() => parseInbox(JSON.stringify([first, { ...second, course_id: "other" }]), scope), /different course/);
+ assert.throws(() => parseInbox(JSON.stringify([first, course]), scope), /only study-module objects/);
+});
+
 test("Inbox finds multiple supported fences and removes trailing commas without altering quoted text", () => {
  const raw = `Prose\n\`\`\`json\n${JSON.stringify(course)}\n\`\`\`\n\`\`\`study-digest\n${JSON.stringify(digest).replace(/}$/, ',}')}\n\`\`\`\n\`\`\`json\n{"ordinary":1}\n\`\`\``;
  const parsed = parseInbox(raw);

@@ -125,6 +125,8 @@ The learning path shows numbered module and lesson cards. Its progress bar count
 
 Open a module's lesson plan and copy its request into the ChatGPT Project containing that Library version. Import the returned `study-module/1` file beside that request, or paste the response. The form accepts that module's plan and any summaries for the same export; other responses belong in Inbox. The app checks the course, export, module, ordered step IDs and source references. Saved plans retain their lesson identities on repeat import. A different plan for the same module is rejected rather than replacing existing lessons.
 
+For several modules, open **Prepare several lesson plans** in Courses. Select 2 to 5 unplanned modules and copy the batch request. Import the returned file or paste the JSON array in the same section. All selected plans must pass validation before any are saved. The results link to each saved plan.
+
 Select a saved lesson to copy its study request. It includes the lesson's goal, source references, completion condition and saved identities. ChatGPT teaches that step using relevant Library material and general knowledge. Copying the request does not record completion or mastery.
 
 Use **Mark done** after studying a lesson, or **Reopen** to clear that mark. This records study activity only; approved assessments still determine mastery. Reimporting the same lesson plan retains these marks.

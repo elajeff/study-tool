@@ -18,6 +18,7 @@ import { BatchModulePlanner } from "@/components/BatchModulePlanner";
 import { RememberCourse } from "@/components/RememberCourse";
 import { coursePositionToResume, savedCoursePosition } from "@/lib/course-position";
 import { CourseChatLink } from "@/components/CourseChatLink";
+import { ManageCourse } from "@/components/ManageCourse";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string; page?: string }> }) {
   const { supabase, user } = await requireAccount();
@@ -26,7 +27,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const requestedPage = Number(requested.page ?? 1);
   const page = Number.isInteger(requestedPage) && requestedPage > 0 && requestedPage <= 10_000 ? requestedPage : 1;
   const offset = (page - 1) * 20;
-  const { data: recent, error } = await supabase.from("courses").select("id,title:raw_block->>title")
+  const { data: recent, error } = await supabase.from("courses").select("id,display_name,title:raw_block->>title")
     .order("created_at", { ascending: false }).order("id").range(offset, offset + 20);
   if (error) throw new Error("Could not load courses. Check migration 011.");
   if (!query.id) query.id = (await cookies()).get(`study-course-${user.id}`)?.value ?? recent[0]?.id;
@@ -63,9 +64,12 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected ? result.course.modules.indexOf(selected) : undefined} stepId={currentStep?.row_id} />}
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     {courseError && <p role="alert">{courseError}</p>}
+    {courseError && query.id && <section className="panel">
+      <ManageCourse key={query.id} courseId={query.id} name={recent.find(row => row.id === query.id)?.display_name ?? ""} />
+    </section>}
     {result && query.id && <section className="panel next-panel">
-      <h2>{result.course.title}</h2>
-      {resume && <p>Continue at {resume.step?.goal ?? resume.module.title}</p>}
+      <h2 className="course-name">{result.name}</h2>
+      {resume && <p>Continue at {resume.step ? `${resume.step.id} · ${resume.module.title}` : resume.module.title}</p>}
       <div className="import-actions">
         {resume && <Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: resume.module.id, ...(resume.step ? { step: resume.step.row_id } : {}) }, hash: resume.step ? "lesson-focus" : "module-plan" }}>
           {resume.step ? "Continue studying" : "Prepare the next lesson plan"}
@@ -75,9 +79,10 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         </a>
         <Link className="button button-light" href="#saved-courses">Switch course</Link>
       </div>
-      <CourseChatLink key={query.id} courseId={query.id} url={result.chatUrl} />
+      <div className="course-options"><CourseChatLink key={query.id} courseId={query.id} url={result.chatUrl} /></div>
+      <ManageCourse key={`manage-${query.id}`} courseId={query.id} name={result.name} />
     </section>}
-    {result && query.id && <section className="panel course-path" id="course-path"><h2>{result.course.title}</h2><p>{result.course.goal}</p>
+    {result && query.id && <section className="panel course-path" id="course-path"><h2>Course roadmap</h2><p>{result.course.goal}</p>
       <p>Target: {result.course.target}</p><p>Starting level: {result.course.assumed_level}</p>
       <p><Link href={`/library/exports/${result.course.export_id}`}>Saved Library snapshot</Link></p>
       <p>Source items without a module or exclusion: {result.unassigned.length}. This is file accounting, not a check of teaching completeness.</p>
@@ -126,7 +131,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     </section>}
     <section className="panel" id="saved-courses"><h2>Saved courses</h2>
       {recent.length ? <ul>{recent.slice(0, 20).map(row => <li key={row.id}>
-        <Link href={`/courses?id=${row.id}`} aria-current={row.id === query.id ? "true" : undefined}>{row.title || "Untitled course"}</Link>
+        <Link className="course-name" href={`/courses?id=${row.id}`} aria-current={row.id === query.id ? "true" : undefined}>{row.display_name ?? (row.title || "Untitled course")}</Link>
         {row.id === query.id && " · Current"}
       </li>)}</ul>
         : <p>{page === 1 ? "No courses saved yet." : "No more courses."}</p>}

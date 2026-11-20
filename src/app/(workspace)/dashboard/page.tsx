@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const pace = parseStudyPace((await cookies()).get(`study-pace-${user.id}`)?.value);
   const minutesPerLesson = pace?.minutesPerLesson ?? 30;
   const [courses, profile] = await Promise.all([
-    supabase.from("courses").select("id,title:raw_block->>title").order("created_at", { ascending: false }).limit(20),
+    supabase.from("courses").select("id,display_name,title:raw_block->>title").order("created_at", { ascending: false }).limit(20),
     supabase.from("study_profiles").select("hours_per_week").eq("user_id", user.id).maybeSingle(),
   ]);
   if (courses.error || profile.error) throw new Error("Could not load your course dashboard.");
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
   if (next) { nextQuery.set("module", next.module.id); if (next.step) nextQuery.set("step", next.step.row_id); }
   return <>
     <div className="page-heading"><h1>Dashboard</h1><p>Your courses and study progress.</p></div>
-    <section className="panel next-panel"><h2>{saved.course.title}</h2><p>{saved.course.goal}</p>
+    <section className="panel next-panel"><h2 className="course-name">{saved.name}</h2><p>{saved.course.goal}</p>
       <progress className="course-progress" aria-label="Course modules completed" value={overview.completedModules} max={saved.course.modules.length} />
       <p>{overview.completedModules} of {saved.course.modules.length} modules finished · {overview.completedLessons} of {overview.plannedLessons} planned lessons done</p>
       <div className="import-actions"><Link className="button button-dark" href={`/courses?${nextQuery}#${next?.step ? "lesson-focus" : next ? "module-plan" : "course-path"}`}>
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
         <p className="muted small">A planning estimate, not measured study time. Days assume your weekly hours are spread evenly. Practice, reviews and difficult lessons can take longer.</p>
       </section>
       <section className="panel"><h2>Recent courses</h2><ul>{courses.data.map(course => <li key={course.id}>
-        <Link className="text-link" href={`/courses?id=${course.id}`}>{course.title}</Link>{course.id === courseId ? " · Current" : ""}
+        <Link className="text-link course-name" href={`/courses?id=${course.id}`}>{course.display_name ?? course.title}</Link>{course.id === courseId ? " · Current" : ""}
       </li>)}</ul><p><Link className="text-link" href="/inbox">Import another course</Link></p>
         <p>Marking lessons done records activity. Approved assessments record demonstrated knowledge separately.</p>
         {!!steps.length && <ProgressExport rows={steps.map(step => {

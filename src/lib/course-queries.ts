@@ -6,13 +6,14 @@ export class UnreadableCourseError extends Error {}
 
 export async function loadCourse(client: SupabaseClient, id: string) {
   if (!/^[a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(id)) return null;
-  const { data, error } = await client.from("courses").select("raw_block,export_id,chat_url").eq("id", id).maybeSingle();
+  const { data, error } = await client.from("courses").select("raw_block,export_id,chat_url,display_name").eq("id", id).maybeSingle();
   if (error) throw new Error("Could not load the saved course.");
   if (!data) return null;
   const manifest = await loadExportManifest(client, data.export_id);
   if (!manifest) throw new Error("The course's Library snapshot is unavailable.");
   try {
-    return { ...parseCourse(data.raw_block, manifest), chatUrl: typeof data.chat_url === "string" ? data.chat_url : null };
+    const parsed = parseCourse(data.raw_block, manifest);
+    return { ...parsed, name: data.display_name ?? parsed.course.title, chatUrl: data.chat_url };
   } catch {
     throw new UnreadableCourseError("This saved outline is invalid. Import a corrected outline or open another course.");
   }

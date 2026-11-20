@@ -23,6 +23,9 @@ begin
       'title','Foundation','outcome','Explain','proof','Solve a changed ratio','needs','[]'::jsonb,'sources','["general"]'::jsonb,'steps_estimate',5) order by n))
   into outline from generate_series(1,2) n;
   course_id := public.save_course(outline);
+  update public.courses set display_name='My ratios course' where id=course_id;
+  assert (select display_name='My ratios course' and raw_block=outline from public.courses where id=course_id);
+  assert public.save_course(outline)=course_id;
   other_course := public.save_course(jsonb_set(outline,'{title}','"Separate course"'));
   select jsonb_build_object('format','study-module/1','course_id',course_id,'export_id',snapshot->>'export_id','module','M01',
     'steps',jsonb_agg(jsonb_build_object('id','M01.S'||n,'kind','exercise','goal','Solve fresh case '||n,
@@ -75,6 +78,12 @@ begin
   assert (select count(*)=17 from public.course_steps);
   perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
   assert not exists(select 1 from public.course_modules) and not exists(select 1 from public.course_steps);
+  update public.courses set display_name='Foreign change' where id=course_id;
+  assert not found;
+  begin
+    perform public.delete_course(course_id);
+    raise exception 'Foreign course deleted';
+  exception when insufficient_privilege then null; end;
   update public.course_steps set completed_at=now() where id=first_step;
   assert not found, 'Foreign progress was updated';
   begin
@@ -88,6 +97,16 @@ begin
   exception when insufficient_privilege then null; end;
   perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000100',true);
   assert (select completed_at is null from public.course_steps where id=first_step);
+
+  module_uuid := public.save_course_module(other_course, jsonb_set(plan,'{course_id}',to_jsonb(other_course)));
+  insert into public.assessment_receipts(user_id,fingerprint,topic,step_id,date,level,task,evidence,independent,hints)
+    select auth.uid(),'remove-with-course','course-step:'||id,id,'2026-11-17',2,'Explain','Explained units.',false,'major'
+    from public.course_steps where module_id=module_uuid and position=1;
+  perform public.delete_course(other_course);
+  assert (select count(*)=1 from public.courses) and (select count(*)=1 from public.library_exports);
+  assert not exists(select 1 from public.course_steps where module_id=module_uuid);
+  assert not exists(select 1 from public.assessment_receipts where fingerprint='remove-with-course');
+  assert exists(select 1 from public.assessment_receipts where fingerprint='lesson-review');
 end $$;
 reset role;
 delete from public.course_modules where user_id='00000000-0000-4000-8000-000000000100';

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
-import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
+import { loadCourse, loadCourseSteps, UnreadableCourseError } from "@/lib/course-queries";
 import { nextCourseLesson } from "@/lib/course";
 import { courseOverview } from "@/lib/course-overview";
 import { loadAssessments } from "@/lib/assessment-queries";
@@ -21,8 +21,19 @@ export default async function DashboardPage() {
   ]);
   if (courses.error || profile.error) throw new Error("Could not load your course dashboard.");
   let courseId = (await cookies()).get(`study-course-${user.id}`)?.value ?? courses.data[0]?.id;
-  let saved = courseId ? await loadCourse(supabase, courseId) : null;
-  if (!saved && courses.data.length) { courseId = courses.data[0].id; saved = await loadCourse(supabase, courses.data[0].id); }
+  let saved: Awaited<ReturnType<typeof loadCourse>> = null;
+  try {
+    if (courseId) saved = await loadCourse(supabase, courseId);
+    if (!saved && courses.data.length && courseId !== courses.data[0].id) {
+      courseId = courses.data[0].id;
+      saved = await loadCourse(supabase, courseId);
+    }
+  } catch (error) {
+    if (!(error instanceof UnreadableCourseError)) throw error;
+    return <section className="panel"><h1>Dashboard</h1><p role="alert">{error.message}</p>
+      <Link className="button button-dark" href="/courses#saved-courses">Open saved courses</Link>
+    </section>;
+  }
   if (!saved || !courseId) return <>
     <div className="page-heading"><h1>Dashboard</h1><p>Your courses and study progress.</p></div>
     <section className="panel"><h2>No courses yet</h2><p>Import a course from ChatGPT to see its roadmap, next lesson and progress here.</p>

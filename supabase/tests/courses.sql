@@ -31,6 +31,10 @@ begin
     perform public.save_course(jsonb_set(outline,'{modules}','[]'));
     raise exception 'Empty course accepted';
   exception when invalid_parameter_value then null; end;
+  begin
+    perform public.save_course(outline #- '{modules,0,title}');
+    raise exception 'Unreadable course accepted';
+  exception when invalid_parameter_value then null; end;
   perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000099',true);
   assert not exists(select 1 from public.courses);
   begin

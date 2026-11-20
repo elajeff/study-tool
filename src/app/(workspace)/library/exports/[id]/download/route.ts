@@ -4,11 +4,14 @@ import { loadExportManifest, loadExportRevisions } from "@/lib/export-queries";
 import JSZip from "jszip";
 import { buildLibraryFiles, LibraryFileSizeError } from "@/lib/library-files";
 import { inspectImportText } from "@/lib/import-privacy";
+import { downloadLimit } from "@/lib/download-limit";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { supabase } = await requireAccount();
   const manifest = await loadExportManifest(supabase, (await params).id);
   if (!manifest) notFound();
+  const limited = await downloadLimit(supabase, "library");
+  if (limited) return limited;
   const revisions = await loadExportRevisions(supabase, manifest.sources.map(source => source.id), manifest.items.map(item => item.revision_id));
   let files;
   try { files = buildLibraryFiles(manifest, revisions); }

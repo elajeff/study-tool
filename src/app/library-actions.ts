@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
-import { loadLibrarySources, loadLibraryArtifacts } from "@/lib/library-queries";
+import { loadLibrarySources, loadLibraryArtifacts, loadLatestRepositoryItems, selectLibraryArtifacts } from "@/lib/library-queries";
 import { loadExportManifest, loadExportRevisions } from "@/lib/export-queries";
 import { loadConversationContexts } from "@/lib/conversation-queries";
 import { prepareLibraryExport } from "@/lib/library-pack";
@@ -18,7 +18,11 @@ export async function prepareProjectExport(_previous: { error: string } | null, 
     const sources = (await loadLibrarySources(supabase)).filter(source => selected.has(source.id));
     if (!sources.length || sources.length !== selected.size) throw new Error("Select owned Library sources.");
     const collections = [];
-    for (const source of sources) collections.push({ source, artifacts: await loadLibraryArtifacts(supabase, source.id) });
+    for (const source of sources) {
+      const [items, latest] = await Promise.all([loadLibraryArtifacts(supabase, source.id),
+        source.kind === "repository" ? loadLatestRepositoryItems(supabase, source.id) : null]);
+      collections.push({ source, artifacts: selectLibraryArtifacts(items, latest) });
+    }
     const ids = collections.flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
     const revisions = await loadExportRevisions(supabase, sources.map(source => source.id), ids);
     const chatIds = collections.filter(({ source }) => ["chatgpt", "claude"].includes(source.kind))
@@ -33,6 +37,15 @@ export async function prepareProjectExport(_previous: { error: string } | null, 
     return { error: error instanceof Error ? error.message : "Could not prepare the Library snapshot. Try again." };
   }
   redirect(`/library/exports/${exportId}`);
+}
+
+export async function setLibraryItemExclusion(form: FormData) {
+  const { supabase } = await requireAccount();
+  const { error } = await supabase.from("source_artifacts")
+    .update({ exclude_from_library: form.get("exclude") === "yes" })
+    .eq("id", String(form.get("item") ?? "")).select("id").single();
+  if (error) throw new Error("Could not change the Library selection.");
+  revalidatePath("/library");
 }
 
 export async function importLibraryDigest(_previous: { error?: string; saved?: number } | null, form: FormData): Promise<{ error?: string; saved?: number }> {

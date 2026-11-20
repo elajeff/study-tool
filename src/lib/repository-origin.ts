@@ -4,6 +4,6 @@ export type ExportRepositoryOrigin = { import_id: string; source_id: string; ori
 
 export function repositoryOriginText(origin: ExportRepositoryOrigin): string {
   return `Repository import ${origin.import_id} (text first saved). ${origin.origin.kind === "github" ? `${origin.origin.url} at commit ${origin.origin.commit}` : "Local ZIP; original repository commit is unknown."}
-Excluded paths in this import: ${JSON.stringify(origin.origin.excluded)}.
+Excluded paths in this import: ${origin.origin.excluded.length}.
 This records this import only. Saved items may span imports; it is not a verified current checkout.`;
 }

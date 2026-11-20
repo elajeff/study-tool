@@ -85,7 +85,7 @@ Obsidian previews recognize ChatBridge frontmatter when its conversation URL and
 
 ## Library snapshots
 
-In Library, select collections and choose **Save Library snapshot**. The saved page links to the selected source revisions and records their paths, hashes, maps and accepted conversation context. Reimporting a source does not update an existing snapshot. Repeating the same selection without changes reuses its reference.
+In Library, select collections and choose **Save snapshot and open export**. Open a collection to exclude individual items from future snapshots. A repository with recorded import history contributes the files accepted in its latest recorded batch. The download lists how many paths were excluded from a repository import. Review the exact items on the saved page before downloading. New imports and selection changes leave existing snapshots intact.
 
 Snapshots contain saved imports, which may omit parts of the original collections. Preparing a snapshot does not send it to an AI service. Selected source text is limited to 35 MiB; larger libraries need separate selections.
 

@@ -3,7 +3,6 @@ import type { LibrarySource, LibraryArtifact } from "./library-queries.ts";
 export type MapEntry = { id: string; label: string; artifact?: LibraryArtifact };
 export type LibraryMap = {
   id: string; text: string; entries: MapEntry[]; next: string | null;
-  characters: number; estimatedTokens: number;
 };
 
 export const MAP_CHARACTER_LIMIT = 4000;
@@ -31,7 +30,7 @@ function pages(prefix: string, heading: string, entries: MapEntry[]): LibraryMap
     const next = index + 1 < groups.length ? `${prefix}/${index + 2}` : null;
     const text = [`MAP ${id}`, heading, ...group.map(entry => `${entry.id}  ${entry.label}`),
       next ? `NEXT ${next}` : "END MAP"].join("\n");
-    return { id, text, entries: group, next, characters: text.length, estimatedTokens: Math.ceil(text.length / 4) };
+    return { id, text, entries: group, next };
   });
 }
 

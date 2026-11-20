@@ -10,6 +10,7 @@ import { repositoryOriginText, type RepositoryOrigin, type ExportRepositoryOrigi
 export type ExportItem = {
   id: string; source_id: string; artifact_id: string; revision_id: string;
   path: string; content_hash: string; conversation?: ConversationContext; origin_import_id?: string;
+  review?: { blocked: string | null; review: string | null };
 };
 export type ExportManifest = {
   format: "study-export/3"; export_id: string; sources: LibrarySource[];
@@ -32,9 +33,10 @@ export function prepareLibraryExport(collections: { source: LibrarySource; artif
     const conversation = ["chatgpt", "claude"].includes(source.kind) ? contexts.get(revision.id) : undefined;
     if (["chatgpt", "claude"].includes(source.kind) && !conversation)
       throw new Error("A conversation has no accepted import context. Reload before exporting.");
+    const review = inspectImportText(revision.content);
     return { id: `${source.short_code}/${artifact.short_code}`, source_id: source.id, artifact_id: artifact.id,
       revision_id: revision.id, path: artifact.path ?? artifact.external_id ?? "(no path)", content_hash: revision.content_hash,
-      ...(conversation ? { conversation } : {}),
+      ...(conversation ? { conversation } : {}), ...(review.blocked || review.review ? { review } : {}),
       ...(source.kind === "repository" && revision.repository_origin && revision.import_id ? { origin_import_id: revision.import_id } : {}) };
   })).sort((a, b) => a.id.localeCompare(b.id));
   const selected = currentLibraryDigests(ordered.flatMap(collection => collection.artifacts), contexts, candidates);

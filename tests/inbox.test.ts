@@ -9,6 +9,20 @@ const course = { format: "study-course/1", export_id: exportId, title: "Seeds", 
  modules: [{ id: "M01", title: "First", outcome: "Sow", proof: "Sow alone", needs: [], sources: ["V1/N001"], steps_estimate: 3 }], not_covered: [], open_questions: [] };
 const digest = { format: "study-digest/1", export_id: exportId, items: [{ id: "V1/N001", summary: 'Keep the exact punctuation ,} and \"quotes\".' }] };
 
+test("a course start validates its first plan against the enclosed outline without a saved course ID", async () => {
+ const manifest = { export_id: exportId, items: [{ id: "V1/N001" }] };
+ const client = createClient("http://example.test", "fixture", { auth: { persistSession: false }, global: { fetch: async (input, init) => {
+  assert.equal(new URL(String(input)).pathname, "/rest/v1/library_exports");
+  assert.equal(init?.method, "GET");
+  return Response.json({ manifest });
+ } } });
+ const step = { id: "M01.S1", kind: "example", goal: "Compare two seed depths", sources: ["V1/N001"], done_when: "Explain the difference" };
+ const start = { format: "study-course-start/1", course, first_steps: [step] };
+ const prepare = (value: unknown) => prepareInboxImport(client, parseInbox(JSON.stringify(value)).blocks);
+ assert.deepEqual(await prepare(start), [{ kind: "course", course, first_steps: [step] }]);
+ await assert.rejects(prepare({ ...start, first_steps: [{ ...step, sources: ["V1/N999"] }] }), /unknown Library item/);
+});
+
 test("module intake accepts its own plan and summaries while rejecting a different workflow or identity", () => {
  const expected = { courseId: "saved-course", moduleId: "M01" };
  const plan = { format: "study-module/1", course_id: expected.courseId, module: "M01", export_id: exportId };

@@ -50,7 +50,7 @@ Clients can edit note bodies but cannot directly change source links, import bas
 
 ### Database checks
 
-After applying all migrations to a disposable development database, run each file in `supabase/tests/` using `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f <script>`. The scripts check source identity, revision reuse, stale previews, ownership, frozen Library context, courses, lesson plans, summaries, repository origins and atomic Inbox imports. They roll back their test users and imports. They need an administrative connection to create users and switch roles. These database integration checks are separate from ordinary CI.
+CI starts a disposable Supabase database, applies the schema and numbered migrations, and runs the SQL scripts in `supabase/tests/`. To run a script locally after applying the migrations, use `psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f <script>` against a local database. The scripts need an administrative connection to create test users and switch roles. They roll back their test data.
 
 ## Explicit connections and provenance
 

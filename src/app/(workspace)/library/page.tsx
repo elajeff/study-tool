@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAccount } from "@/lib/auth";
-import { loadLibrarySources, loadLibraryArtifacts } from "@/lib/library-queries";
+import { loadLibrarySources, loadLibraryArtifacts, loadLatestRepositoryItems } from "@/lib/library-queries";
+import { setLibraryItemExclusion } from "@/app/library-actions";
 import { buildLibraryMaps } from "@/lib/library-map";
 import { LibrarySnapshotForm } from "@/components/LibrarySnapshotForm";
 import { loadConversationContexts } from "@/lib/conversation-queries";
@@ -19,6 +20,7 @@ export default async function LibraryPage({ searchParams }: {
     .sort((a, b) => a.short_code.localeCompare(b.short_code, undefined, { numeric: true }));
   const source = query.source ? sources.find(row => row.short_code === query.source) : sources[0];
   const artifacts = source ? await loadLibraryArtifacts(supabase, source.id) : [];
+  const latest = source?.kind === "repository" ? await loadLatestRepositoryItems(supabase, source.id) : null;
   const revisionIds = artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []);
   const contexts = source && ["chatgpt", "claude"].includes(source.kind) ? await loadConversationContexts(supabase, revisionIds) : new Map();
   const digests = currentLibraryDigests(artifacts, contexts, await loadLibraryDigests(supabase, revisionIds));
@@ -39,23 +41,29 @@ export default async function LibraryPage({ searchParams }: {
       <p>Download a saved snapshot, then upload its files to your ChatGPT Project. The 20 most recent snapshots are shown.</p>
       {snapshots.length ? <div className="saved-exports">{snapshots.map(snapshot => <article className="saved-export" key={snapshot.id}>
         <p>Saved {new Date(snapshot.created_at).toLocaleString("en-GB", { timeZone: "UTC" })} UTC · {snapshot.id.slice(0, 9)}</p>
-        <div className="import-actions"><form action={`/library/exports/${snapshot.id}/download`} method="POST">
-          <button className="button button-dark">Download Study Library</button>
-        </form><Link className="button button-light" href={`/library/exports/${snapshot.id}`}>View details</Link></div>
+        <Link className="button button-light" href={`/library/exports/${snapshot.id}`}>Review and download</Link>
       </article>)}</div> : <p>No snapshots saved yet.</p>}
     </section>
     {source && <section className="panel library-source"><h2>{source.short_code} · {source.name} ({artifacts.length})</h2>
       <p>Read saved import text. Editable notes remain separate.</p>
+      <Link className="back-link" href={`/library/collections/${source.id}/remove`}>Remove collection</Link>
       {map ? <>
         <h3>{map.id}</h3>
-        <p className="muted small">{map.characters.toLocaleString()} characters · approximately {map.estimatedTokens.toLocaleString()} tokens (characters ÷ 4; estimate only)</p>
-        <pre className="library-text">{map.text}</pre>
         <ul>{map.entries.map(entry => {
           const href = entry.artifact
             ? entry.artifact.current_revision_id && `/sources/revisions/${entry.artifact.current_revision_id}`
             : { pathname: "/library", query: { source: source.short_code, map: entry.id } };
+          const item = entry.artifact;
           return <li key={entry.id}>{href ? <Link href={href}>{entry.id} · {entry.label}</Link>
             : <span>{entry.id} · {entry.label}</span>}
+            {item && (latest && !latest.has(item.id) ? <p className="muted small">Older import · excluded from new snapshots</p>
+              : <form action={setLibraryItemExclusion}>
+                <input type="hidden" name="item" value={item.id} />
+                <input type="hidden" name="exclude" value={item.exclude_from_library ? "no" : "yes"} />
+                <button className="button button-light" aria-label={`${item.exclude_from_library ? "Include" : "Exclude"} ${entry.id} in new snapshots`}>
+                  {item.exclude_from_library ? "Include in new snapshots" : "Exclude from new snapshots"}
+                </button>
+              </form>)}
           </li>;
         })}</ul>
         {!map.entries.length && <p>No saved items in this source.</p>}

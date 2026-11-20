@@ -2,14 +2,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadExportManifest } from "./export-queries.ts";
 import { parseCourse, type SavedCourseStep } from "./course.ts";
 
+export class UnreadableCourseError extends Error {}
+
 export async function loadCourse(client: SupabaseClient, id: string) {
   if (!/^[a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(id)) return null;
-  const { data, error } = await client.from("courses").select("raw_block,export_id").eq("id", id).maybeSingle();
+  const { data, error } = await client.from("courses").select("raw_block,export_id,chat_url").eq("id", id).maybeSingle();
   if (error) throw new Error("Could not load the saved course.");
   if (!data) return null;
   const manifest = await loadExportManifest(client, data.export_id);
   if (!manifest) throw new Error("The course's Library snapshot is unavailable.");
-  return { ...parseCourse(data.raw_block, manifest), manifest };
+  try {
+    return { ...parseCourse(data.raw_block, manifest), chatUrl: typeof data.chat_url === "string" ? data.chat_url : null };
+  } catch {
+    throw new UnreadableCourseError("This saved outline is invalid. Import a corrected outline or open another course.");
+  }
 }
 
 export async function loadCourseSteps(client: SupabaseClient, courseId: string): Promise<SavedCourseStep[]> {

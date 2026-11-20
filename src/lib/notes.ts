@@ -57,10 +57,6 @@ export function noteRelationships(markdown: string): NoteRelationship[] {
   return links;
 }
 
-export function wikiLinks(markdown: string): string[] {
-  return [...new Set(noteRelationships(markdown).map((link) => link.target))];
-}
-
 export function resolveNoteLink<T extends { path: string; artifact_id?: string | null }>(target: string, notes: T[], aliases: SourceAlias[] = []):
   { state: "resolved"; note: T } | { state: "missing" | "ambiguous" } {
   const normalized = target.replace(/\.md$/i, "").toLowerCase();
@@ -79,18 +75,17 @@ export function resolveNoteLink<T extends { path: string; artifact_id?: string |
 }
 
 
-/** Skip Obsidian metadata and generated records during study-note import. */
 export function shouldImportNote(path: string) {
-  return !!cleanNotePath(path) && !/^(ai chats|progress|tools|\.obsidian|\.trash)\//i.test(path)
-    && !/^research\/source-manifest\.json$/i.test(path);
+  return !!cleanNotePath(path) && !/(^|\/)ai chats\//i.test(path);
 }
 
-/** ZIP exports sometimes include the vault directory above the Markdown folders. */
-export function vaultRoot(paths: string[]): string | null {
-  const namedFolders = new Set(["lessons", "dsa", "foundations", "concepts", "learning projects", "walkthroughs", "learning paths", "progress", "ai chats"]);
-  const parts = paths.map((path) => path.replaceAll("\\", "/").split("/"));
-  const root = parts[0]?.[0];
-  if (!root || !parts.every((part) => part[0] === root && part.length > 1)) return null;
-  const looksLikeVault = parts.some((part) => namedFolders.has(part[1]?.toLowerCase()) || part[1]?.toLowerCase() === "home.md");
-  return looksLikeVault ? root : null;
+export function vaultRoot(paths: string[], directories: string[] = []): string | null {
+  const roots = new Set<string>();
+  for (const path of [...paths, ...directories]) {
+    const parts = path.split("/");
+    const marker = parts.indexOf(".obsidian");
+    if (marker !== -1) roots.add(parts.slice(0, marker).join("/"));
+  }
+  if (roots.size > 1) throw new Error("This ZIP contains multiple Obsidian vaults. Import them separately.");
+  return [...roots][0] || null;
 }

@@ -33,31 +33,42 @@ test("equal content does not infer a rename; explicit reconciliation keeps the a
   assert.equal(previewImport([{ ...file, path: "topic.md" }], [current])[0].identityConflict, true);
 });
 
-test("ZIP preview preserves text and rejects traversal, private/generated folders, and colliding selected paths", async () => {
+test("ZIP preview finds a marked vault, preserves text, and skips unsafe or private paths", async () => {
   const zip = new JSZip();
   zip.file("Vault/Lessons/Java/Methods.md", "# Methods\r\n\r\nReturn π.");
   zip.file("Vault/AI Chats/private.md", "Excluded");
   zip.file("Vault/Progress/report.md", "Excluded");
   zip.file("Vault/.obsidian/config.md", "Excluded");
   zip.file("Vault/../escape.md", "Excluded");
-  zip.file("README.txt", "Archive packaging note");
+  zip.file("README.md", "Archive packaging note");
   zip.file(".hidden.md", "Excluded");
-  zip.file(".obsidian/config.md", "Excluded");
-  const result = await readMarkdownFiles([new File([await zip.generateAsync({ type: "uint8array" })], "vault.zip")]);
-  assert.deepEqual(result.files.map((file) => file.path), ["Lessons/Java/Methods.md"]);
+  zip.file(".trash/config.md", "Excluded");
+  const result = await readMarkdownFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "vault.zip")]);
+  assert.deepEqual(result.files.map((file) => file.path), ["Lessons/Java/Methods.md", "Progress/report.md"]);
   assert.equal(result.files[0].body, "# Methods\r\n\r\nReturn π.");
-  assert.equal(result.skipped, 7);
+  assert.equal(result.skipped, 6);
   await assert.rejects(() => readMarkdownFiles([new File(["one"], "Topic.md"), new File(["two"], "topic.md")]), /Duplicate path/);
+});
+
+test("a ZIP without vault metadata keeps ordinary folders and omits nested chat transcripts", async () => {
+  const zip = new JSZip();
+  zip.file("README.md", "Introduction");
+  zip.file("Biology/Foundations/Cells.md", "Cells");
+  zip.file("Biology/AI Chats/transcript.md", "Chat");
+  const file = new File([await zip.generateAsync({ type: "arraybuffer" })], "notes.zip");
+  const result = await readMarkdownFiles([file]);
+  assert.deepEqual(result.files.map(note => note.path), ["README.md", "Biology/Foundations/Cells.md"]);
+  assert.equal(result.skipped, 1);
 });
 
 test("ZIP preview stops oversized decompression even when the archive understates its size", async () => {
   const zip = new JSZip();
   zip.file("Large.md", "x".repeat(8 * 1024 * 1024));
   zip.file("Small.md", "# Small\n\nKeep π and \uFEFF.");
-  const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
-  const view = new DataView(bytes.buffer);
+  const bytes = await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+  const view = new DataView(bytes);
   // The first central-directory entry and its local header falsely advertise one byte.
-  const central = view.getUint32(bytes.length - 22 + 16, true);
+  const central = view.getUint32(bytes.byteLength - 22 + 16, true);
   view.setUint32(central + 24, 1, true);
   view.setUint32(view.getUint32(central + 42, true) + 22, 1, true);
   const result = await readMarkdownFiles([new File([bytes], "understated.zip")]);

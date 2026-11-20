@@ -22,9 +22,8 @@ You need Node.js 24+ (or Node.js 22.13+ within the Node 22 release line) and a S
 1. Run `npm ci` to install the locked dependencies.
 2. Copy `.env.example` to `.env.local` and enter the Supabase project URL and publishable/anon key. Do not use the service-role key.
 3. Set up the database in the Supabase SQL Editor:
-   - **Fresh installation:** run `supabase/schema.sql`, then numbered migrations `002` through `019` from `supabase/`, in order.
-   - **Upgrade from v0.1:** run numbered migrations `002` through `019` against the existing database. Do not rerun `schema.sql`; it creates tables and policies that already exist.
-   - **Existing v0.2 database:** apply any missing numbered migrations in order. A database with `018` already applied needs only `019`.
+   - **Fresh installation:** run `supabase/schema.sql`, then the numbered migrations from `supabase/` in order.
+   - **Existing database:** apply any missing numbered migrations in order. Skip `schema.sql` on upgrades.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
    The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
@@ -44,9 +43,9 @@ For deployment, configure the production site URL and redirect URL in Supabase, 
 1. Sign in and import material through **Notes**, **Repositories** or **Conversations**. Review the preview before saving.
 2. In **Library**, select the collections to include and choose **Save Library snapshot**.
 3. Download the Study Library and upload it to a ChatGPT Project. For a ZIP, extract it and upload all included Markdown files. The authoring instructions are included.
-4. Ask ChatGPT for a course, then choose its returned JSON file in **Courses**. The app checks the source references and outline structure before saving.
-5. Open a module, copy its lesson-plan request into ChatGPT and import the returned plan beside that request.
-6. Select a lesson and copy its study request into ChatGPT. Mark it done after studying; review assessment receipts separately before they count toward mastery.
+4. Ask ChatGPT for a course and say **start** when it returns the outline and first lesson plan.
+5. Import the returned file through **Inbox** or **Courses**. Study Tool checks both parts and opens the first unfinished lesson.
+6. Mark lessons done as you study. Request later lesson plans in batches and review assessment receipts separately.
 
 Reusing the same import collection preserves source identities. Existing Library snapshots keep their original revisions. [The usage guide](docs/USAGE.md) covers reimports, file limits, source summaries, portfolio requests and assessments.
 

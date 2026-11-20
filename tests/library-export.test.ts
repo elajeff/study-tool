@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { prepareLibraryExport, projectInstructions } from "../src/lib/library-pack.ts";
 import { buildLibraryFiles, LIBRARY_FILE_BYTES, LibraryFileSizeError } from "../src/lib/library-files.ts";
 import { MAP_CHARACTER_LIMIT } from "../src/lib/library-map.ts";
+import { selectLibraryArtifacts } from "../src/lib/library-queries.ts";
 
 const source = { id: "repository", short_code: "R1", kind: "repository", name: "Synthetic project" };
 const artifact = { id: "file", short_code: "F001", path: "example.py", external_id: null, current_revision_id: "revision" };
@@ -48,9 +49,24 @@ test("repository exports bind first-save origin and exclusions while older impor
   assert.ok(text.includes("original repository commit is unknown"));
   assert.ok(text.includes("not a verified current checkout"));
   assert.ok(text.includes(content));
+  assert.ok(!text.includes("unchecked.md"));
+  assert.match(text, /Excluded paths in this import: 2\./);
   const github = { ...archive, kind: "github" as const, url: "https://github.com/example/project", commit: "a".repeat(40) };
   const pinned = prepareLibraryExport(collections, [{ ...recorded, repository_origin: github }], new Map());
   assert.ok(buildLibraryFiles(pinned, [recorded])[0].text.includes(github.commit));
+});
+
+test("new exports use the latest accepted repository paths and keep prior snapshots intact", () => {
+  const older = { ...artifact, id: "older", short_code: "F002", path: "old-name.md", current_revision_id: "older-revision" };
+  const olderRevision = { ...revision, id: "older-revision", artifact_id: older.id };
+  const excluded = { ...artifact, id: "hidden", exclude_from_library: true };
+  const latest = new Map([[artifact.id, { path: "renamed.py", revision_id: revision.id }],
+    [excluded.id, { path: "hidden.md", revision_id: "hidden-revision" }]]);
+  const old = prepareLibraryExport([{ source, artifacts: [artifact, older] }], [revision, olderRevision], new Map());
+  const next = prepareLibraryExport([{ source, artifacts: selectLibraryArtifacts([artifact, older, excluded], latest) }], [revision], new Map());
+  assert.deepEqual(next.items.map(item => item.path), ["renamed.py"]);
+  assert.deepEqual(old.items.map(item => item.path), ["example.py", "old-name.md"]);
+  assert.ok(!buildLibraryFiles(next, [revision])[0].text.includes("old-name.md"));
 });
 
 test("snapshots keep mixed-source identities and hashes stable regardless of selection order", () => {

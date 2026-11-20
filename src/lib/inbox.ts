@@ -1,6 +1,6 @@
-export type InboxKind = "course" | "module" | "digest" | "evidence";
+export type InboxKind = "course" | "course-start" | "module" | "digest" | "evidence";
 export type InboxBlock = { kind: InboxKind; value: Record<string, unknown> };
-const formats = new Map<string, InboxKind>([["study-course/1", "course"], ["study-module/1", "module"], ["study-digest/1", "digest"], ["study-evidence/1", "evidence"]]);
+const formats = new Map<string, InboxKind>([["study-course/1", "course"], ["study-course-start/1", "course-start"], ["study-module/1", "module"], ["study-digest/1", "digest"], ["study-evidence/1", "evidence"]]);
 
 // Remove trailing commas only outside strings; code examples and quoted punctuation stay intact.
 function parseJson(raw: string): unknown {

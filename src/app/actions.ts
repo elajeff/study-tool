@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadStudy } from "@/lib/study";
 import { cleanNotePath, titleFromPath } from "@/lib/notes";
-import { parseEvidence, evidenceFingerprint } from "@/lib/assessments";
+import { parseEvidence } from "@/lib/assessments";
+import { checkAssessmentTopics, evidenceImport } from "@/lib/inbox-import";
 
 export async function importAssessments(formData: FormData) {
-  const { supabase, user } = await requireAccount();
+  const { supabase } = await requireAccount();
   const text = String(formData.get("evidenceText") ?? "");
   const entries = parseEvidence(text);
   const topics = new Set<string>();
@@ -16,23 +17,8 @@ export async function importAssessments(formData: FormData) {
     const { lessons } = await loadStudy();
     lessons.forEach(lesson => topics.add(lesson.topic));
   }
-  const stepIds = entries.flatMap(entry => entry.step ? [entry.step] : []);
-  const knownSteps = new Set<string>();
-  if (stepIds.length) {
-    const { data, error } = await supabase.from("course_steps").select("id").in("id", stepIds);
-    if (error) throw new Error("Could not load course steps for these receipts.");
-    data.forEach(step => knownSteps.add(step.id));
-  }
-  for (const entry of entries) {
-    if (entry.step ? !knownSteps.has(entry.step) : !topics.has(entry.topic))
-      throw new Error(`Unknown assessment topic: ${entry.topic}`);
-  }
-  const rows = entries.map(receipt => {
-    const { step, ...fields } = receipt;
-    return { ...fields, step_id: step ?? null, fingerprint: evidenceFingerprint(receipt), user_id: user.id, status: "pending" };
-  });
-  const { error } = await supabase.from("assessment_receipts")
-    .upsert(rows, { onConflict: "user_id,fingerprint", ignoreDuplicates: true });
+  await checkAssessmentTopics(supabase, entries, topics);
+  const { error } = await supabase.rpc("save_study_inbox", { p_blocks: entries.map(evidenceImport) });
   if (error) throw new Error("Could not import the assessment. Check that the database migration was applied.");
   revalidatePath("/assessments");
   revalidatePath("/dashboard");
@@ -100,9 +86,10 @@ export async function removeNote(formData: FormData) {
   redirect("/notes");
 }
 
-export async function signOut() {
+export async function signOut(): Promise<string> {
   const { supabase } = await requireAccount();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) return "Could not sign out. Try again before leaving this device.";
   redirect("/");
 }
 

@@ -21,8 +21,8 @@ export type ImportPreview = {
 };
 
 export async function readMarkdownFiles(selected: File[]) {
-  // Non-Markdown archive metadata must not change vault-root detection.
-  const result = await readImportFiles(selected, (path) => shouldImportNote(path) || (!!cleanNotePath(path) && /^ai chats\//i.test(path)), (paths) => vaultRoot(paths.filter((path) => cleanNotePath(path))));
+  // ChatBridge files are read for references only, even inside a wrapped vault.
+  const result = await readImportFiles(selected, (path) => !!cleanNotePath(path), vaultRoot);
   const chatReferences: ChatReference[] = [];
   for (const file of result.files) {
     const reference = chatBridgeReference(file.body);

@@ -11,7 +11,7 @@ test("repository ZIPs retain relative paths and text while excluding secrets, ge
   for (const path of paths) zip.file(path, "// Synthetic π\r\n");
   const excluded = [".env", "config/.env.local", "config/private.pem", "node_modules/a/index.js", "target/Main.java", ".git/config", "package-lock.json", "../escape.py", "/absolute.sql", "C:/drive.sql"];
   for (const path of excluded) zip.file(path, "Excluded");
-  const result = await readImportFiles([new File([await zip.generateAsync({ type: "uint8array" })], "repository.zip")], shouldImportRepositoryFile);
+  const result = await readImportFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "repository.zip")], shouldImportRepositoryFile);
   assert.deepEqual(result.files.map((file) => file.path), paths);
   assert.equal(result.files[0].body, "// Synthetic π\r\n");
   assert.equal(result.skipped.length, excluded.length);

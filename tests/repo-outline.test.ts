@@ -10,7 +10,7 @@ test('syntax hints support different languages and leave unsupported text intact
     ['schema.sql', 'CREATE TABLE measurements (value int);', /CREATE TABLE/],
     ['notes.md', '# Unrelated topic\nOriginal explanation.', /Unrelated topic/],
     ['package.json', '{"dependencies":{"some-library":"1"}}', /some-library/],
-  ]) {
+  ] as const) {
     const result = repositoryOutline(path, text);
     assert.ok(result.supported);
     assert.match(result.lines.join('\n'), expected);

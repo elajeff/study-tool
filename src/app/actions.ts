@@ -100,9 +100,10 @@ export async function removeNote(formData: FormData) {
   redirect("/notes");
 }
 
-export async function signOut() {
+export async function signOut(): Promise<string> {
   const { supabase } = await requireAccount();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) return "Could not sign out. Try again before leaving this device.";
   redirect("/");
 }
 

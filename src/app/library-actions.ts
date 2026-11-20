@@ -48,6 +48,19 @@ export async function setLibraryItemExclusion(form: FormData) {
   revalidatePath("/library");
 }
 
+export async function removeLibraryCollection(_previous: string, form: FormData): Promise<string> {
+  if (form.get("confirm") !== "yes") return "Confirm removal before continuing.";
+  const { supabase } = await requireAccount();
+  const { error } = await supabase.rpc("remove_library_source", {
+    p_source_id: String(form.get("source_id") ?? ""),
+    p_expected_exports: form.getAll("export_id").map(String),
+  });
+  if (error?.code === "40001") return "The snapshots changed. Reload this page and review the list again.";
+  if (error) return "Could not remove this collection.";
+  revalidatePath("/library");
+  redirect("/library");
+}
+
 export async function importLibraryDigest(_previous: { error?: string; saved?: number } | null, form: FormData): Promise<{ error?: string; saved?: number }> {
   const { supabase } = await requireAccount();
   const manifest = await loadExportManifest(supabase, String(form.get("export_id") ?? ""));

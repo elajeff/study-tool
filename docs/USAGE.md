@@ -89,6 +89,8 @@ In Library, select collections and choose **Save snapshot and open export**. Ope
 
 Snapshots contain saved imports, which may omit parts of the original collections. Preparing a snapshot does not send it to an AI service. Selected source text is limited to 35 MiB; larger libraries need separate selections.
 
+To remove a collection, open it in Library and choose **Remove collection**. The confirmation lists the snapshots that will be removed with it. Courses based on those snapshots, their progress and their lesson assessments are deleted too. Remove files you downloaded or uploaded to ChatGPT separately.
+
 New snapshots contain a compact Library card with source counts and navigation hints from chat titles, file extensions and note folders. These hints are not extracted concepts or prerequisites. **Include learning history** is unchecked by default. Selecting it adds account-wide saved course titles and recent reviewed assessment summaries; the snapshot page shows the card before download.
 
 From the saved page, download `study-library.md` and upload it to a ChatGPT Project. The same file includes authoring instructions, maps, exact source text and saved conversation context. Ask ChatGPT to follow those instructions for your learning request. It should inspect relevant items itself, use general knowledge where needed and name anything it cannot retrieve.

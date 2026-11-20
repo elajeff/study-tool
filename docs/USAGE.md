@@ -97,7 +97,7 @@ If you have not chosen a subject, open **Find learning directions** on the snaps
 
 Larger libraries download as `study-library.zip`. Extract it and upload every included Markdown file to the same Project. The core file holds instructions, maps and an item-to-file index. Data files keep whole source items together. Each Markdown file is limited to 1,500,000 UTF-8 bytes; this is a packaging budget, not a measured model token limit. An item or index that cannot fit is reported without shortening it. Check the displayed file count against your account allowance.
 
-The instructions request a complete course outline as downloadable JSON, with a JSON block as fallback. ChatGPT Web still requires manual file upload and response transfer. Study Tool does not automate its website or require a paid AI API. Upload limits and reading behavior depend on the account and model; including text does not prove ChatGPT read it.
+The instructions request the complete course outline and first module plan in one downloadable JSON file, with a JSON block as fallback. Say **start** in the same conversation to begin studying. Upload limits and reading behavior depend on the ChatGPT account and model. Study Tool requires no paid AI API.
 
 The download page flags uncertain credential values without removing them. Known token/private-key patterns block the download. These checks do not identify all private information; review the selected material before sharing it.
 
@@ -105,7 +105,7 @@ The download page flags uncertain credential values without removing them. Known
 
 Inbox accepts one complete JSON object or a response containing course, module, digest and assessment code blocks. Paste up to 20 blocks within 1 MiB. It validates the full batch before saving it in one database transaction. An invalid block leaves the batch unchanged. Repeated imports retain existing records and assessment decisions; new assessments start pending review. Unrelated JSON blocks are counted and ignored.
 
-Use **Import ChatGPT file** in Inbox or Courses to choose a downloaded `.json`, `.txt` or `.md` response. Selection starts validation and saving without another submit button. Files containing a course or module open that course automatically. For pasted responses, Inbox shows the saved results; Courses opens the course. Paste remains available when ChatGPT cannot create a file.
+Use **Import ChatGPT file** in Inbox or Courses to choose a downloaded `.json`, `.txt` or `.md` response. Selection starts validation and saving. A course with its first plan opens the first unfinished lesson whether you choose a file or paste the response. Other pasted responses show the saved results in Inbox.
 
 ## Source summaries
 
@@ -117,17 +117,17 @@ New snapshots include matching summaries in their navigation maps. The snapshot 
 
 Saved courses include an optional outline-review request for ChatGPT. Add your original learning request when needed so the review checks your intended scope. Import a revised outline through Inbox; existing lessons and progress stay with the original course.
 
-Ask ChatGPT for a course using your uploaded Library, then import the returned file in **Courses**. The app detects its export reference and requires that snapshot in your account. It checks module prerequisites, item references, exclusions and required fields before saving. Reimporting an unchanged outline opens the same course.
+Ask ChatGPT for a course using your uploaded Library, then import the returned file in **Inbox** or **Courses**. The app checks the snapshot, module prerequisites, item references and first plan before saving both parts together. It opens the first unfinished lesson of that module. Reimporting the same file keeps the saved lesson IDs and progress. Outline-only files remain supported.
 
 Courses show the outline, independent proofs, source accounting, exclusions and open questions. Unassigned sources are reported rather than treated as covered. These checks validate structure and references; they do not verify explanations, lesson quality or mastery.
 
 The learning path shows numbered module and lesson cards. Its progress bar counts saved lesson plans only; modules without a plan are listed separately. A full bar does not mean the entire course is planned or mastered.
 
-Open a module's lesson plan and copy its request into the ChatGPT Project containing that Library version. Import the returned `study-module/1` file beside that request, or paste the response. The form accepts that module's plan and any summaries for the same export; other responses belong in Inbox. The app checks the course, export, module, ordered step IDs and source references. Saved plans retain their lesson identities on repeat import. A different plan for the same module is rejected rather than replacing existing lessons.
+For modules without a saved plan, copy the module request into the ChatGPT Project containing that Library version. Import its `study-module/1` file beside the request, or paste the response. The form accepts that module's plan and any summaries for the same export. The app checks the course, export, module, ordered step IDs and source references. Reimports keep saved lesson IDs and progress. To start a new tutoring chat or request an assessment tied to a lesson, use **Get a saved lesson request**.
 
 For several modules, open **Prepare several lesson plans** in Courses. Select 2 to 5 unplanned modules and copy the batch request. Import the returned file or paste the JSON array in the same section. All selected plans must pass validation before any are saved. The results link to each saved plan.
 
-Select a saved lesson to copy its study request. It includes the lesson's goal, source references, completion condition and saved identities. ChatGPT teaches that step using relevant Library material and general knowledge. Copying the request does not record completion or mastery.
+Continue in the ChatGPT conversation that created the course. When you need a saved lesson request, it includes the goal, source references, completion condition and saved identities. ChatGPT can teach the step using relevant Library material and general knowledge.
 
 Use **Mark done** after studying a lesson, or **Reopen** to clear that mark. This records study activity only; approved assessments still determine mastery. Reimporting the same lesson plan retains these marks.
 

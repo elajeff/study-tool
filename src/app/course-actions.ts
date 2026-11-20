@@ -5,6 +5,18 @@ import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
 import { nextCourseLesson } from "@/lib/course";
 
+export async function saveCourseChat(_previous: string, form: FormData): Promise<string> {
+  const { supabase } = await requireAccount();
+  const url = String(form.get("url") ?? "").trim().replace(/\/$/, "");
+  if (url && !/^https:\/\/chatgpt\.com\/(g\/[a-zA-Z0-9-]{1,160}\/)?c\/[a-zA-Z0-9-]{1,100}$/.test(url))
+    return "Use the URL of your ChatGPT conversation.";
+  const { error } = await supabase.from("courses").update({ chat_url: url || null })
+    .eq("id", String(form.get("course") ?? "")).select("id").single();
+  if (error) return "Could not save the conversation link.";
+  revalidatePath("/courses");
+  return url ? "Conversation link saved." : "Conversation link removed.";
+}
+
 export async function markCourseStep(form: FormData) {
   const { supabase } = await requireAccount();
   const courseId = String(form.get("course_id") ?? ""), stepId = String(form.get("step_id") ?? "");

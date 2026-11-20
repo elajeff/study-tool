@@ -92,10 +92,13 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       </details>}
     </section>}
     {result && query.id && selected && query.step && !currentStep && <p role="status">Lesson not found in this module.</p>}
-    {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Start lesson</h2>
+    {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Study lesson</h2>
       <h3>What you&apos;ll learn</h3><p>{currentStep.goal}</p>
       <h3>Study with ChatGPT</h3><p>Copy the lesson request below. Open your ChatGPT conversation in the Project containing your Study Library, paste it, and send it. ChatGPT will teach the lesson there.</p>
-      <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
+      <p>Already studying in ChatGPT? Continue in that conversation. Use the saved lesson request to start a new chat or ask for an assessment tied to this lesson.</p>
+      <details><summary>Get a saved lesson request</summary>
+        <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
+      </details>
       <details><summary>Lesson details and sources</summary><p>Done when: {currentStep.done_when}</p><p>Sources: {currentStep.sources.join(", ")}.</p></details>
       <h3>After studying</h3><p>Finish the explanation and exercises in ChatGPT, then mark this lesson done here to continue.</p>
       <p>Status: {currentStep.completed_at ? "Done" : "Not started"}. Marking a lesson done records study activity, not mastery.</p>

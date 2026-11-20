@@ -97,7 +97,7 @@ If you have not chosen a subject, open **Find learning directions** on the snaps
 
 Larger libraries download as `study-library.zip`. Extract it and upload every included Markdown file to the same Project. The core file holds instructions, maps and an item-to-file index. Data files keep whole source items together. Each Markdown file is limited to 1,500,000 UTF-8 bytes; this is a packaging budget, not a measured model token limit. An item or index that cannot fit is reported without shortening it. Check the displayed file count against your account allowance.
 
-The instructions request a complete course outline as downloadable JSON, with a JSON block as fallback. ChatGPT Web still requires manual file upload and response transfer. Study Tool does not automate its website or require a paid AI API. Upload limits and reading behavior depend on the account and model; including text does not prove ChatGPT read it.
+The instructions request the complete course outline and first module plan in one downloadable JSON file, with a JSON block as fallback. Say **start** in the same conversation to begin studying. Upload limits and reading behavior depend on the ChatGPT account and model. Study Tool requires no paid AI API.
 
 The download page flags uncertain credential values without removing them. Known token/private-key patterns block the download. These checks do not identify all private information; review the selected material before sharing it.
 
@@ -117,7 +117,7 @@ New snapshots include matching summaries in their navigation maps. The snapshot 
 
 Saved courses include an optional outline-review request for ChatGPT. Add your original learning request when needed so the review checks your intended scope. Import a revised outline through Inbox; existing lessons and progress stay with the original course.
 
-Ask ChatGPT for a course using your uploaded Library, then import the returned file in **Courses**. The app detects its export reference and requires that snapshot in your account. It checks module prerequisites, item references, exclusions and required fields before saving. Reimporting an unchanged outline opens the same course.
+Ask ChatGPT for a course using your uploaded Library, then import the returned file in **Inbox** or **Courses**. The app checks the snapshot, module prerequisites, item references and first plan before saving both parts together. It opens the first unfinished lesson of that module. Reimporting the same file keeps the saved lesson IDs and progress. Outline-only files remain supported.
 
 Courses show the outline, independent proofs, source accounting, exclusions and open questions. Unassigned sources are reported rather than treated as covered. These checks validate structure and references; they do not verify explanations, lesson quality or mastery.
 

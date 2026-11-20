@@ -26,11 +26,11 @@ export default function HowToUsePage() {
           <p>You can request any subject, even one outside your Library. ChatGPT uses your material where relevant.</p>
         </li>
         <li><h2>Import the course</h2>
-          <p>Open <Link href="/inbox">Inbox</Link> and choose ChatGPT&apos;s JSON file; it is checked and saved automatically. Or paste the response and click <strong>Import response</strong>. Open the saved outline in <Link href="/courses">Courses</Link>.</p>
+          <p>Open <Link href="/inbox">Inbox</Link> and choose ChatGPT&apos;s JSON file, or paste the response. A file with the outline and first module plan saves both and opens your first lesson. Older outline-only files still work.</p>
         </li>
-        <li><h2>Prepare a module and study</h2>
-          <p>In <Link href="/courses">Courses</Link>, choose a module. Copy its lesson-plan request into ChatGPT, then import the returned JSON using <strong>Import a plan</strong> in that module.</p>
-          <p>Click <strong>Start lesson</strong>, then <strong>Copy lesson request</strong>. Paste it into the same ChatGPT Project and work through the explanation and exercises there. <strong>Continue studying</strong> on Dashboard returns to your saved place.</p>
+        <li><h2>Start studying</h2>
+          <p>Say <strong>start</strong> in the same ChatGPT conversation. You can begin there before importing the file. Ask for the next step when ready. Use <strong>Copy lesson request</strong> in <Link href="/courses">Courses</Link> to focus a new chat or share the saved lesson ID for an assessment.</p>
+          <p>For later modules, use <strong>Prepare several lesson plans</strong> in Courses and import the returned file. <strong>Continue studying</strong> on Dashboard opens your saved place.</p>
         </li>
         <li><h2>Record progress and continue</h2>
           <p>Return to <Link href="/courses">Courses</Link> and mark completed lessons done. Study Tool cannot see your ChatGPT activity automatically.</p>

@@ -36,7 +36,9 @@ begin
  result := public.save_study_inbox(batch);
  assert result->0->>'created'='true';
  assert (select status='pending' from public.assessment_receipts);
+ update public.assessment_receipts set status='approved',reviewed_at=now();
  result := public.save_study_inbox(batch);assert result->0->>'created'='false';
+ assert (select status='approved' from public.assessment_receipts);
  begin
   perform public.save_study_inbox(jsonb_build_array(
    jsonb_build_object('kind','course','course',outline||jsonb_build_object('title','Must roll back')),

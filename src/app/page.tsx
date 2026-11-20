@@ -15,7 +15,7 @@ export default async function HomePage() {
     <main className="wrap">
       <div className="hero">
         <h1>Study Tool</h1>
-        <p>Import Markdown notes, organize study topics, and track progress through approved assessments.</p>
+        <p>Use your notes, conversations and repositories to build a course in ChatGPT and track your progress in Study Tool.</p>
         <div className="hero-actions"><Link id="landing-primary-action" className="button button-dark button-large" href={href}>{label} <ArrowRight size={18} /></Link><Link className="button button-light button-large" href="/demo">Try the demo</Link></div>
         <div className="hero-foot"><CheckCircle2 size={16} /> No AI API key required.</div>
       </div>
@@ -23,9 +23,9 @@ export default async function HomePage() {
         <div><h2>Features</h2></div>
         <div className="feature-grid">
           {[
-            { icon: BookOpen, title: "Curriculum", description: "Study topics and prerequisite links drawn from imported notes." },
-            { icon: MessageSquare, title: "Tutor handoffs", description: "Copy lesson context to ChatGPT Web or Codex." },
-            { icon: FileText, title: "Markdown notes", description: "Import, edit, link, and export Markdown notes." },
+            { icon: BookOpen, title: "Courses", description: "Save the course outline and first lesson plan in one import." },
+            { icon: MessageSquare, title: "ChatGPT tutor", description: "Start studying in the chat that created your course." },
+            { icon: FileText, title: "Study Library", description: "Organize notes, exported conversations and repository files for ChatGPT." },
             { icon: Sparkles, title: "Assessments", description: "Only approved assessment receipts affect mastery. Reading a lesson does not count." },
           ].map(({ icon: Icon, title, description }) => <article key={title} className="feature-card"><span className="feature-icon"><Icon size={22} /></span><h3>{title}</h3><p>{description}</p></article>)}
         </div>

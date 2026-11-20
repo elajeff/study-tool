@@ -43,9 +43,9 @@ For deployment, configure the production site URL and redirect URL in Supabase, 
 1. Sign in and import material through **Notes**, **Repositories** or **Conversations**. Review the preview before saving.
 2. In **Library**, select the collections to include and choose **Save Library snapshot**.
 3. Download the Study Library and upload it to a ChatGPT Project. For a ZIP, extract it and upload all included Markdown files. The authoring instructions are included.
-4. Ask ChatGPT for a course, then choose its returned JSON file in **Courses**. The app checks the source references and outline structure before saving.
-5. Open a module, copy its lesson-plan request into ChatGPT and import the returned plan beside that request.
-6. Select a lesson and copy its study request into ChatGPT. Mark it done after studying; review assessment receipts separately before they count toward mastery.
+4. Ask ChatGPT for a course and say **start** when it returns the outline and first lesson plan.
+5. Import the returned file through **Inbox** or **Courses**. Study Tool checks both parts and opens the first unfinished lesson.
+6. Mark lessons done as you study. Request later lesson plans in batches and review assessment receipts separately.
 
 Reusing the same import collection preserves source identities. Existing Library snapshots keep their original revisions. [The usage guide](docs/USAGE.md) covers reimports, file limits, source summaries, portfolio requests and assessments.
 

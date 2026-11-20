@@ -42,7 +42,7 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
         : <><p>Extract study-library.zip and upload all {files.length} Markdown files to the same ChatGPT Project. study-library.md contains instructions, maps and a file index; data files contain the source items.</p>
           <p>Check your account&apos;s file allowance before uploading. Files are bounded by UTF-8 bytes, not a verified model token count.</p>
           <ul>{files.map(file => <li key={file.name}>{file.name} · {Buffer.byteLength(file.text, "utf8").toLocaleString()} bytes</li>)}</ul></>}
-      <p>Ask ChatGPT to follow the authoring instructions and tell it what you want to learn. Import the returned course and first lesson plan together, then say <strong>start</strong> in the same ChatGPT conversation.</p>
+      <p>Tell ChatGPT what you want to learn and ask it to follow the authoring instructions. Say <strong>start</strong> in the same chat. Import the returned course file to track your progress.</p>
       <p>Downloading does not upload anything. ChatGPT receives the file when you upload it, under your account and data settings.</p>
       {!!warnings.length && <ul>{warnings.map(warning => <li key={warning.id}>{warning.id}: {warning.text}</li>)}</ul>}
       {blocked && <p>Known credential patterns were found. Sanitize the source and prepare a new snapshot before downloading.</p>}

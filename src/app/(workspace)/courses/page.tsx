@@ -50,7 +50,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected ? result.course.modules.indexOf(selected) : undefined} stepId={currentStep?.row_id} />}
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
-      <p>Import the returned file or paste its response. The Library version is detected automatically.</p><InboxImporter openCourse />
+      <p>Choose the file with your course and first lesson plan, or paste the ChatGPT response. Study Tool opens the first unfinished lesson.</p><InboxImporter openCourse />
       <p><Link href="/library">Prepare a Library snapshot</Link> · <Link href="/portfolio">Plan repository courses</Link></p>
     </details></section>
     <section className="panel"><h2>Recent courses</h2>
@@ -94,8 +94,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && query.id && selected && query.step && !currentStep && <p role="status">Lesson not found in this module.</p>}
     {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Study lesson</h2>
       <h3>What you&apos;ll learn</h3><p>{currentStep.goal}</p>
-      <h3>Study with ChatGPT</h3><p>Copy the lesson request below. Open your ChatGPT conversation in the Project containing your Study Library, paste it, and send it. ChatGPT will teach the lesson there.</p>
-      <p>Already studying in ChatGPT? Continue in that conversation. Use the saved lesson request to start a new chat or ask for an assessment tied to this lesson.</p>
+      <h3>Study with ChatGPT</h3><p>Say <strong>start</strong> in the chat that created your course, or ask to continue at {currentStep.id}. Use the saved lesson request when switching chats or asking for an assessment tied to this lesson.</p>
       <details><summary>Get a saved lesson request</summary>
         <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
       </details>

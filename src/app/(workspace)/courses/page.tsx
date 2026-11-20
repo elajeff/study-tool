@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
-import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
+import { loadCourse, loadCourseSteps, UnreadableCourseError } from "@/lib/course-queries";
 import { InboxImporter } from "@/components/InboxImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard, moduleReviewPrompt } from "@/lib/module-request";
@@ -26,12 +26,19 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     .order("created_at", { ascending: false }).limit(20);
   if (error) throw new Error("Could not load courses. Check migration 011.");
   if (!query.id) query.id = (await cookies()).get(`study-course-${user.id}`)?.value ?? recent[0]?.id;
-  let result = query.id ? await loadCourse(supabase, query.id) : null;
-  if (requested.id && !result) notFound();
-  if (!result && !requested.id && recent.length) {
-    query.id = recent[0].id;
-    result = await loadCourse(supabase, recent[0].id);
+  let result: Awaited<ReturnType<typeof loadCourse>> = null;
+  let courseError = "";
+  try {
+    if (query.id) result = await loadCourse(supabase, query.id);
+    if (!result && !requested.id && recent.length && query.id !== recent[0].id) {
+      query.id = recent[0].id;
+      result = await loadCourse(supabase, recent[0].id);
+    }
+  } catch (error) {
+    if (!(error instanceof UnreadableCourseError)) throw error;
+    courseError = error.message;
   }
+  if (requested.id && !result && !courseError) notFound();
   const allSteps = query.id && result ? await loadCourseSteps(supabase, query.id) : [];
   if (result && query.id && !requested.module && !requested.step) {
     const position = savedCoursePosition((await cookies()).get(`study-position-${user.id}`)?.value, query.id, result.course, allSteps);
@@ -49,12 +56,13 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   return <>
     {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected ? result.course.modules.indexOf(selected) : undefined} stepId={currentStep?.row_id} />}
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
-    <section className="panel"><details open={!query.id}><summary>Import from ChatGPT</summary>
+    {courseError && <p role="alert">{courseError}</p>}
+    <section className="panel"><details open={!result}><summary>Import from ChatGPT</summary>
       <p>Choose the file with your course and first lesson plan, or paste the ChatGPT response. Study Tool opens the first unfinished lesson.</p><InboxImporter openCourse />
       <p><Link href="/library">Prepare a Library snapshot</Link> · <Link href="/portfolio">Plan repository courses</Link></p>
     </details></section>
-    <section className="panel"><h2>Recent courses</h2>
-      {recent.length ? <ul>{recent.map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title}</Link></li>)}</ul> : <p>No courses saved yet.</p>}
+    <section className="panel" id="saved-courses"><h2>Recent courses</h2>
+      {recent.length ? <ul>{recent.map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title || "Untitled course"}</Link></li>)}</ul> : <p>No courses saved yet.</p>}
     </section>
     {result && query.id && <BatchModulePlanner key={query.id} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
     {result && query.id && <section className="panel course-path" id="course-path"><h2>{result.course.title}</h2><p>{result.course.goal}</p>

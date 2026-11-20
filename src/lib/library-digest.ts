@@ -17,7 +17,10 @@ export function parseDigest(raw: string, manifest: ExportManifest): DigestBlock 
   if (new TextEncoder().encode(raw).length > 200000) throw new Error("Digest text exceeds 200,000 UTF-8 bytes.");
   const blocks = [...raw.matchAll(/^```(?:study-digest|json)\s*\r?\n([\s\S]*?)^```\s*$/gm)];
   if (blocks.length > 1) throw new Error("Import one complete digest at a time.");
-  const value: unknown = JSON.parse(blocks.length ? blocks[0][1] : raw);
+  return validateDigest(JSON.parse(blocks.length ? blocks[0][1] : raw), manifest);
+}
+
+export function validateDigest(value: unknown, manifest: ExportManifest): DigestBlock {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected a digest JSON object.");
   const block = value as Record<string, unknown>;
   if (block.format !== "study-digest/1" || block.export_id !== manifest.export_id)

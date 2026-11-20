@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseModule, type Course, type ModulePlan } from "../src/lib/course.ts";
+import { validateModule, type Course, type ModulePlan } from "../src/lib/course.ts";
 import { modulePlanningCard, moduleReviewPrompt } from "../src/lib/module-request.ts";
 import type { ExportManifest } from "../src/lib/library-pack.ts";
 
@@ -14,14 +14,13 @@ const plan: ModulePlan = { format: "study-module/1", course_id: courseId, export
   steps: [{ id: "M01.S1", kind: "example", goal: "Work through a ratio", sources: ["R1/F001", "V1/N001"], done_when: "Explain each unit conversion." }] };
 
 test("module plans bind identities and ordered steps while allowing other relevant Library items", () => {
-  assert.deepEqual(parseModule(JSON.stringify(plan), courseId, course, "M01", manifest), plan);
-  assert.deepEqual(parseModule('```study-module\n' + JSON.stringify(plan) + '\n```', courseId, course, "M01", manifest), plan);
+  assert.deepEqual(validateModule(plan, courseId, course, "M01", manifest), plan);
   for (const changed of [{ course_id: "other" }, { export_id: "other" }, { module: "M02" }, { steps: [] },
     { steps: [{ ...plan.steps[0], id: "M01.S2" }] }, { steps: [{ ...plan.steps[0], sources: ["V1/N999"] }] },
     { steps: [{ ...plan.steps[0], kind: "unknown" }] }])
-    assert.throws(() => parseModule(JSON.stringify({ ...plan, ...changed }), courseId, course, "M01", manifest));
+    assert.throws(() => validateModule({ ...plan, ...changed }, courseId, course, "M01", manifest));
   const unicode = { ...plan, steps: Array.from({ length: 12 }, (_, index) => ({ ...plan.steps[0], id: `M01.S${index + 1}`, goal: "α".repeat(3000), done_when: "β".repeat(3000) })) };
-  assert.equal(parseModule(JSON.stringify(unicode), courseId, course, "M01", manifest).steps.length, 12);
+  assert.equal(validateModule(unicode, courseId, course, "M01", manifest).steps.length, 12);
 });
 
 test("module requests carry real identities and scope without inventing assessed ability", () => {

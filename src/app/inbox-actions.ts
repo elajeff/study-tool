@@ -29,16 +29,19 @@ export async function importInbox(_previous: { error?: string; results?: InboxRe
   if (error) return { error: error.code === "23505" ? "A module already has a different saved plan. Nothing from this response was saved."
     : "Nothing from this response was saved. " + error.message };
   for (const path of ["/library", "/courses", "/assessments", "/dashboard"]) revalidatePath(path);
-  if (form.get("open_course") === "true") {
-    const saved = (data as InboxResult[]).find(result => result.kind === "course" || result.kind === "module");
+  const savedResults = data as InboxResult[];
+  const started = savedResults.find(result => result.kind === "course" && result.module);
+  if (started || form.get("open_course") === "true") {
+    const saved = started ?? savedResults.find(result => result.kind === "course" || result.kind === "module");
     if (saved && "course_id" in saved) {
       const query = new URLSearchParams({ id: saved.course_id });
       const savedModule = prepared.find(block => block.kind === "module" && block.course_id === saved.course_id);
-      if (savedModule?.kind === "module") query.set("module", savedModule.plan.module);
-      redirect(`/courses?${query}#${savedModule ? "lesson-focus" : "course-path"}`);
+      const moduleKey = saved.module ?? (savedModule?.kind === "module" ? savedModule.plan.module : undefined);
+      if (moduleKey) query.set("module", moduleKey);
+      redirect(`/courses?${query}#${moduleKey ? "lesson-focus" : "course-path"}`);
     }
   }
-  const results = (data as InboxResult[]).map((result, index) => {
+  const results = savedResults.map((result, index) => {
     const block = prepared[index];
     return result.kind === "module" && block.kind === "module" ? { ...result, module: block.plan.module } : result;
   });

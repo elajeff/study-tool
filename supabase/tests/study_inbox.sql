@@ -10,6 +10,7 @@ insert into public.sources(id,user_id,kind,name) values('96000000-0000-4000-8000
 select public.accept_source_import('96000000-0000-4000-8000-000000000001','[{"path":"one.md","content":"Source text","artifact_id":null,"expected_path":null,"expected_revision_id":null}]');
 do $$
 declare manifest jsonb; outline jsonb; plan jsonb; batch jsonb; result jsonb; course_uuid uuid; step_uuid uuid; receipt jsonb; key text := 'X'||repeat('6',64);
+  start_block jsonb; started_course uuid; started_step uuid;
 begin
  select jsonb_build_object('format','study-export/3','export_id',key,
   'maps','[]'::jsonb,'sources',jsonb_build_array(jsonb_build_object('id',s.id,'name',s.name,'kind',s.kind,'short_code',s.short_code)),
@@ -45,6 +46,22 @@ begin
  exception when unique_violation then null; end;
  assert (select count(*)=1 from public.courses);
  assert (select count(*)=1 from public.source_digests);
+ start_block := jsonb_build_object('kind','course','course',outline||jsonb_build_object('title','Start together'),'first_steps',plan->'steps');
+ begin
+  perform public.save_study_inbox(jsonb_build_array(jsonb_set(start_block,'{first_steps,0,sources}','["unknown"]')));
+  assert false,'An invalid first plan must reject the complete import';
+ exception when invalid_parameter_value then null; end;
+ assert (select count(*)=1 from public.courses);
+ result := public.save_study_inbox(jsonb_build_array(start_block));
+ started_course := (result->0->>'id')::uuid;
+ assert result->0->>'created'='true' and result->0->>'module'='M01';
+ select s.id into strict started_step from public.course_steps s join public.course_modules m on m.id=s.module_id
+  where m.course_id=started_course;
+ update public.course_steps set completed_at=now() where id=started_step;
+ result := public.save_study_inbox(jsonb_build_array(start_block));
+ assert result->0->>'created'='false' and result->0->>'id'=started_course::text;
+ assert (select completed_at is not null from public.course_steps where id=started_step);
+ perform set_config('test.inbox_start',start_block::text,true);
  perform set_config('test.inbox_step',step_uuid::text,true);
  perform set_config('test.inbox_course',outline::text,true);
  perform set_config('test.inbox_receipt',receipt::text,true);
@@ -52,6 +69,10 @@ end $$;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000097',true);
 do $$ begin
  assert not exists(select 1 from public.courses);
+ begin
+  perform public.save_study_inbox(jsonb_build_array(current_setting('test.inbox_start')::jsonb));
+  assert false,'A course start cannot use another account''s export';
+ exception when insufficient_privilege then null; end;
  begin
   perform public.save_study_inbox(jsonb_build_array(jsonb_build_object('kind','course','course',current_setting('test.inbox_course')::jsonb)));
   assert false,'Foreign exports cannot be imported';

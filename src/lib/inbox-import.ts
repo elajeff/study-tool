@@ -1,12 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { InboxBlock } from "./inbox.ts";
-import { parseCourse, parseModule, type Course, type ModulePlan } from "./course.ts";
-import { parseDigest, type DigestBlock } from "./library-digest.ts";
+import { parseCourse, validateModule, validateModuleSteps, type Course, type ModulePlan, type ModuleStep } from "./course.ts";
+import { validateDigest, type DigestBlock } from "./library-digest.ts";
 import { validateEvidence, evidenceFingerprint, type Evidence } from "./assessments.ts";
 import { loadExportManifest } from "./export-queries.ts";
 import type { ExportManifest } from "./library-pack.ts";
 
-export type InboxImport = { kind: "course"; course: Course } | { kind: "module"; course_id: string; plan: ModulePlan }
+export type InboxImport = { kind: "course"; course: Course; first_steps?: ModuleStep[] } | { kind: "module"; course_id: string; plan: ModulePlan }
   | { kind: "digest"; export_id: string; items: DigestBlock["items"] }
   | { kind: "evidence"; receipt: Evidence; fingerprint: string };
 export type InboxResult = { kind: "course" | "module"; id: string; course_id: string; created?: boolean; module?: string }
@@ -27,8 +27,15 @@ export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBl
   for (const block of blocks) {
     const value = block.value;
     if (block.kind === "course") prepared.push({ kind: "course", course: parseCourse(value, await manifest(value.export_id)).course });
-    else if (block.kind === "digest") {
-      const digest = parseDigest(JSON.stringify(value), await manifest(value.export_id));
+    else if (block.kind === "course-start") {
+      const outline = value.course as { export_id?: unknown } | undefined;
+      const snapshot = await manifest(outline?.export_id);
+      const { course } = parseCourse(outline, snapshot);
+      const first_steps = validateModuleSteps(value.first_steps, course.modules[0].id, snapshot);
+      prepared.push({ kind: "course", course, first_steps });
+    } else if (block.kind === "digest") {
+      if (new TextEncoder().encode(JSON.stringify(value)).length > 200000) throw new Error("Digest text exceeds 200,000 UTF-8 bytes.");
+      const digest = validateDigest(value, await manifest(value.export_id));
       prepared.push({ kind: "digest", export_id: digest.export_id, items: digest.items });
     } else if (block.kind === "module") {
       const id = value.course_id;
@@ -41,7 +48,7 @@ export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBl
       const course = courses.get(id)!;
       const moduleId = String(value.module ?? "");
       const snapshot = await manifest(course.export_id);
-      try { prepared.push({ kind: "module", course_id: id, plan: parseModule(JSON.stringify(value), id, course, moduleId, snapshot) }); }
+      try { prepared.push({ kind: "module", course_id: id, plan: validateModule(value, id, course, moduleId, snapshot) }); }
       catch (error) { throw new Error(`${moduleId || "Module plan"}: ${error instanceof Error ? error.message : "Invalid module plan."}`); }
     } else {
       const receipt = validateEvidence(value);

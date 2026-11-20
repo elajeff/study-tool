@@ -6,9 +6,10 @@ import { validateEvidence, evidenceFingerprint, type Evidence } from "./assessme
 import { loadExportManifest } from "./export-queries.ts";
 import type { ExportManifest } from "./library-pack.ts";
 
+type EvidenceImport = { kind: "evidence"; receipt: Evidence; fingerprint: string };
 export type InboxImport = { kind: "course"; course: Course; first_steps?: ModuleStep[] } | { kind: "module"; course_id: string; plan: ModulePlan }
   | { kind: "digest"; export_id: string; items: DigestBlock["items"] }
-  | { kind: "evidence"; receipt: Evidence; fingerprint: string };
+  | EvidenceImport;
 export type InboxResult = { kind: "course" | "module"; id: string; course_id: string; created?: boolean; module?: string }
   | { kind: "digest"; export_id: string; new_items: number } | { kind: "evidence"; id: string; created: boolean };
 
@@ -51,11 +52,19 @@ export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBl
       try { prepared.push({ kind: "module", course_id: id, plan: validateModule(value, id, course, moduleId, snapshot) }); }
       catch (error) { throw new Error(`${moduleId || "Module plan"}: ${error instanceof Error ? error.message : "Invalid module plan."}`); }
     } else {
-      const receipt = validateEvidence(value);
-      prepared.push({ kind: "evidence", receipt, fingerprint: evidenceFingerprint(receipt) });
+      prepared.push(evidenceImport(validateEvidence(value)));
     }
   }
   const receipts = prepared.flatMap(block => block.kind === "evidence" ? [block.receipt] : []);
+  await checkAssessmentTopics(client, receipts, legacyTopics);
+  return prepared;
+}
+
+export function evidenceImport(receipt: Evidence): EvidenceImport {
+  return { kind: "evidence", receipt, fingerprint: evidenceFingerprint(receipt) };
+}
+
+export async function checkAssessmentTopics(client: SupabaseClient, receipts: Evidence[], legacyTopics: Set<string>) {
   const stepIds = [...new Set(receipts.flatMap(receipt => receipt.step ? [receipt.step] : []))];
   const steps = new Set<string>();
   if (stepIds.length) {
@@ -65,5 +74,4 @@ export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBl
   }
   if (receipts.some(receipt => receipt.step ? !steps.has(receipt.step) : !legacyTopics.has(receipt.topic)))
     throw new Error("Assessment topic or saved step is not available in this account.");
-  return prepared;
 }

@@ -32,7 +32,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     if (query.id) result = await loadCourse(supabase, query.id);
     if (!result && !requested.id && recent.length && query.id !== recent[0].id) {
       query.id = recent[0].id;
-      result = await loadCourse(supabase, query.id);
+      result = await loadCourse(supabase, recent[0].id);
     }
   } catch (error) {
     if (!(error instanceof UnreadableCourseError)) throw error;

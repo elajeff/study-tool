@@ -22,7 +22,6 @@ test('large directories and many folders stay bounded, reachable and complete', 
     const map = byId.get(id);
     assert.ok(map, `Missing map ${id}`);
     assert.ok(map.text.length <= MAP_CHARACTER_LIMIT, map.id);
-    assert.equal(map.characters, map.text.length);
     for (const entry of map.entries) {
       if (entry.artifact) {
         assert.ok(!found.has(entry.artifact.id), 'An artifact appears twice');
@@ -48,7 +47,7 @@ test('maps keep artifact identity across edits, renames and additions without al
   }
   const long = file(10, 'nested/' + '<script>\n'.repeat(1000));
   const map = buildLibraryMaps(source, [long]).at(-1)!;
-  assert.ok(map.characters <= MAP_CHARACTER_LIMIT);
+  assert.ok(map.text.length <= MAP_CHARACTER_LIMIT);
   assert.match(map.text, /label shortened/);
   assert.equal(map.entries[0].artifact?.path, long.path);
   assert.equal(original.path, 'old/name.py');

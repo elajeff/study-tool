@@ -2,12 +2,11 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps, UnreadableCourseError } from "@/lib/course-queries";
-import { nextCourseLesson } from "@/lib/course";
 import { courseOverview } from "@/lib/course-overview";
 import { loadAssessments } from "@/lib/assessment-queries";
-import { latestApproved } from "@/lib/progress";
+import { latestApproved, type Assessment } from "@/lib/progress";
 import { ProgressExport } from "@/components/ProgressExport";
-import { savedCoursePosition } from "@/lib/course-position";
+import { coursePositionToResume } from "@/lib/course-position";
 import { parseStudyPace } from "@/lib/study-pace";
 import { StudyPaceForm } from "@/components/StudyPaceForm";
 
@@ -43,8 +42,14 @@ export default async function DashboardPage() {
   const steps = await loadCourseSteps(supabase, courseId);
   const hoursPerWeek = pace ? pace.hoursPerDay * pace.daysPerWeek : profile.data?.hours_per_week ?? null;
   const overview = courseOverview(saved.course, steps, minutesPerLesson, hoursPerWeek);
-  const next = savedCoursePosition((await cookies()).get(`study-position-${user.id}`)?.value, courseId, saved.course, steps) ?? nextCourseLesson(saved.course, steps);
-  const assessments = latestApproved(await loadAssessments(supabase, "approved"));
+  const next = coursePositionToResume((await cookies()).get(`study-position-${user.id}`)?.value, courseId, saved.course, steps);
+  const assessments = new Map<string, Assessment>();
+  for (let start = 0; start < steps.length; start += 100) {
+    const topics = steps.slice(start, start + 100).map(step => `course-step:${step.row_id}`);
+    for (const [topic, receipt] of latestApproved(await loadAssessments(supabase, "approved", topics))) {
+      assessments.set(topic, receipt);
+    }
+  }
   const assessed = steps.filter(step => assessments.has(`course-step:${step.row_id}`)).length;
   const nextQuery = new URLSearchParams({ id: courseId });
   if (next) { nextQuery.set("module", next.module.id); if (next.step) nextQuery.set("step", next.step.row_id); }

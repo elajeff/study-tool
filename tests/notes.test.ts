@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanNotePath, wikiLinks, noteRelationships, resolveNoteLink, type SourceAlias } from "../src/lib/notes.ts";
+import { cleanNotePath, noteRelationships, resolveNoteLink, type SourceAlias } from "../src/lib/notes.ts";
 
 test("note imports reject unsafe paths and non-Markdown files", () => {
   assert.equal(cleanNotePath("../notes.md"), null);
@@ -9,23 +9,25 @@ test("note imports reject unsafe paths and non-Markdown files", () => {
   assert.equal(cleanNotePath("Secrets.txt"), null);
 });
 
-test("wikilinks find referenced notes, without creating duplicate targets", () => {
-  assert.deepEqual(wikiLinks("[[Java]] and [[Java|lang]] then [[Concepts/Arrays#Basics]]"), ["Java", "Concepts/Arrays"]);
+test("wikilinks resolve a note by its path", () => {
   const result = resolveNoteLink("Java", [{ path: "Concepts/Java.md" }]);
   assert.equal(result.state === "resolved" && result.note.path, "Concepts/Java.md");
 });
 
-test("generated vault data and chat transcripts are excluded from import", async () => {
+test("the ChatBridge archive is excluded while ordinary folders are accepted", async () => {
   const { shouldImportNote } = await import("../src/lib/notes.ts");
   assert.equal(shouldImportNote("AI Chats/conversation.md"), false);
-  assert.equal(shouldImportNote("Progress/Dashboard.md"), false);
-  assert.equal(shouldImportNote("Tools/README.md"), false);
+  assert.equal(shouldImportNote("Vault/AI Chats/conversation.md"), false);
+  assert.equal(shouldImportNote("Progress/Dashboard.md"), true);
+  assert.equal(shouldImportNote("Tools/README.md"), true);
   assert.equal(shouldImportNote("Lessons/Java/06 Methods.md"), true);
 });
 
 test("vault ZIPs can have one surrounding directory without losing their note paths", async () => {
   const { vaultRoot } = await import("../src/lib/notes.ts");
-  assert.equal(vaultRoot(["nothingburger/Concepts/Java.md", "nothingburger/AI Chats/log.md"]), "nothingburger");
+  assert.equal(vaultRoot(["Vault/.obsidian", "Vault/Concepts/Plants.md", "README.md"]), "Vault");
+  assert.equal(vaultRoot(["Biology/Foundations/Cells.md", "Biology/Lab.md"]), null);
+  assert.throws(() => vaultRoot(["First/.obsidian", "Second/.obsidian"]), /multiple Obsidian vaults/);
   assert.equal(vaultRoot(["Concepts/Java.md", "DSA/Arrays.md"]), null);
   assert.equal(vaultRoot(["Notes/Java.md", "Notes/C.md"]), null);
 });

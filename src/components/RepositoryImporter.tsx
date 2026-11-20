@@ -32,11 +32,14 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
   const [selected, setSelected] = useState(new Set<string>());
   const [state, setState] = useState<RepositoryFile[]>([]);
   const [bindings, setBindings] = useState<Record<string, string>>({});
+  const [renamePath, setRenamePath] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [queue, setQueue] = useState<GitHubPublicRepository[]>([]), [batchSize, setBatchSize] = useState(0);
   const [destinationId, setDestinationId] = useState(sourceId);
   const rows = previewRepository(files.filter((file) => selected.has(file.path)), state, bindings);
+  const rowsByPath = new Map(rows.map(row => [row.file.path, row]));
+  const assigned = new Set(rows.map(row => row.previous?.artifact_id));
 
   async function createRepository(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setMessage("");
@@ -60,7 +63,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       setMessage("Comparing files with the saved repository…");
       const current = targetSourceId ? await loadRepositoryFiles(createClient(), targetSourceId) : [];
       const reviewed = parsed.files.map((file) => ({ ...file, ...inspectRepositoryText(file.body) }));
-      setState(current); setBindings({}); setFiles(reviewed); setSkipped(parsed.skipped);
+      setState(current); setBindings({}); setRenamePath(""); setFiles(reviewed); setSkipped(parsed.skipped);
       setDestinationId(targetSourceId);
       setGitHubSnapshot(snapshot ?? null);
       setSelected(new Set(reviewed.filter((file) => !file.blocked).map((file) => file.path)));
@@ -180,17 +183,25 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       <p>Review the selected files. Possible credential values stay selected with a warning; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
       {skipped.length > 0 && <details><summary>Skipped files ({skipped.length})</summary><ul>{skipped.map((path, index) => <li key={index}><code>{path}</code></li>)}</ul></details>}
       {files.map((file) => {
-        const row = rows.find((row) => row.file.path === file.path);
+        const row = rowsByPath.get(file.path);
         return <article className="import-row" key={file.path}>
           <label className="file-choice"><input type="checkbox" checked={selected.has(file.path)} disabled={busy || !!file.blocked} onChange={() => toggle(file.path)} />
             {file.review ? "Include flagged file: " : "Include: "}{file.path}</label>
           <span>{row?.status ?? "Not selected"}{row?.previous?.path !== file.path && row?.previous ? ` · Rename ${row.previous.path}` : ""}</span>
           {(file.blocked || file.review) && <p role="note">{file.blocked ?? file.review}</p>}
-          {row && (!row.previous || row.previous.path !== file.path) && <label>Saved file for {file.path}
-            <select className="input" value={bindings[file.path] ?? ""} disabled={busy} onChange={(event) => bind(file.path, event.target.value)}>
-              <option value="">New file</option>{state.map((saved) => <option value={saved.artifact_id} key={saved.artifact_id}
-                disabled={rows.some((other) => other.file.path !== file.path && other.previous?.artifact_id === saved.artifact_id)}>Rename {saved.path ?? saved.artifact_id}</option>)}
-            </select></label>}
+          {row && (!row.previous || row.previous.path !== file.path) && state.length > 0 && <>
+            <button type="button" className="text-link" disabled={busy} aria-expanded={renamePath === file.path}
+              onClick={() => setRenamePath(renamePath === file.path ? "" : file.path)}>Match a renamed file</button>
+            {renamePath === file.path && <label>Saved file for {file.path}
+              <select className="input" value={bindings[file.path] ?? ""} disabled={busy} onChange={event => bind(file.path, event.target.value)}>
+                <option value="">New file</option>
+                {state.map(saved => <option value={saved.artifact_id} key={saved.artifact_id}
+                  disabled={assigned.has(saved.artifact_id) && row.previous?.artifact_id !== saved.artifact_id}>
+                  {saved.path ?? saved.artifact_id}
+                </option>)}
+              </select>
+            </label>}
+          </>}
           {row?.identityConflict && <p role="alert">This path belongs to another saved file. Select it or rename the incoming file.</p>}
           {row?.previous?.revision_id && <Link className="small" href={`/sources/revisions/${row.previous.revision_id}`} target="_blank">Current saved text</Link>}
           <details><summary>Review text for {file.path}</summary><pre>{file.body}</pre></details>

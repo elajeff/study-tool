@@ -12,14 +12,9 @@ The separate note-based roadmap is available through **Browse note topics** on N
 
 ## Obsidian
 
-Create or select a vault on the Notes page, then preview `.md` files or a ZIP containing Markdown. Reuse that vault when reimporting; its UUID identifies the collection independently of its name. Different vaults can contain the same path. The app uses these folders when present:
+Create or select a vault on the Notes page, then preview `.md` files or a ZIP containing Markdown. Reuse that vault when reimporting; its UUID identifies the collection independently of its name. Different vaults can contain the same path. Note topics are grouped by vault and top-level folder. Explicit prerequisite links determine the order within each group.
 
-- `Lessons/Java/`, `DSA/`, and `Foundations/` for the main study tracks.
-- `Concepts/` for technical reference topics.
-- `Learning Projects/` for project practice.
-- `Walkthroughs/` for implementation traces.
-
-Other Markdown collections can be used too. Obsidian configuration, chat archives, and generated progress reports are skipped during import. Prerequisites are read from explicitly named sections, not from every wikilink.
+ZIPs with a single `.obsidian` directory use its parent as the vault root. ZIPs without it keep their relative paths. A path change on reimport can be reconciled in the rename picker. Obsidian metadata and files under ChatBridge's `AI Chats/` folder are skipped.
 
 The preview compares incoming files with the current editable notes and the last accepted import. Local edits are kept when the source is unchanged. Conflicting changes require a choice. For a rename, select the existing artifact; matching text alone never merges files. Files absent from the selection are kept.
 

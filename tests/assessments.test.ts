@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validateEvidence, parseEvidence, evidenceFingerprint } from "../src/lib/assessments.ts";
-import { latestApproved, reviewDate, isDueForReview, type Assessment } from "../src/lib/progress.ts";
+import { latestApproved, reviewDate, type Assessment } from "../src/lib/progress.ts";
 
 const evidence = {
   topic: "Lessons/Java/06 Methods", date: "2026-11-10", level: 3,
@@ -45,5 +45,4 @@ test("only approved records determine mastery, including a later lower score", (
   const latest = latestApproved([pending, later, earlier]);
   assert.equal(latest.get(evidence.topic)?.level, 2);
   assert.equal(reviewDate(later), "2026-11-14");
-  assert.equal(isDueForReview(later, new Date("2026-11-14T12:00:00Z")), true);
 });

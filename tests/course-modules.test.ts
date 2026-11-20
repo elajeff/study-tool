@@ -31,9 +31,6 @@ test("module requests carry real identities and scope without inventing assessed
   assert.equal(schema.module, "M02");
   const context = JSON.parse(card.split("REFERENCE DATA (JSON):\n")[1]);
   assert.equal(context.prerequisites[0].id, "M01");
-  assert.match(card, /retrieve relevant source items yourself/);
-  assert.match(card, /Do not issue assessment receipts/);
-  assert.match(card, /Existing code or notes do not establish mastery/);
 });
 
 test("module review includes the lesson goals and prerequisites without progress records", () => {

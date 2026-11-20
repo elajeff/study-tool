@@ -7,6 +7,7 @@ import { loadAssessments } from "@/lib/assessment-queries";
 import { latestApproved, type Assessment } from "@/lib/progress";
 import { ProgressExport } from "@/components/ProgressExport";
 import { coursePositionToResume } from "@/lib/course-position";
+import { useWeeklyStudyHours } from "@/app/pace-actions";
 import { parseStudyPace } from "@/lib/study-pace";
 import { StudyPaceForm } from "@/components/StudyPaceForm";
 
@@ -60,7 +61,8 @@ export default async function DashboardPage() {
       <p>{overview.completedModules} of {saved.course.modules.length} modules finished · {overview.completedLessons} of {overview.plannedLessons} planned lessons done</p>
       <div className="import-actions"><Link className="button button-dark" href={`/courses?${nextQuery}#${next?.step ? "lesson-focus" : next ? "module-plan" : "course-path"}`}>
         {next ? "Continue studying" : "View completed course"}
-      </Link><Link className="button button-light" href={`/courses?id=${courseId}`}>Open roadmap</Link></div>
+      </Link><Link className="button button-light" href={`/courses?id=${courseId}`}>Open roadmap</Link>
+      <Link className="button button-light" href="/courses#saved-courses">Switch course</Link></div>
       {next && <p>Next: {next.step?.goal ?? next.module.title}</p>}
     </section>
     <div className="stat-grid course-dashboard-stats">
@@ -74,7 +76,9 @@ export default async function DashboardPage() {
         <p>Based on {overview.remainingLessons} remaining lessons at {minutesPerLesson} minutes each. Unplanned modules use the outline&apos;s lesson-count estimates.</p>
         {pace && <p>About {Math.ceil(overview.remainingHours / pace.hoursPerDay)} study days at {pace.hoursPerDay} hours per day, {pace.daysPerWeek} days per week.</p>}
         <StudyPaceForm pace={pace ?? { hoursPerDay: (profile.data?.hours_per_week ?? 5) / 5, daysPerWeek: 5, minutesPerLesson }} />
-        <p><Link className="text-link" href="/settings">Change weekly study hours</Link></p>
+        {pace ? <form action={useWeeklyStudyHours}>
+          <button className="button button-light">Use weekly hours from Settings</button>
+        </form> : <p><Link className="text-link" href="/settings">Change weekly study hours</Link></p>}
         <p className="muted small">A planning estimate, not measured study time. Days assume your weekly hours are spread evenly. Practice, reviews and difficult lessons can take longer.</p>
       </section>
       <section className="panel"><h2>Recent courses</h2><ul>{courses.data.map(course => <li key={course.id}>

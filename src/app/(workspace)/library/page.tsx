@@ -46,6 +46,7 @@ export default async function LibraryPage({ searchParams }: {
     </section>
     {source && <section className="panel library-source"><h2>{source.short_code} · {source.name} ({artifacts.length})</h2>
       <p>Read saved import text. Editable notes remain separate.</p>
+      <Link className="back-link" href={`/library/collections/${source.id}/remove`}>Remove collection</Link>
       {map ? <>
         <h3>{map.id}</h3>
         <ul>{map.entries.map(entry => {

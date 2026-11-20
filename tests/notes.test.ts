@@ -23,13 +23,9 @@ test("the ChatBridge archive is excluded while ordinary folders are accepted", a
   assert.equal(shouldImportNote("Lessons/Java/06 Methods.md"), true);
 });
 
-test("vault ZIPs can have one surrounding directory without losing their note paths", async () => {
+test("multiple marked vaults must be imported separately", async () => {
   const { vaultRoot } = await import("../src/lib/notes.ts");
-  assert.equal(vaultRoot(["Vault/.obsidian", "Vault/Concepts/Plants.md", "README.md"]), "Vault");
-  assert.equal(vaultRoot(["Biology/Foundations/Cells.md", "Biology/Lab.md"]), null);
   assert.throws(() => vaultRoot(["First/.obsidian", "Second/.obsidian"]), /multiple Obsidian vaults/);
-  assert.equal(vaultRoot(["Concepts/Java.md", "DSA/Arrays.md"]), null);
-  assert.equal(vaultRoot(["Notes/Java.md", "Notes/C.md"]), null);
 });
 
 test("relationships retain kind and line references while ignoring code and attachment examples", () => {

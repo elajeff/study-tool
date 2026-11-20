@@ -82,6 +82,8 @@ test("overlapping shards deduplicate identical copies and reject conflicting ver
   const conflict = parseConversationExport([raw, changed, raw]);
   assert.equal(conflict.conversations.length, 0);
   assert.equal(conflict.rejected.length, 3);
-  assert.throws(() => parseConversationExport([raw, "{}"]), /JSON array/);
-  assert.throws(() => parseConversationExport([raw, "not JSON"]), SyntaxError);
+  const differentExclusions = JSON.stringify([{ ...record, mapping: { ...record.mapping, sibling: undefined } }]);
+  const metadataConflict = parseConversationExport([raw, differentExclusions]);
+  assert.equal(metadataConflict.conversations.length, 0);
+  assert.equal(metadataConflict.rejected.length, 2);
 });

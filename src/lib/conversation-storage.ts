@@ -18,11 +18,19 @@ export async function loadConversationState(client: SupabaseClient, sourceId: st
 export async function prepareConversationEntries(conversations: ImportedConversation[], state: ConversationState[]) {
   const byId = new Map(state.map(item => [item.external_id, item]));
   const encoder = new TextEncoder(), entries = [];
+  const skipped: { id: string; title: string; reason: string }[] = [];
   for (const conversation of conversations) {
-    if (conversation.text.length > 500000 || conversation.text.includes("\0")) throw new Error("A conversation exceeds the storage limit or contains null characters. No text was truncated.");
+    const { id, title } = conversation;
+    if (conversation.text.length > 500000 || conversation.text.includes("\0")) {
+      skipped.push({ id, title, reason: "Text exceeds the storage limit or contains null characters." });
+      continue;
+    }
     const previous = byId.get(conversation.id);
     const path = `${Array.from(conversation.title).slice(0, 160).join("").replace(/[\/\\\x00-\x1f\x7f]/g, " ")} [${conversation.id}]`;
-    if (encoder.encode(path).length > 1024 || encoder.encode(conversation.id).length > 1024) throw new Error("A conversation title or identity exceeds the storage limit.");
+    if (encoder.encode(path).length > 1024 || encoder.encode(id).length > 1024) {
+      skipped.push({ id, title, reason: "Title or identity exceeds the storage limit." });
+      continue;
+    }
     let byteOffset = 0, previousEnd = 0;
     const messages = conversation.messages.map(message => {
       byteOffset += encoder.encode(conversation.text.slice(previousEnd, message.start)).length;
@@ -40,7 +48,5 @@ export async function prepareConversationEntries(conversations: ImportedConversa
         excluded: conversation.excluded, redactions: conversation.redactions },
       status: !previous ? "New" : previous.content_hash === hash ? "Unchanged" : "Updated" });
   }
-  if (!entries.length || entries.length > 2000 || encoder.encode(JSON.stringify(entries)).length > 35 * 1024 * 1024)
-    throw new Error("Select between 1 and 2000 conversations within 35 MiB of cleaned JSON. No import was sent.");
-  return entries;
+  return { entries, skipped };
 }

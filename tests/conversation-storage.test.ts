@@ -10,7 +10,7 @@ const raw = JSON.stringify([{ uuid: "c", name: "Emoji 😀 and π", created_at: 
 ] }]);
 test("storage uses exact UTF-8 message offsets, stable external identities and revision preview tokens", async () => {
   const parsed = parseConversationExport(raw, "claude"), chat = parsed.conversations[0];
-  const [entry] = await prepareConversationEntries([chat], []);
+  const { entries: [entry] } = await prepareConversationEntries([chat], []);
   const bytes = new TextEncoder().encode(entry.content);
   for (const [index, message] of entry.metadata.messages.entries()) {
     const block = new TextDecoder("utf-8", { fatal: true }).decode(bytes.slice(message.start, message.end));
@@ -18,13 +18,21 @@ test("storage uses exact UTF-8 message offsets, stable external identities and r
   }
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   const hash = Buffer.from(digest).toString("hex");
-  const [same] = await prepareConversationEntries([chat], [{ artifact_id: "saved", external_id: chat.id, revision_id: "revision", content_hash: hash }]);
+  const { entries: [same] } = await prepareConversationEntries([chat], [{ artifact_id: "saved", external_id: chat.id, revision_id: "revision", content_hash: hash }]);
   assert.equal(same.status, "Unchanged"); assert.equal(same.expected_revision_id, "revision"); assert.equal(same.artifact_id, "saved");
   assert.equal(entry.metadata.messages.at(-1)?.end, bytes.length);
   assert.ok(!("text" in entry.metadata.messages[0]));
   assert.equal(entry.metadata.created_at, "2026-11-01T12:00:00Z");
   assert.equal(entry.metadata.messages[0].created_at, "2026-11-01T12:00:01Z");
   assert.equal(entry.metadata.messages[1].created_at, null);
+});
+
+test("an oversized chat is identified without blocking the others", async () => {
+  const [chat] = parseConversationExport(raw, "claude").conversations;
+  const oversized = { ...chat, id: "long", title: "Long chat", text: "x".repeat(500001) };
+  const { entries, skipped } = await prepareConversationEntries([oversized, chat], []);
+  assert.deepEqual(entries.map(entry => entry.external_id), [chat.id]);
+  assert.deepEqual(skipped.map(({ id, title }) => ({ id, title })), [{ id: "long", title: "Long chat" }]);
 });
 
 function savedConversationClient(failSecondPage = false) {

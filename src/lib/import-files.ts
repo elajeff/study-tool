@@ -15,7 +15,7 @@ function readZipText(entry: JSZip.JSZipObject): Promise<string | null> {
     internalStream(type: "uint8array"): JSZip.JSZipStreamHelper<Uint8Array>;
   }).internalStream("uint8array");
   return new Promise((resolve, reject) => {
-    const decoder = new TextDecoder("utf-8", { ignoreBOM: true });
+    const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
     let bytes = 0;
     let body = "";
     let oversized = false;
@@ -26,8 +26,14 @@ function readZipText(entry: JSZip.JSZipObject): Promise<string | null> {
         oversized = true;
         stream.pause();
         resolve(null);
-      } else body += decoder.decode(chunk, { stream: true });
-    }).on("error", reject).on("end", () => resolve(body + decoder.decode())).resume();
+      } else {
+        try { body += decoder.decode(chunk, { stream: true }); }
+        catch (error) { stream.pause(); reject(error); }
+      }
+    }).on("error", reject).on("end", () => {
+      try { resolve(body + decoder.decode()); }
+      catch (error) { reject(error); }
+    }).resume();
   });
 }
 
@@ -39,7 +45,12 @@ export async function readImportFiles(selected: File[], include: (path: string) 
   async function add(raw: string, bytes: number, read: () => Promise<string | null>) {
     const path = cleanSourcePath(raw);
     if (!path || !include(path) || bytes > 500000) { skipped.push(raw); return; }
-    const body = await read();
+    let body;
+    try { body = await read(); }
+    catch (error) {
+      if (!(error instanceof TypeError)) throw error;
+      throw new Error(`${path} is not valid UTF-8. Save it as UTF-8 and import it again.`);
+    }
     if (body === null) { skipped.push(path); return; }
     const bodyBytes = new Blob([body]).size;
     total += bodyBytes;
@@ -76,7 +87,7 @@ export async function readImportFiles(selected: File[], include: (path: string) 
         }
       } else {
         const raw = file.webkitRelativePath || file.name;
-        await add(raw, file.size, () => file.text());
+        await add(raw, file.size, async () => new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()));
       }
     } catch (error) {
       throw new Error(`${file.name}: ${error instanceof Error ? error.message : "Could not read this file."}`);

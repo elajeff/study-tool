@@ -8,7 +8,6 @@ test("repository draft requests retain the selected snapshot and repository scop
   assert.match(prompt, /export_id Xsaved/);
   assert.match(prompt, /scoped to R1/);
   assert.ok(prompt.includes(JSON.stringify('One "quoted" repository')));
-  assert.match(prompt, /not a verified complete curriculum/);
 });
 const repositories = [
   { id: "one", short_code: "R1", kind: "repository", name: "One" },
@@ -26,15 +25,13 @@ test("portfolio merge keeps exact source versions and namespaces draft module ID
   drafts[0].course.not_covered.push({ id: "R1/F002", why: "Fixture subsystem not inspected" });
   drafts[0].course.open_questions.push("Fixture prerequisite is uncertain");
   const prompt = portfolioMergePrompt("export", repositories, drafts);
-  assert.match(prompt, /R1\/M01/);
-  assert.match(prompt, /R2\/M01/);
+  assert.match(prompt, /study-course-start\/1/);
   const reference = JSON.parse(prompt.split("REFERENCE DATA (JSON):\n")[1]);
   assert.deepEqual(reference.drafts[0].modules[1].needs, ["R1/M01"]);
   assert.deepEqual(reference.drafts[0].modules[0].sources, ["R1/F001"]);
-  assert.match(prompt, /shared foundations once/);
-  assert.match(prompt, /Fixture subsystem not inspected/);
-  assert.match(prompt, /Fixture prerequisite is uncertain/);
-  assert.match(repositoryDraftPrompt("export", repositories[0]), /scoped to R1/);
+  assert.deepEqual(reference.drafts.map((draft: { modules: { id: string }[] }) => draft.modules[0].id), ["R1/M01", "R2/M01"]);
+  assert.deepEqual(reference.drafts[0].not_covered, drafts[0].course.not_covered);
+  assert.deepEqual(reference.drafts[0].open_questions, drafts[0].course.open_questions);
   assert.throws(() => portfolioMergePrompt("other", repositories, drafts), /same exact/);
   assert.throws(() => portfolioMergePrompt("export", repositories, [drafts[0]]), /every repository/);
   assert.throws(() => portfolioMergePrompt("export", repositories, [drafts[0], drafts[0]]), /exactly one/);

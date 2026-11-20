@@ -16,7 +16,7 @@ import { CourseModules } from "@/components/CourseModules";
 import { CourseStepAction } from "@/components/CourseStepAction";
 import { BatchModulePlanner } from "@/components/BatchModulePlanner";
 import { RememberCourse } from "@/components/RememberCourse";
-import { savedCoursePosition } from "@/lib/course-position";
+import { coursePositionToResume, savedCoursePosition } from "@/lib/course-position";
 import { CourseChatLink } from "@/components/CourseChatLink";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string; page?: string }> }) {
@@ -44,14 +44,16 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   }
   if (requested.id && !result && !courseError) notFound();
   const allSteps = query.id && result ? await loadCourseSteps(supabase, query.id) : [];
+  const savedPosition = (await cookies()).get(`study-position-${user.id}`)?.value;
   if (result && query.id && !requested.module && !requested.step) {
-    const position = savedCoursePosition((await cookies()).get(`study-position-${user.id}`)?.value, query.id, result.course, allSteps);
+    const position = savedCoursePosition(savedPosition, query.id, result.course, allSteps);
     if (position) { query.module = position.module.id; query.step = position.step?.row_id; }
   }
   const selected = result?.course.modules.find(item => item.id === query.module);
   const steps = allSteps.filter(step => step.module_key === selected?.id).sort((a, b) => a.position - b.position);
   const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps.find(step => !step.completed_at) ?? steps[0];
   const next = result ? nextCourseLesson(result.course, allSteps) : null;
+  const resume = result && query.id ? coursePositionToResume(savedPosition, query.id, result.course, allSteps) : null;
   const completed = allSteps.filter(step => step.completed_at).length;
   const plannedIds = [...new Set(allSteps.map(step => step.module_key))];
   const unplanned = result ? result.course.modules.length - plannedIds.length : 0;
@@ -63,14 +65,15 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {courseError && <p role="alert">{courseError}</p>}
     {result && query.id && <section className="panel next-panel">
       <h2>{result.course.title}</h2>
-      {next && <p>Next up: {next.step?.goal ?? next.module.title}</p>}
+      {resume && <p>Continue at {resume.step?.goal ?? resume.module.title}</p>}
       <div className="import-actions">
-        {next && <Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) }, hash: next.step ? "lesson-focus" : "module-plan" }}>
-          {next.step ? "Continue studying" : "Prepare the next lesson plan"}
+        {resume && <Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: resume.module.id, ...(resume.step ? { step: resume.step.row_id } : {}) }, hash: resume.step ? "lesson-focus" : "module-plan" }}>
+          {resume.step ? "Continue studying" : "Prepare the next lesson plan"}
         </Link>}
         <a className="button button-light" href={result.chatUrl ?? "https://chatgpt.com/"} target="_blank" rel="noopener noreferrer">
           {result.chatUrl ? "Open course in ChatGPT" : "Open ChatGPT"}
         </a>
+        <Link className="button button-light" href="#saved-courses">Switch course</Link>
       </div>
       <CourseChatLink key={query.id} courseId={query.id} url={result.chatUrl} />
     </section>}
@@ -122,7 +125,10 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       </details>
     </section>}
     <section className="panel" id="saved-courses"><h2>Saved courses</h2>
-      {recent.length ? <ul>{recent.slice(0, 20).map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title || "Untitled course"}</Link></li>)}</ul>
+      {recent.length ? <ul>{recent.slice(0, 20).map(row => <li key={row.id}>
+        <Link href={`/courses?id=${row.id}`} aria-current={row.id === query.id ? "true" : undefined}>{row.title || "Untitled course"}</Link>
+        {row.id === query.id && " · Current"}
+      </li>)}</ul>
         : <p>{page === 1 ? "No courses saved yet." : "No more courses."}</p>}
       <div className="import-actions">
         {page > 1 && <Link href={{ pathname: "/courses", query: { id: query.id, page: page - 1 }, hash: "saved-courses" }}>Newer courses</Link>}

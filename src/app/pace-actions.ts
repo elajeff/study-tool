@@ -11,3 +11,9 @@ export async function saveStudyPace(_previous: { error: string } | null, form: F
   (await cookies()).set(`study-pace-${user.id}`, value, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 31536000 });
   redirect("/dashboard");
 }
+
+export async function useWeeklyStudyHours() {
+  const { user } = await requireAccount();
+  (await cookies()).delete(`study-pace-${user.id}`);
+  redirect("/dashboard");
+}

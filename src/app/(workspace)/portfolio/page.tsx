@@ -16,12 +16,15 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   if (query.export && !manifest) notFound();
   const repositories = manifest?.sources.filter(source => source.kind === "repository") ?? [];
   const drafts: RepositoryDraft[] = [];
+  let unreadable = 0;
   if (manifest && repositories.length >= 2) for (let offset = 0; ; offset += 500) {
     const { data, error } = await supabase.from("courses").select("id,raw_block").eq("export_id", manifest.export_id)
       .order("created_at", { ascending: false }).order("id").range(offset, offset + 499);
     if (error) throw new Error("Could not load repository courses.");
     for (const row of data) {
-      const course = parseCourse(row.raw_block, manifest).course;
+      let course;
+      try { course = parseCourse(row.raw_block, manifest).course; }
+      catch { unreadable++; continue; }
       if (repositoryDraftSource(repositories, course)) drafts.push({ id: row.id, course });
     }
     if (data.length < 500) break;
@@ -38,6 +41,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <CourseLessonCard text={repositoryDraftPrompt(manifest.export_id, source)} />
       </details>)}
     </section> : <p>Select a saved Library snapshot containing a repository.</p>}
+    {unreadable > 0 && <p role="status">Skipped {unreadable} saved outlines that could not be read.</p>}
     {manifest && repositories.length >= 2 && <PortfolioPlanner key={manifest.export_id} exportId={manifest.export_id} repositories={repositories} drafts={drafts} />}
   </>;
 }

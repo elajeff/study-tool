@@ -15,11 +15,13 @@ test("resume ignores another course, missing modules and malformed positions", (
     assert.equal(savedCoursePosition(raw, "course", course, steps), null);
 });
 
-test("Dashboard resumes unfinished work and does not reopen the final completed lesson", () => {
-  const planned = [
-    { ...steps[0], row_id: "first", module_key: "M1", position: 1, completed_at: "2026-11-19" },
+test("resume prefers the saved unfinished lesson and does not reopen a finished course", () => {
+  const planned: SavedCourseStep[] = [
+    { ...steps[0], row_id: "first", module_key: "M1", position: 1, completed_at: null },
     { ...steps[0], position: 1, completed_at: null },
   ];
+  assert.equal(coursePositionToResume("course.1.step", "course", course, planned)?.step?.row_id, "step");
+  planned[0].completed_at = "2026-11-19";
   assert.equal(coursePositionToResume("course.0.first", "course", course, planned)?.step?.row_id, "step");
   planned[1].completed_at = "2026-11-20";
   assert.equal(coursePositionToResume("course.1.step", "course", course, planned), null);

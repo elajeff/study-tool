@@ -22,19 +22,25 @@ import { ManageCourse } from "@/components/ManageCourse";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string; page?: string }> }) {
   const { supabase, user } = await requireAccount();
-  const requested = await searchParams;
+  const [requested, jar] = await Promise.all([searchParams, cookies()]);
   const query = { ...requested };
   const requestedPage = Number(requested.page ?? 1);
   const page = Number.isInteger(requestedPage) && requestedPage > 0 && requestedPage <= 10_000 ? requestedPage : 1;
   const offset = (page - 1) * 20;
-  const { data: recent, error } = await supabase.from("courses").select("id,display_name,title:raw_block->>title")
+  const recentCourses = supabase.from("courses").select("id,display_name,title:raw_block->>title")
     .order("created_at", { ascending: false }).order("id").range(offset, offset + 20);
-  if (error) throw new Error("Could not load courses. Check migration 011.");
-  if (!query.id) query.id = (await cookies()).get(`study-course-${user.id}`)?.value ?? recent[0]?.id;
+  query.id ??= jar.get(`study-course-${user.id}`)?.value;
+  const requestedCourse = query.id ? loadCourse(supabase, query.id).catch(error => {
+    if (!(error instanceof UnreadableCourseError)) throw error;
+    return error;
+  }) : null;
+  const [{ data: recent, error }, initial] = await Promise.all([recentCourses, requestedCourse]);
+  if (error) throw new Error("Could not load courses.");
   let result: Awaited<ReturnType<typeof loadCourse>> = null;
   let courseError = "";
   try {
-    if (query.id) result = await loadCourse(supabase, query.id);
+    if (initial instanceof UnreadableCourseError) throw initial;
+    result = initial;
     if (!result && !requested.id && recent.length && query.id !== recent[0].id) {
       query.id = recent[0].id;
       result = await loadCourse(supabase, recent[0].id);
@@ -45,10 +51,11 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   }
   if (requested.id && !result && !courseError) notFound();
   const allSteps = query.id && result ? await loadCourseSteps(supabase, query.id) : [];
-  const savedPosition = (await cookies()).get(`study-position-${user.id}`)?.value;
-  if (result && query.id && !requested.module && !requested.step) {
-    const position = savedCoursePosition(savedPosition, query.id, result.course, allSteps);
-    if (position) { query.module = position.module.id; query.step = position.step?.row_id; }
+  const savedPosition = jar.get(`study-position-${user.id}`)?.value;
+  const position = result && query.id ? savedCoursePosition(savedPosition, query.id, result.course, allSteps) : null;
+  if (position && !requested.step && (!requested.module || requested.module === position.module.id)) {
+    query.module = position.module.id;
+    query.step = position.step?.row_id;
   }
   const selected = result?.course.modules.find(item => item.id === query.module);
   const steps = allSteps.filter(step => step.module_key === selected?.id).sort((a, b) => a.position - b.position);
@@ -122,8 +129,12 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       </details>
       <details><summary>Lesson details and sources</summary><p>Done when: {currentStep.done_when}</p><p>Sources: {currentStep.sources.join(", ")}.</p></details>
       <h3>After studying</h3><p>Finish the explanation and exercises in ChatGPT, then mark this lesson done here to continue.</p>
-      <p>Status: {currentStep.completed_at ? "Done" : "Not started"}. Marking a lesson done records study activity, not mastery.</p>
-      <CourseStepAction courseId={query.id} step={currentStep} />
+      <p role="status">Status: {currentStep.completed_at ? "Done" : "Not started"}. Marking a lesson done records study activity, not mastery.</p>
+      <CourseStepAction key={currentStep.row_id} courseId={query.id} step={currentStep} />
+      {currentStep.completed_at && next && <p><Link className="text-link" href={{
+        pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) },
+        hash: next.step ? "lesson-focus" : "module-plan",
+      }}>{next.step ? "Go to next lesson" : "Prepare the next lesson plan"}</Link></p>}
       <details className="optional-assessment"><summary>{assessment ? "Assessment and review" : "Optional: assess your understanding"}</summary>
         <p>Use this after practicing independently. If ChatGPT returns an assessment receipt, import it through <Link className="text-link" href="/inbox">Inbox</Link>, then review it in <Link className="text-link" href="/assessments">Assessments</Link>. You can continue studying without an assessment.</p>
         <LessonControls assessment={assessment} />

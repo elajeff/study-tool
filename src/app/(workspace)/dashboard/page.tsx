@@ -16,14 +16,15 @@ import { RememberCourse } from "@/components/RememberCourse";
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ course?: string }> }) {
   const { course: requestedCourse } = await searchParams;
   const { supabase, user } = await requireAccount();
-  const pace = parseStudyPace((await cookies()).get(`study-pace-${user.id}`)?.value);
+  const jar = await cookies();
+  const pace = parseStudyPace(jar.get(`study-pace-${user.id}`)?.value);
   const minutesPerLesson = pace?.minutesPerLesson ?? 30;
   const [courses, profile] = await Promise.all([
     supabase.from("courses").select("id,display_name,title:raw_block->>title").order("created_at", { ascending: false }).limit(20),
     supabase.from("study_profiles").select("hours_per_week").eq("user_id", user.id).maybeSingle(),
   ]);
   if (courses.error || profile.error) throw new Error("Could not load your course dashboard.");
-  let courseId = requestedCourse ?? (await cookies()).get(`study-course-${user.id}`)?.value ?? courses.data[0]?.id;
+  let courseId = requestedCourse ?? jar.get(`study-course-${user.id}`)?.value ?? courses.data[0]?.id;
   const switcher = (activeCourseId: string | undefined) => <details className="course-options">
     <summary>Switch course</summary>
     <ul>{courses.data.map(course => <li key={course.id}>
@@ -56,12 +57,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const steps = await loadCourseSteps(supabase, courseId);
   const hoursPerWeek = pace ? pace.hoursPerDay * pace.daysPerWeek : profile.data?.hours_per_week ?? null;
   const overview = courseOverview(saved.course, steps, minutesPerLesson, hoursPerWeek);
-  const next = coursePositionToResume((await cookies()).get(`study-position-${user.id}`)?.value, courseId, saved.course, steps);
+  const next = coursePositionToResume(jar.get(`study-position-${user.id}`)?.value, courseId, saved.course, steps);
   const assessments = new Map<string, Assessment>();
-  for (let start = 0; start < steps.length; start += 100) {
-    const topics = steps.slice(start, start + 100).map(step => `course-step:${step.row_id}`);
-    for (const [topic, receipt] of latestApproved(await loadAssessments(supabase, "approved", topics))) {
-      assessments.set(topic, receipt);
+  const topics = steps.map(step => `course-step:${step.row_id}`);
+  // Keep filter URLs short and limit concurrent requests for large courses.
+  for (let start = 0; start < topics.length; start += 400) {
+    const batches = [];
+    for (let offset = start; offset < Math.min(start + 400, topics.length); offset += 100) {
+      batches.push(loadAssessments(supabase, "approved", topics.slice(offset, offset + 100)));
+    }
+    for (const records of await Promise.all(batches)) {
+      for (const [topic, receipt] of latestApproved(records)) assessments.set(topic, receipt);
     }
   }
   const assessed = steps.filter(step => assessments.has(`course-step:${step.row_id}`)).length;

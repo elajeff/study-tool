@@ -13,17 +13,23 @@ export default async function LibraryPage({ searchParams }: {
 }) {
   const { supabase } = await requireAccount();
   const query = await searchParams;
-  const { data: snapshots, error: snapshotError } = await supabase.from("library_exports").select("id,created_at")
-    .order("created_at", { ascending: false }).order("id").limit(20);
+  const [{ data: snapshots, error: snapshotError }, sources] = await Promise.all([
+    supabase.from("library_exports").select("id,created_at").order("created_at", { ascending: false }).order("id").limit(20),
+    loadLibrarySources(supabase),
+  ]);
   if (snapshotError) throw new Error("Could not load saved Library snapshots.");
-  const sources = (await loadLibrarySources(supabase))
-    .sort((a, b) => a.short_code.localeCompare(b.short_code, undefined, { numeric: true }));
-  const source = query.source ? sources.find(row => row.short_code === query.source) : sources[0];
-  const artifacts = source ? await loadLibraryArtifacts(supabase, source.id) : [];
-  const latest = source?.kind === "repository" ? await loadLatestRepositoryItems(supabase, source.id) : null;
+  sources.sort((a, b) => a.short_code.localeCompare(b.short_code, undefined, { numeric: true }));
+  const source = sources.find(row => row.short_code === query.source);
+  const [artifacts, latest] = await Promise.all([
+    source ? loadLibraryArtifacts(supabase, source.id) : [],
+    source?.kind === "repository" ? loadLatestRepositoryItems(supabase, source.id) : null,
+  ]);
   const revisionIds = artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []);
-  const contexts = source && ["chatgpt", "claude"].includes(source.kind) ? await loadConversationContexts(supabase, revisionIds) : new Map();
-  const digests = currentLibraryDigests(artifacts, contexts, await loadLibraryDigests(supabase, revisionIds));
+  const [contexts, savedDigests] = await Promise.all([
+    source && ["chatgpt", "claude"].includes(source.kind) ? loadConversationContexts(supabase, revisionIds) : new Map(),
+    loadLibraryDigests(supabase, revisionIds),
+  ]);
+  const digests = currentLibraryDigests(artifacts, contexts, savedDigests);
   const summaries = new Map([...digests].map(([id, digest]) => [id, digest.summary]));
   const maps = source ? buildLibraryMaps(source, artifacts, summaries) : [];
   const map = query.map ? maps.find(row => row.id === query.map) : maps[0];

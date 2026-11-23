@@ -6,7 +6,7 @@ Built with Next.js, TypeScript and Supabase. The app organizes imports into a sa
 
 ## What it does
 
-Try the [demo course](https://study-tool-opal.vercel.app/demo) without signing in.
+Try the [demo course](https://study-tool-cat.vercel.app/demo) without signing in.
 
 - Imports Obsidian Markdown, repository ZIPs, public GitHub snapshots and exported ChatGPT or Claude conversations.
 - Keeps imported source text separate from editable notes, with saved revisions and reading references.

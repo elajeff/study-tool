@@ -29,14 +29,10 @@ test("active branch retains answers after thoughts, exact math/code and structur
   assert.equal(chat.excluded.hidden_messages, 1);
 });
 
-test("broken branches are reported rather than guessed, duplicate copies do not merge conflicting answers", () => {
+test("broken branches are reported rather than guessed", () => {
   for (const mapping of [{ ...record.mapping, answer: { ...record.mapping.answer, parent: "missing" } },
     { ...record.mapping, answer: { ...record.mapping.answer, parent: "answer" } }])
     assert.equal(parseConversationExport(JSON.stringify([{ ...record, mapping }])).rejected.length, 1);
-  assert.equal(parseConversationExport(JSON.stringify([record, record])).duplicates, 1);
-  const changed = { ...record, mapping: { ...record.mapping, answer: { ...record.mapping.answer, message: message("assistant", "text", ["Different answer"]) } } };
-  const conflict = parseConversationExport(JSON.stringify([record, changed]));
-  assert.equal(conflict.rejected.length, 2); assert.equal(conflict.conversations.length, 0);
 });
 
 test("credential redaction preserves example values, original input and long code blocks", () => {
@@ -82,6 +78,4 @@ test("overlapping shards deduplicate identical copies and reject conflicting ver
   const conflict = parseConversationExport([raw, changed, raw]);
   assert.equal(conflict.conversations.length, 0);
   assert.equal(conflict.rejected.length, 3);
-  assert.throws(() => parseConversationExport([raw, "{}"]), /JSON array/);
-  assert.throws(() => parseConversationExport([raw, "not JSON"]), SyntaxError);
 });

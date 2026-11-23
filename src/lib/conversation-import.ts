@@ -141,7 +141,9 @@ export function parseConversationExport(raw: string | string[], provider: ChatPr
       if (start < text.length) pages.push({ start, end: text.length });
       const created_at = sourceTime(provider === "chatgpt" ? record.create_time : record.created_at);
       const updated_at = sourceTime(provider === "chatgpt" ? record.update_time : record.updated_at);
-      const signature = JSON.stringify([title.text, created_at, updated_at, messages.map(item => [item.id, item.role, item.text, item.created_at])]);
+      const counts = Object.entries(excluded).sort(([a], [b]) => a.localeCompare(b));
+      const signature = JSON.stringify([title.text, created_at, updated_at, counts, redactions,
+        messages.map(item => [item.id, item.role, item.text, item.created_at])]);
       if (conflicts.has(id)) throw new ConversationFormatError("Conflicting copies of one conversation; select one version.");
       const previous = identities.get(id);
       if (previous) {

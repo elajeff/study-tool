@@ -1,15 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Note } from "./notes.ts";
 
-export async function loadNoteList(supabase: SupabaseClient) {
-  const notes: Pick<Note, "id" | "path" | "title" | "source_id">[] = [];
-  for (let offset = 0; ; offset += 500) {
-    const { data, error } = await supabase.from("notes").select("id,path,title,source_id")
-      .order("id").range(offset, offset + 499);
-    if (error) throw new Error("Could not load the note list.");
-    notes.push(...data);
-    if (data.length < 500) return notes;
+export async function loadNoteList(supabase: SupabaseClient, search: string, page: number) {
+  const pageSize = 50;
+  const start = (page - 1) * pageSize;
+  let query = supabase.from("notes").select("id,path,title,source_id");
+  if (search) {
+    // Escape regex syntax, then quote the value for PostgREST's OR filter.
+    const literal = JSON.stringify(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    query = query.or("path.imatch." + literal + ",title.imatch." + literal);
   }
+  const { data, error } = await query.order("id").range(start, start + pageSize);
+  if (error) throw new Error("Could not load the note list.");
+  return { notes: data.slice(0, pageSize), hasNextPage: data.length > pageSize };
 }
 
 export async function loadNotes(supabase: SupabaseClient, sourceId?: string | null): Promise<Note[]> {

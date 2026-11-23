@@ -10,8 +10,11 @@ import { coursePositionToResume } from "@/lib/course-position";
 import { useWeeklyStudyHours } from "@/app/pace-actions";
 import { parseStudyPace } from "@/lib/study-pace";
 import { StudyPaceForm } from "@/components/StudyPaceForm";
+import { ManageCourse } from "@/components/ManageCourse";
+import { RememberCourse } from "@/components/RememberCourse";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ course?: string }> }) {
+  const { course: requestedCourse } = await searchParams;
   const { supabase, user } = await requireAccount();
   const pace = parseStudyPace((await cookies()).get(`study-pace-${user.id}`)?.value);
   const minutesPerLesson = pace?.minutesPerLesson ?? 30;
@@ -20,7 +23,16 @@ export default async function DashboardPage() {
     supabase.from("study_profiles").select("hours_per_week").eq("user_id", user.id).maybeSingle(),
   ]);
   if (courses.error || profile.error) throw new Error("Could not load your course dashboard.");
-  let courseId = (await cookies()).get(`study-course-${user.id}`)?.value ?? courses.data[0]?.id;
+  let courseId = requestedCourse ?? (await cookies()).get(`study-course-${user.id}`)?.value ?? courses.data[0]?.id;
+  const switcher = (activeCourseId: string | undefined) => <details className="course-options">
+    <summary>Switch course</summary>
+    <ul>{courses.data.map(course => <li key={course.id}>
+      <Link className="text-link course-name" href={{ pathname: "/dashboard", query: { course: course.id } }}
+        aria-current={course.id === activeCourseId ? "true" : undefined}>{course.display_name ?? (course.title || "Untitled course")}</Link>
+      {course.id === activeCourseId && " · Current"}
+    </li>)}</ul>
+    <p><Link className="text-link" href="/courses#saved-courses">View all saved courses</Link></p>
+  </details>;
   let saved: Awaited<ReturnType<typeof loadCourse>> = null;
   try {
     if (courseId) saved = await loadCourse(supabase, courseId);
@@ -31,7 +43,8 @@ export default async function DashboardPage() {
   } catch (error) {
     if (!(error instanceof UnreadableCourseError)) throw error;
     return <section className="panel"><h1>Dashboard</h1><p role="alert">{error.message}</p>
-      <Link className="button button-dark" href="/courses#saved-courses">Open saved courses</Link>
+      {switcher(courseId)}
+      {courseId && <ManageCourse courseId={courseId} name={courses.data.find(course => course.id === courseId)?.display_name ?? ""} fromDashboard />}
     </section>;
   }
   if (!saved || !courseId) return <>
@@ -56,13 +69,16 @@ export default async function DashboardPage() {
   if (next) { nextQuery.set("module", next.module.id); if (next.step) nextQuery.set("step", next.step.row_id); }
   return <>
     <div className="page-heading"><h1>Dashboard</h1><p>Your courses and study progress.</p></div>
+    <RememberCourse userId={user.id} courseId={courseId} />
     <section className="panel next-panel"><h2 className="course-name">{saved.name}</h2><p>{saved.course.goal}</p>
       <progress className="course-progress" aria-label="Course modules completed" value={overview.completedModules} max={saved.course.modules.length} />
       <p>{overview.completedModules} of {saved.course.modules.length} modules finished · {overview.completedLessons} of {overview.plannedLessons} planned lessons done</p>
       <div className="import-actions"><Link className="button button-dark" href={`/courses?${nextQuery}#${next?.step ? "lesson-focus" : next ? "module-plan" : "course-path"}`}>
         {next ? "Continue studying" : "View completed course"}
       </Link><Link className="button button-light" href={`/courses?id=${courseId}`}>Open roadmap</Link>
-      <Link className="button button-light" href="/courses#saved-courses">Switch course</Link></div>
+      <Link className="button button-light" href="/inbox">Import another course</Link></div>
+      {switcher(courseId)}
+      <ManageCourse key={courseId} courseId={courseId} name={saved.name} fromDashboard />
       {next && <p>Next: {next.step?.goal ?? next.module.title}</p>}
     </section>
     <div className="stat-grid course-dashboard-stats">
@@ -81,9 +97,7 @@ export default async function DashboardPage() {
         </form> : <p><Link className="text-link" href="/settings">Change weekly study hours</Link></p>}
         <p className="muted small">A planning estimate, not measured study time. Days assume your weekly hours are spread evenly. Practice, reviews and difficult lessons can take longer.</p>
       </section>
-      <section className="panel"><h2>Recent courses</h2><ul>{courses.data.map(course => <li key={course.id}>
-        <Link className="text-link course-name" href={`/courses?id=${course.id}`}>{course.display_name ?? course.title}</Link>{course.id === courseId ? " · Current" : ""}
-      </li>)}</ul><p><Link className="text-link" href="/inbox">Import another course</Link></p>
+      <section className="panel"><h2>Learning records</h2>
         <p>Marking lessons done records activity. Approved assessments record demonstrated knowledge separately.</p>
         {!!steps.length && <ProgressExport rows={steps.map(step => {
           const record = assessments.get(`course-step:${step.row_id}`);

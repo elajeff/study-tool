@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { deleteCourse, renameCourse } from "@/app/course-actions";
 
-export function ManageCourse({ courseId, name }: { courseId: string; name: string }) {
+export function ManageCourse({ courseId, name, fromDashboard }: { courseId: string; name: string; fromDashboard?: boolean }) {
   const [renameMessage, rename, renaming] = useActionState(renameCourse, "");
   const [deleteMessage, remove, removing] = useActionState(deleteCourse, "");
   return <details className="course-options">
@@ -19,6 +19,7 @@ export function ManageCourse({ courseId, name }: { courseId: string; name: strin
       <summary>Delete course</summary>
       <form className="stack" action={remove}>
         <input type="hidden" name="course" value={courseId} />
+        {fromDashboard && <input type="hidden" name="from_dashboard" value="yes" />}
         <p>This permanently deletes this course, its lesson plans, progress and lesson assessments. Your Library and ChatGPT conversation stay available.</p>
         <label><input type="checkbox" name="confirm" value="yes" required /> I want to delete this course</label>
         <button className="button button-danger" disabled={renaming || removing}>{removing ? "Deleting…" : "Delete course"}</button>

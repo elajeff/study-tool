@@ -17,13 +17,17 @@ import { CourseStepAction } from "@/components/CourseStepAction";
 import { BatchModulePlanner } from "@/components/BatchModulePlanner";
 import { RememberCourse } from "@/components/RememberCourse";
 import { savedCoursePosition } from "@/lib/course-position";
+import { CourseChatLink } from "@/components/CourseChatLink";
 
-export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string }> }) {
+export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string; page?: string }> }) {
   const { supabase, user } = await requireAccount();
   const requested = await searchParams;
   const query = { ...requested };
+  const requestedPage = Number(requested.page ?? 1);
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 && requestedPage <= 10_000 ? requestedPage : 1;
+  const offset = (page - 1) * 20;
   const { data: recent, error } = await supabase.from("courses").select("id,title:raw_block->>title")
-    .order("created_at", { ascending: false }).limit(20);
+    .order("created_at", { ascending: false }).order("id").range(offset, offset + 20);
   if (error) throw new Error("Could not load courses. Check migration 011.");
   if (!query.id) query.id = (await cookies()).get(`study-course-${user.id}`)?.value ?? recent[0]?.id;
   let result: Awaited<ReturnType<typeof loadCourse>> = null;
@@ -57,14 +61,19 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected ? result.course.modules.indexOf(selected) : undefined} stepId={currentStep?.row_id} />}
     <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
     {courseError && <p role="alert">{courseError}</p>}
-    <section className="panel"><details open={!result}><summary>Import from ChatGPT</summary>
-      <p>Choose the file with your course and first lesson plan, or paste the ChatGPT response. Study Tool opens the first unfinished lesson.</p><InboxImporter openCourse />
-      <p><Link href="/library">Prepare a Library snapshot</Link> · <Link href="/portfolio">Plan repository courses</Link></p>
-    </details></section>
-    <section className="panel" id="saved-courses"><h2>Recent courses</h2>
-      {recent.length ? <ul>{recent.map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title || "Untitled course"}</Link></li>)}</ul> : <p>No courses saved yet.</p>}
-    </section>
-    {result && query.id && <BatchModulePlanner key={query.id} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
+    {result && query.id && <section className="panel next-panel">
+      <h2>{result.course.title}</h2>
+      {next && <p>Next up: {next.step?.goal ?? next.module.title}</p>}
+      <div className="import-actions">
+        {next && <Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) }, hash: next.step ? "lesson-focus" : "module-plan" }}>
+          {next.step ? "Continue studying" : "Prepare the next lesson plan"}
+        </Link>}
+        <a className="button button-light" href={result.chatUrl ?? "https://chatgpt.com/"} target="_blank" rel="noopener noreferrer">
+          {result.chatUrl ? "Open course in ChatGPT" : "Open ChatGPT"}
+        </a>
+      </div>
+      <CourseChatLink key={query.id} courseId={query.id} url={result.chatUrl} />
+    </section>}
     {result && query.id && <section className="panel course-path" id="course-path"><h2>{result.course.title}</h2><p>{result.course.goal}</p>
       <p>Target: {result.course.target}</p><p>Starting level: {result.course.assumed_level}</p>
       <p><Link href={`/library/exports/${result.course.export_id}`}>Saved Library snapshot</Link></p>
@@ -74,9 +83,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <p>{unplanned ? `${unplanned} modules still need a lesson plan.` : "All modules have lesson plans."}</p>
         <p>Done records study activity. Approved assessments track demonstrated knowledge separately.</p>
       </div>
-      {next ? <p><Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) }, hash: next.step ? "lesson-focus" : "module-plan" }}>
-        {next.step ? `Continue at ${next.step.id}` : `Prepare ${next.module.id} lesson plan`}
-      </Link></p> : <p>All course lessons are marked done. This does not establish mastery.</p>}
+      {!next && <p>All course lessons are marked done. This does not establish mastery.</p>}
       <CourseModules key={query.id} courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id} nextModule={next?.module.id} selectedStep={currentStep?.row_id} nextStep={next?.step?.row_id} />
       <details><summary>Exclusions and open questions</summary>
         <ul>{result.course.not_covered.map(item => <li key={item.id}>{item.id}: {item.why}</li>)}</ul>
@@ -84,7 +91,6 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         {!!result.unassigned.length && <p>Unassigned items: {result.unassigned.join(", ")}</p>}
       </details>
     </section>}
-    {result && <CourseReviewCard key={query.id} course={result.course} />}
     {query.module && !selected && <p role="status">Module not found in this course.</p>}
     {result && query.id && selected && <section className="panel" id="module-plan"><h2>{selected.id} · {steps.length ? "Lesson plan ready" : "Prepare lesson plan"}</h2>
       {steps.length ? <p>Choose a lesson in the roadmap to start studying. You do not need to import this plan again.</p>
@@ -115,5 +121,19 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <LessonControls assessment={assessment} />
       </details>
     </section>}
+    <section className="panel" id="saved-courses"><h2>Saved courses</h2>
+      {recent.length ? <ul>{recent.slice(0, 20).map(row => <li key={row.id}><Link href={`/courses?id=${row.id}`}>{row.title || "Untitled course"}</Link></li>)}</ul>
+        : <p>{page === 1 ? "No courses saved yet." : "No more courses."}</p>}
+      <div className="import-actions">
+        {page > 1 && <Link href={{ pathname: "/courses", query: { id: query.id, page: page - 1 }, hash: "saved-courses" }}>Newer courses</Link>}
+        {recent.length > 20 && <Link href={{ pathname: "/courses", query: { id: query.id, page: page + 1 }, hash: "saved-courses" }}>Older courses</Link>}
+      </div>
+    </section>
+    {result && query.id && <BatchModulePlanner key={query.id} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
+    {result && <CourseReviewCard key={query.id} course={result.course} />}
+    <section className="panel"><details open={!result}><summary>Import from ChatGPT</summary>
+      <p>Choose the file with your course and first lesson plan, or paste the ChatGPT response.</p><InboxImporter openCourse />
+      <p><Link href="/library">Prepare a Library snapshot</Link> · <Link href="/portfolio">Plan repository courses</Link></p>
+    </details></section>
   </>;
 }

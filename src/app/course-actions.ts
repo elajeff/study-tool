@@ -1,9 +1,35 @@
 "use server";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps } from "@/lib/course-queries";
 import { nextCourseLesson } from "@/lib/course";
+
+export async function renameCourse(_previous: string, form: FormData): Promise<string> {
+  const name = String(form.get("name") ?? "").trim();
+  if (!name || name.length > 160) return "Enter a course name of up to 160 characters.";
+  const { supabase } = await requireAccount();
+  const { error } = await supabase.from("courses").update({ display_name: name })
+    .eq("id", String(form.get("course") ?? "")).select("id").single();
+  if (error) return "Could not rename this course.";
+  revalidatePath("/courses");
+  revalidatePath("/dashboard");
+  return "Course renamed.";
+}
+
+export async function deleteCourse(_previous: string, form: FormData): Promise<string> {
+  if (form.get("confirm") !== "yes") return "Confirm that you want to delete this course.";
+  const { supabase, user } = await requireAccount();
+  const id = String(form.get("course") ?? "");
+  const { error } = await supabase.rpc("delete_course", { p_course_id: id });
+  if (error) return "Could not delete this course.";
+  const jar = await cookies();
+  if (jar.get(`study-course-${user.id}`)?.value === id) jar.delete(`study-course-${user.id}`);
+  if (jar.get(`study-position-${user.id}`)?.value.startsWith(`${id}.`)) jar.delete(`study-position-${user.id}`);
+  for (const path of ["/courses", "/dashboard", "/assessments", "/portfolio"]) revalidatePath(path);
+  redirect(form.get("from_dashboard") === "yes" ? "/dashboard" : "/courses#saved-courses");
+}
 
 export async function saveCourseChat(_previous: string, form: FormData): Promise<string> {
   const { supabase } = await requireAccount();

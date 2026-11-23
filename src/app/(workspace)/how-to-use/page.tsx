@@ -29,7 +29,7 @@ export default function HowToUsePage() {
           <p>Choose ChatGPT&apos;s file in <Link href="/inbox">Inbox</Link> or paste the response. The combined file saves the outline and first plan together and opens the first unfinished lesson.</p>
         </li>
         <li><h2>Record progress and continue</h2>
-          <p>Mark completed lessons done in <Link href="/courses">Courses</Link>. <Link href="/dashboard">Dashboard</Link> shows your saved place. For modules that still need plans, use <strong>Prepare several lesson plans</strong> to request them together.</p>
+          <p>In <Link href="/courses">Courses</Link>, click <strong>Mark done</strong>, then <strong>Go to next lesson</strong> when you are ready. <Link href="/dashboard">Dashboard</Link> shows your saved place. For modules that still need plans, use <strong>Prepare several lesson plans</strong> to request them together.</p>
           <p>On <Link href="/dashboard">Dashboard</Link>, use <strong>Switch course</strong> to change roadmaps or <strong>Manage course</strong> to rename or delete the current one. Import another course to keep studying both.</p>
           <p>If ChatGPT returns an assessment receipt, import it through <Link href="/inbox">Inbox</Link> and review it in <Link href="/assessments">Assessments</Link>. Finishing a lesson and demonstrating a skill are recorded separately.</p>
         </li>

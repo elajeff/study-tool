@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ImportedConversation } from "./conversation-import.ts";
 
-export type ConversationState = { artifact_id: string; external_id: string | null; revision_id: string | null; content_hash: string | null };
+type ConversationState = { artifact_id: string; external_id: string | null; revision_id: string | null; content_hash: string | null };
 export async function loadConversationState(client: SupabaseClient, sourceId: string): Promise<ConversationState[]> {
   const state: ConversationState[] = [];
   for (let offset = 0; ; offset += 500) {

@@ -8,8 +8,8 @@ export type StudyProfile = {
   hours_per_week: number;
 };
 
-export type SourceNote = { path: string; title: string; body: string; topic?: string; source_id?: string | null; source_name?: string; artifact_id?: string | null };
-export type Track = { id: string; title: string; description: string };
+type SourceNote = { path: string; title: string; body: string; topic?: string; source_id?: string | null; source_name?: string; artifact_id?: string | null };
+type Track = { id: string; title: string; description: string };
 export type Lesson = {
   id: string;
   track: string;
@@ -19,7 +19,6 @@ export type Lesson = {
   summary: string;
   sourcePath: string;
   sourceBody: string;
-  topic: string;
   sourceName: string;
   blocked: boolean;
 };
@@ -85,7 +84,7 @@ export function buildCurriculum(notes: SourceNote[], profile: StudyProfile | nul
     return {
       id: ids.get(note)!, track,
       title: note.title || titleFromPath(note.path), sourcePath: note.path, sourceBody: note.body,
-      topic: note.topic ?? note.path.replace(/\.md$/i, ""), sourceName: note.source_name ?? "Notes",
+      sourceName: note.source_name ?? "Notes",
       prerequisites, recommendations, blocked,
       summary: summary(note.body),
     };

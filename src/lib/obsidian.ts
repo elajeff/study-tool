@@ -13,7 +13,7 @@ export type VaultState = {
   note_hash: string | null;
   note_body: string | null;
 };
-export type ImportPreview = {
+type ImportPreview = {
   file: ImportFile;
   previous: VaultState | undefined;
   status: string;

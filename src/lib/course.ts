@@ -16,7 +16,7 @@ function strings(value: unknown): string[] {
   if (!Array.isArray(value)) throw new Error("Expected a list of text values.");
   return value.map(text);
 }
-export function parseCourse(input: unknown, manifest: ExportManifest): { course: Course; unassigned: string[] } {
+export function parseCourse(input: unknown, manifest: { export_id: string; items: readonly { id: string }[] }): { course: Course; unassigned: string[] } {
   const value = object(input);
   if (value.format !== "study-course/1" || value.export_id !== manifest.export_id) throw new Error("Course format or export ID does not match this saved export.");
   if (!Array.isArray(value.modules) || !value.modules.length || !Array.isArray(value.not_covered)) throw new Error("Provide modules and a not_covered list.");

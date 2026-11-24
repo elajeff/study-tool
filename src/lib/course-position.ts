@@ -17,3 +17,9 @@ export function coursePositionToResume(raw: string | undefined, courseId: string
   if (!saved.step && !steps.some(step => step.module_key === saved.module.id)) return saved;
   return next;
 }
+
+export function courseStudyHref(courseId: string, moduleId: string, stepId?: string) {
+  const query = new URLSearchParams({ id: courseId, module: moduleId });
+  if (stepId) query.set("step", stepId);
+  return `/courses/study?${query}`;
+}

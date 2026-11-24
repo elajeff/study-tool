@@ -29,8 +29,8 @@ export default function HowToUsePage() {
           <p>Upload the single JSON file from ChatGPT in <Link href="/inbox">Inbox</Link>. Study Tool saves the full roadmap and the first module&apos;s lesson plan together, then opens the first unfinished lesson. If ChatGPT only gives you a code block, use the paste option in Inbox.</p>
         </li>
         <li><h2>Study in the same chat</h2>
-          <p>Say <strong>start</strong> in the ChatGPT chat that created your course. ChatGPT explains the topic, works through an example, then gives you a fresh exercise. Solve it yourself and share your attempt in the same chat for feedback.</p>
-          <p>Check <strong>After studying</strong> in <Link href="/courses">Courses</Link> to see what you should be able to do. Click <strong>Mark done</strong> when you can do it. When <strong>Go to next lesson</strong> appears, open it and ask ChatGPT to continue at the lesson ID shown. <Link href="/dashboard">Dashboard</Link> shows your saved place.</p>
+          <p>Open a lesson from the roadmap. On the lesson page, open your course chat and say <strong>start</strong> for the first lesson. ChatGPT explains the topic, works through an example, then gives you a fresh exercise. Solve it yourself and share your attempt in the same chat for feedback.</p>
+          <p>Check <strong>After studying</strong> on the lesson page to see what you should be able to do. Click <strong>Mark done</strong> when you can do it. When <strong>Go to next lesson</strong> appears, open it and ask ChatGPT to continue at the lesson ID shown. Use <strong>Back to roadmap</strong> to see the whole course. <Link href="/dashboard">Dashboard</Link> shows your saved place.</p>
           <p>On <Link href="/dashboard">Dashboard</Link>, use <strong>Switch course</strong> to change roadmaps or <strong>Manage course</strong> to rename or delete the current one. Import another course to keep studying both.</p>
         </li>
         <li><h2>Prepare more lessons when needed</h2>

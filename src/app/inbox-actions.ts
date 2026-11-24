@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
+import { courseStudyHref } from "@/lib/course-position";
 import { parseInbox } from "@/lib/inbox";
 import { prepareInboxImport, type InboxResult } from "@/lib/inbox-import";
 
@@ -24,17 +25,15 @@ export async function importInbox(_previous: { error?: string; results?: InboxRe
   const { data, error } = await supabase.rpc("save_study_inbox", { p_blocks: prepared });
   if (error) return { error: error.code === "23505" ? "A module already has a different saved plan. Nothing from this response was saved."
     : "Nothing from this response was saved. " + error.message };
-  for (const path of ["/library", "/courses", "/dashboard"]) revalidatePath(path);
+  for (const path of ["/library", "/courses", "/courses/study", "/dashboard"]) revalidatePath(path);
   const savedResults = data as InboxResult[];
   const started = savedResults.find(result => result.kind === "course" && result.module);
   if (started || form.get("open_course") === "true") {
     const saved = started ?? savedResults.find(result => result.kind === "course" || result.kind === "module");
     if (saved && "course_id" in saved) {
-      const query = new URLSearchParams({ id: saved.course_id });
       const savedModule = prepared.find(block => block.kind === "module" && block.course_id === saved.course_id);
       const moduleKey = saved.module ?? (savedModule?.kind === "module" ? savedModule.plan.module : undefined);
-      if (moduleKey) query.set("module", moduleKey);
-      redirect(`/courses?${query}#${moduleKey ? "lesson-focus" : "course-path"}`);
+      redirect(moduleKey ? courseStudyHref(saved.course_id, moduleKey) : `/courses?id=${saved.course_id}#course-path`);
     }
   }
   const results = savedResults.map((result, index) => {

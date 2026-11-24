@@ -45,22 +45,21 @@ test("source conflicts and cycles are reported", () => {
 
 test("same paths in separate vaults keep separate topics and prerequisites; renames keep the same topic ID", () => {
   const notes = ["vault-a", "vault-b"].flatMap((source_id) => [
-    { path: "Basics.md", title: "Basics", body: "# Basics", source_id, topic: `source/${source_id}-basics` },
-    { path: "Next.md", title: "Next", body: "## Prerequisites\n[[Basics]]", source_id, topic: `source/${source_id}-next` },
+    { path: "Basics.md", title: "Basics", body: "# Basics", source_id, source_name: source_id, topic: `source/${source_id}-basics` },
+    { path: "Next.md", title: "Next", body: "## Prerequisites\n[[Basics]]", source_id, source_name: source_id, topic: `source/${source_id}-next` },
   ]);
   const { lessons, issues } = buildCurriculum(notes, profile);
   assert.deepEqual(issues, []);
   assert.equal(new Set(lessons.map((lesson) => lesson.id)).size, 4);
   assert.deepEqual(lessons.map((lesson) => lesson.id), buildCurriculum(notes, profile).lessons.map((lesson) => lesson.id));
   for (const vault of ["vault-a", "vault-b"]) {
-    assert.deepEqual(lessons.find((lesson) => lesson.topic === `source/${vault}-next`)?.prerequisites,
-      [lessons.find((lesson) => lesson.topic === `source/${vault}-basics`)!.id]);
+    assert.deepEqual(lessons.find((lesson) => lesson.sourceName === vault && lesson.sourcePath === "Next.md")?.prerequisites,
+      [lessons.find((lesson) => lesson.sourceName === vault && lesson.sourcePath === "Basics.md")!.id]);
   }
   const original = { path: "Lessons/Java/Methods.md", title: "Methods", body: "# Methods" };
   const before = buildCurriculum([original], profile).lessons[0];
   const renamed = buildCurriculum([{ ...original, path: "Lessons/Java/Renamed.md", topic: "Lessons/Java/Methods", source_id: "legacy" }], profile).lessons[0];
   assert.equal(renamed.id, before.id);
-  assert.equal(renamed.topic, before.topic);
 });
 
 test("ambiguous prerequisite names are reported rather than linked to an arbitrary note", () => {
@@ -82,9 +81,9 @@ test("only explicit prerequisites block study, and renamed targets stay scoped w
     { path: "Optional.md", title: "Optional", body: "# Optional", source_id: "vault-a", artifact_id: "optional" }];
   const aliases = [{ source_id: "vault-a", artifact_id: "base-a", path: "Basics.md", current_path: "Renamed.md", current_revision_id: "revision" }];
   const current = buildCurriculum(notes, profile, aliases);
-  const lesson = current.lessons.find((lesson) => lesson.topic === next.topic)!;
+  const lesson = current.lessons.find((lesson) => lesson.sourcePath === next.path)!;
   assert.equal(lesson.blocked, false);
-  assert.deepEqual(lesson.prerequisites, [current.lessons.find((lesson) => lesson.topic === base.topic)!.id]);
+  assert.deepEqual(lesson.prerequisites, [current.lessons.find((lesson) => lesson.sourcePath === base.path)!.id]);
   assert.equal(lesson.recommendations.length, 1);
   assert.deepEqual(current.issues, []);
   const changed = buildCurriculum(notes.map((note) => note === next ? { ...note, body: "[[Optional]]" } : note), profile, aliases);

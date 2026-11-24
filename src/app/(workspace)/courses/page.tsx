@@ -1,32 +1,33 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps, UnreadableCourseError } from "@/lib/course-queries";
 import { InboxImporter } from "@/components/InboxImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard, moduleReviewPrompt } from "@/lib/module-request";
-import { lessonStudyCard } from "@/lib/lesson-request";
 import { nextCourseLesson } from "@/lib/course";
 import { CourseReviewCard } from "@/components/CourseReviewCard";
 import { CourseModules } from "@/components/CourseModules";
-import { CourseStepAction } from "@/components/CourseStepAction";
 import { BatchModulePlanner } from "@/components/BatchModulePlanner";
 import { RememberCourse } from "@/components/RememberCourse";
-import { coursePositionToResume, savedCoursePosition } from "@/lib/course-position";
+import { coursePositionToResume, courseStudyHref } from "@/lib/course-position";
 import { CourseChatLink } from "@/components/CourseChatLink";
 import { ManageCourse } from "@/components/ManageCourse";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ id?: string; module?: string; step?: string; page?: string }> }) {
   const { supabase, user } = await requireAccount();
   const [requested, jar] = await Promise.all([searchParams, cookies()]);
-  const query = { ...requested };
+  if (requested.id && requested.module && requested.step) {
+    redirect(courseStudyHref(requested.id, requested.module, requested.step));
+  }
+
+  const query = { id: requested.id ?? jar.get(`study-course-${user.id}`)?.value, module: requested.module };
   const requestedPage = Number(requested.page ?? 1);
   const page = Number.isInteger(requestedPage) && requestedPage > 0 && requestedPage <= 10_000 ? requestedPage : 1;
   const offset = (page - 1) * 20;
   const recentCourses = supabase.from("courses").select("id,display_name,title:raw_block->>title")
     .order("created_at", { ascending: false }).order("id").range(offset, offset + 20);
-  query.id ??= jar.get(`study-course-${user.id}`)?.value;
   const requestedCourse = query.id ? loadCourse(supabase, query.id).catch(error => {
     if (!(error instanceof UnreadableCourseError)) throw error;
     return error;
@@ -49,14 +50,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   if (requested.id && !result && !courseError) notFound();
   const allSteps = query.id && result ? await loadCourseSteps(supabase, query.id) : [];
   const savedPosition = jar.get(`study-position-${user.id}`)?.value;
-  const position = result && query.id ? savedCoursePosition(savedPosition, query.id, result.course, allSteps) : null;
-  if (position && !requested.step && (!requested.module || requested.module === position.module.id)) {
-    query.module = position.module.id;
-    query.step = position.step?.row_id;
-  }
   const selected = result?.course.modules.find(item => item.id === query.module);
   const steps = allSteps.filter(step => step.module_key === selected?.id).sort((a, b) => a.position - b.position);
-  const currentStep = query.step ? steps.find(step => step.row_id === query.step) : steps.find(step => !step.completed_at) ?? steps[0];
   const next = result ? nextCourseLesson(result.course, allSteps) : null;
   const resume = result && query.id ? coursePositionToResume(savedPosition, query.id, result.course, allSteps) : null;
   const completed = allSteps.filter(step => step.completed_at).length;
@@ -65,7 +60,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const { not_covered: exclusions = [], open_questions: questions = [] } = result?.course ?? {};
 
   return <div className="course-workspace">
-    {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected ? result.course.modules.indexOf(selected) : undefined} stepId={currentStep?.row_id} />}
+    {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected && !steps.length ? result.course.modules.indexOf(selected) : undefined} />}
     <div className="page-heading"><h1>Courses</h1></div>
     {courseError && <p role="alert">{courseError}</p>}
     {courseError && query.id && <section className="panel">
@@ -75,7 +70,9 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <h2 className="course-name">{result.name}</h2>
       {resume && <p>Continue at {resume.step ? `${resume.step.id} · ${resume.module.title}` : resume.module.title}</p>}
       <div className="import-actions">
-        {resume && <Link className="button button-dark" href={{ pathname: "/courses", query: { id: query.id, module: resume.module.id, ...(resume.step ? { step: resume.step.row_id } : {}) }, hash: resume.step ? "lesson-focus" : "module-plan" }}>
+        {resume && <Link className="button button-dark" href={resume.step
+          ? courseStudyHref(query.id, resume.module.id, resume.step.row_id)
+          : { pathname: "/courses", query: { id: query.id, module: resume.module.id }, hash: "module-plan" }}>
           {resume.step ? "Continue studying" : "Prepare the next lesson plan"}
         </Link>}
         <a className="button button-light" href={result.chatUrl ?? "https://chatgpt.com/"} target="_blank" rel="noopener noreferrer">
@@ -94,7 +91,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         {unplanned > 0 && <p>{unplanned} {unplanned === 1 ? "module needs" : "modules need"} a lesson plan.</p>}
       </div>
       {unplanned > 1 && <BatchModulePlanner key={`${query.id}:${unplanned}`} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
-      <CourseModules key={query.id} courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id} nextModule={next?.module.id} selectedStep={currentStep?.row_id} nextStep={next?.step?.row_id} />
+      <CourseModules key={query.id} courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id ?? resume?.module.id} nextModule={next?.module.id} nextStep={next?.step?.row_id} />
       {!!(exclusions.length || questions.length || result.unassigned.length) && <details className="course-disclosure">
         <summary>Course coverage and open questions</summary>
         <p>See what ChatGPT left out or flagged for clarification. Read this if you want to check what the roadmap covers.</p>
@@ -122,35 +119,6 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         </div>
         {unplanned > 1 && <p><Link className="text-link" href="#batch-plans">Plan several modules at once</Link></p>}
       </>}
-    </section>}
-    {result && query.id && selected && query.step && !currentStep && <p role="status">Lesson not found in this module.</p>}
-    {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Study lesson</h2>
-      <p className="lesson-goal">{currentStep.goal}</p>
-      <div className="lesson-section">
-        <h3>Study with ChatGPT</h3>
-        <p>In the chat that created your course, say <strong>start</strong> for the first lesson or ask to continue at <strong>{currentStep.id}</strong>.</p>
-        <details className="course-disclosure"><summary>Get a saved lesson request</summary>
-          <p className="muted small">Use this if you switch chats, ChatGPT loses your place, or it skips independent practice.</p>
-          <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep)} />
-        </details>
-      </div>
-      <div className="lesson-section">
-        <h3>After studying</h3>
-        <div className="lesson-outcome">
-          <h4>What you should be able to do</h4>
-          <p>{currentStep.done_when}</p>
-        </div>
-        <p>Try the exercise yourself and get feedback in ChatGPT before marking this lesson done.</p>
-        <p className="muted small">Lesson sources · {currentStep.sources.join(", ")}</p>
-        <div className="import-actions lesson-completion">
-          <span className="lesson-state" role="status">{currentStep.completed_at ? "Done" : "Not started"}</span>
-          <CourseStepAction key={currentStep.row_id} courseId={query.id} step={currentStep} />
-          {currentStep.completed_at && next && <Link className="button button-accent" href={{
-            pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) },
-            hash: next.step ? "lesson-focus" : "module-plan",
-          }}>{next.step ? "Go to next lesson" : "Prepare the next lesson plan"}</Link>}
-        </div>
-      </div>
     </section>}
     <section className="panel" id="saved-courses"><h2>Saved courses</h2>
       {recent.length ? <ul>{recent.slice(0, 20).map(row => <li key={row.id}>

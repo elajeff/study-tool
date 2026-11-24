@@ -118,7 +118,7 @@ Ask ChatGPT for a course using your uploaded Library, then import the returned f
 
 Courses show the outline, independent proofs, source accounting, exclusions and open questions. Unassigned sources are reported rather than treated as covered. These checks validate structure and references; they do not verify explanations, lesson quality or mastery.
 
-The learning path shows numbered module and lesson cards. Its progress bar counts saved lesson plans only; modules without a plan are listed separately. A full bar does not mean the entire course is planned or mastered.
+The roadmap shows numbered module and lesson cards. **Start lesson** opens a separate page for that lesson. Use **Back to roadmap** or open **Courses** in the sidebar to return. Its progress bar counts saved lesson plans only; modules without a plan are listed separately. A full bar does not mean the entire course is planned or mastered.
 
 For modules without a saved plan, copy the module request into the ChatGPT Project containing that Library version. Import its `study-module/1` file beside the request. If ChatGPT only returns a code block, paste the response in Inbox. The form accepts that module's plan and any summaries for the same export. The app checks the course, export, module, ordered step IDs and source references. Reimports keep saved lesson IDs and progress. Use **Get a saved lesson request** if you switch chats or need to restore the lesson instructions.
 

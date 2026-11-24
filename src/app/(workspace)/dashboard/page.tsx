@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps, UnreadableCourseError } from "@/lib/course-queries";
 import { courseOverview } from "@/lib/course-overview";
-import { coursePositionToResume } from "@/lib/course-position";
+import { coursePositionToResume, courseStudyHref } from "@/lib/course-position";
 import { useWeeklyStudyHours } from "@/app/pace-actions";
 import { parseStudyPace } from "@/lib/study-pace";
 import { StudyPaceForm } from "@/components/StudyPaceForm";
@@ -55,15 +55,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const hoursPerWeek = pace ? pace.hoursPerDay * pace.daysPerWeek : profile.data?.hours_per_week ?? null;
   const overview = courseOverview(saved.course, steps, minutesPerLesson, hoursPerWeek);
   const next = coursePositionToResume(jar.get(`study-position-${user.id}`)?.value, courseId, saved.course, steps);
-  const nextQuery = new URLSearchParams({ id: courseId });
-  if (next) { nextQuery.set("module", next.module.id); if (next.step) nextQuery.set("step", next.step.row_id); }
+  const nextHref = next?.step
+    ? courseStudyHref(courseId, next.module.id, next.step.row_id)
+    : { pathname: "/courses", query: { id: courseId, module: next?.module.id }, hash: next ? "module-plan" : "course-path" };
   return <>
     <div className="page-heading"><h1>Dashboard</h1><p>Your courses and study progress.</p></div>
     <RememberCourse userId={user.id} courseId={courseId} />
     <section className="panel next-panel"><h2 className="course-name">{saved.name}</h2><p>{saved.course.goal}</p>
       <progress className="course-progress" aria-label="Course modules completed" value={overview.completedModules} max={saved.course.modules.length} />
       <p>{overview.completedModules} of {saved.course.modules.length} modules finished · {overview.completedLessons} of {overview.plannedLessons} planned lessons done</p>
-      <div className="import-actions"><Link className="button button-dark" href={`/courses?${nextQuery}#${next?.step ? "lesson-focus" : next ? "module-plan" : "course-path"}`}>
+      <div className="import-actions"><Link className="button button-dark" href={nextHref}>
         {next?.step ? "Continue studying" : next ? "Prepare the next lesson plan" : "View completed course"}
       </Link><Link className="button button-light" href={`/courses?id=${courseId}`}>Open roadmap</Link>
       <Link className="button button-light" href="/inbox">Import another course</Link></div>

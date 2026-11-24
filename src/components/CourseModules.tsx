@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import type { Course, SavedCourseStep } from "@/lib/course";
+import { courseStudyHref } from "@/lib/course-position";
 import { CourseStepAction } from "./CourseStepAction";
 
-export function CourseModules({ courseId, course, steps, selectedModule, nextModule, selectedStep, nextStep }: {
-  courseId: string; course: Course; steps: SavedCourseStep[]; selectedModule?: string; nextModule?: string; selectedStep?: string; nextStep?: string;
+export function CourseModules({ courseId, course, steps, selectedModule, nextModule, nextStep }: {
+  courseId: string; course: Course; steps: SavedCourseStep[]; selectedModule?: string; nextModule?: string; nextStep?: string;
 }) {
   const [query, setQuery] = useState("");
   const [readyOnly, setReadyOnly] = useState(false);
@@ -40,10 +41,9 @@ export function CourseModules({ courseId, course, steps, selectedModule, nextMod
           <p>Prerequisites: {module.needs.join(", ") || "None"}. Estimated steps: {module.steps_estimate}.</p>
           <details><summary>Sources and independent proof</summary><p>Sources: {module.sources.join(", ")}.</p><p>{module.proof}</p></details>
           {!!saved.length && <ol className="lesson-grid">{saved.map((lesson, lessonIndex) => {
-            const isNext = nextStep === lesson.row_id, isSelected = selectedStep === lesson.row_id;
-            return <li key={lesson.row_id} className={`lesson-tile${lesson.completed_at ? " is-done" : ""}${isNext ? " is-next" : ""}${isSelected ? " is-selected" : ""}`}>
-              <Link className="lesson-tile-link" aria-current={isSelected ? "step" : undefined}
-                href={{ pathname: "/courses", query: { id: courseId, module: module.id, step: lesson.row_id }, hash: "lesson-focus" }}>
+            const isNext = nextStep === lesson.row_id;
+            return <li key={lesson.row_id} className={`lesson-tile${lesson.completed_at ? " is-done" : ""}${isNext ? " is-next" : ""}`}>
+              <Link className="lesson-tile-link" href={courseStudyHref(courseId, module.id, lesson.row_id)}>
                 <span className="lesson-tile-top"><span className="lesson-number">{lesson.completed_at ? <Check size={16} /> : lessonIndex + 1}</span>
                   <span className="lesson-kind">{lesson.kind}</span>{isNext && <span className="path-badge">Next</span>}</span>
                 <strong>Lesson {lessonIndex + 1}</strong><p className="lesson-tile-goal">{lesson.goal}</p>

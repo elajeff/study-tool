@@ -48,7 +48,7 @@ export default async function StudyLessonPage({ searchParams }: { searchParams: 
       </a>
       <details className="course-disclosure"><summary>Get a saved lesson request</summary>
         <p className="muted small">Use this if you switch chats, ChatGPT loses your place, or it skips independent practice.</p>
-        <CourseLessonCard key={step.row_id} label="Copy lesson request" text={lessonStudyCard(id, course.course, selected, step)} />
+        <CourseLessonCard chatUrl={course.chatUrl} key={step.row_id} label="Copy lesson request" text={lessonStudyCard(id, course.course, selected, step)} />
       </details>
       <div className="lesson-section">
         <h2>After studying</h2>

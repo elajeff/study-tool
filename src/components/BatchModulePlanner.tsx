@@ -6,7 +6,7 @@ import { modulePlanningCard } from "@/lib/module-request";
 import { CourseLessonCard } from "./CourseLessonCard";
 import { InboxImporter } from "./InboxImporter";
 
-export function BatchModulePlanner({ courseId, course, plannedIds }: { courseId: string; course: Course; plannedIds: string[] }) {
+export function BatchModulePlanner({ courseId, course, plannedIds, chatUrl }: { courseId: string; course: Course; plannedIds: string[]; chatUrl: string | null }) {
   const [selected, setSelected] = useState<string[]>([]);
   const unplanned = course.modules.filter(module => !plannedIds.includes(module.id));
   const requested = course.modules.filter(module => selected.includes(module.id));
@@ -24,7 +24,7 @@ export function BatchModulePlanner({ courseId, course, plannedIds }: { courseId:
     </fieldset>
     {!!selected.length && <p><button type="button" className="text-link" onClick={() => setSelected([])}>Clear selection</button></p>}
     {requested.length >= 2 && <Fragment key={key}>
-      <CourseLessonCard label="Copy batch request" text={modulePlanningCard(courseId, course, requested)} />
+      <CourseLessonCard chatUrl={chatUrl} label="Copy batch request" text={modulePlanningCard(courseId, course, requested)} />
       <h3>Import the returned plans</h3>
       <p>Every selected plan must pass validation before the batch is saved. Existing progress stays attached to saved lessons.</p>
       <InboxImporter moduleScope={{ courseId, moduleIds: selected }} />

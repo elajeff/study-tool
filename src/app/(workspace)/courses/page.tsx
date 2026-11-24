@@ -65,11 +65,12 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const completed = allSteps.filter(step => step.completed_at).length;
   const plannedIds = [...new Set(allSteps.map(step => step.module_key))];
   const unplanned = result ? result.course.modules.length - plannedIds.length : 0;
+  const { not_covered: exclusions = [], open_questions: questions = [] } = result?.course ?? {};
   const assessmentTopic = currentStep ? `course-step:${currentStep.row_id}` : undefined;
   const assessment = assessmentTopic ? latestApproved(await loadAssessments(supabase, "approved", assessmentTopic)).get(assessmentTopic) : undefined;
-  return <>
+  return <div className="course-workspace">
     {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected ? result.course.modules.indexOf(selected) : undefined} stepId={currentStep?.row_id} />}
-    <div className="page-heading"><h1>Courses</h1><p>Saved outlines reference the exported source versions. Importing an outline does not demonstrate mastery.</p></div>
+    <div className="page-heading"><h1>Courses</h1></div>
     {courseError && <p role="alert">{courseError}</p>}
     {courseError && query.id && <section className="panel">
       <ManageCourse key={query.id} courseId={query.id} name={recent.find(row => row.id === query.id)?.display_name ?? ""} />
@@ -92,53 +93,79 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     {result && query.id && <section className="panel course-path" id="course-path"><h2>Course roadmap</h2><p>{result.course.goal}</p>
       <p>Target: {result.course.target}</p><p>Starting level: {result.course.assumed_level}</p>
       <p><Link href={`/library/exports/${result.course.export_id}`}>Saved Library snapshot</Link></p>
-      <p>Source items without a module or exclusion: {result.unassigned.length}. This is file accounting, not a check of teaching completeness.</p>
-      <div className="course-progress-heading"><p><strong>{unplanned === result.course.modules.length ? "Outline imported · Prepare a lesson plan to start" : completed === allSteps.length && !unplanned ? "Done · All planned lessons finished" : "Ready to study"}</strong></p><p>{result.course.modules.length} modules · {completed} of {allSteps.length} planned lessons done</p>
+      <div className="course-progress-heading"><p><strong>{!allSteps.length ? "Prepare a lesson plan to start" : !next ? "All lessons finished" : "Lesson progress"}</strong></p><p>{result.course.modules.length} modules · {completed} of {allSteps.length} planned lessons done</p>
         <progress className="course-progress" aria-label="Planned lessons completed" value={completed} max={allSteps.length || 1} />
-        <p>{unplanned ? `${unplanned} modules still need a lesson plan.` : "All modules have lesson plans."}</p>
-        <p>Done records study activity. Approved assessments track demonstrated knowledge separately.</p>
+        {unplanned > 0 && <p>{unplanned} {unplanned === 1 ? "module needs" : "modules need"} a lesson plan.</p>}
       </div>
-      {!next && <p>All course lessons are marked done. This does not establish mastery.</p>}
+      {unplanned > 1 && <BatchModulePlanner key={`${query.id}:${unplanned}`} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
       <CourseModules key={query.id} courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id} nextModule={next?.module.id} selectedStep={currentStep?.row_id} nextStep={next?.step?.row_id} />
-      <details><summary>Exclusions and open questions</summary>
-        <ul>{result.course.not_covered.map(item => <li key={item.id}>{item.id}: {item.why}</li>)}</ul>
-        <ul>{result.course.open_questions.map((question, index) => <li key={index}>{question}</li>)}</ul>
-        {!!result.unassigned.length && <p>Unassigned items: {result.unassigned.join(", ")}</p>}
-      </details>
+      {!!(exclusions.length || questions.length || result.unassigned.length) && <details className="course-disclosure">
+        <summary>Course coverage and open questions</summary>
+        <p>See what ChatGPT left out or flagged for clarification. Read this if you want to check what the roadmap covers.</p>
+        {!!exclusions.length && <><h3>Left out of the course</h3>
+          <ul>{exclusions.map(item => <li key={item.id}><strong>{item.id}</strong> · {item.why}</li>)}</ul></>}
+        {!!questions.length && <><h3>Questions to clarify with ChatGPT</h3>
+          <ul>{questions.map((question, index) => <li key={index}>{question}</li>)}</ul></>}
+        {!!result.unassigned.length && <><h3>Library items not accounted for</h3>
+          <p>{result.unassigned.join(", ")}</p></>}
+      </details>}
     </section>}
     {query.module && !selected && <p role="status">Module not found in this course.</p>}
-    {result && query.id && selected && <section className="panel" id="module-plan"><h2>{selected.id} · {steps.length ? "Lesson plan ready" : "Prepare lesson plan"}</h2>
-      {steps.length ? <p>Choose a lesson in the roadmap to start studying. You do not need to import this plan again.</p>
-      : <><p>Request a plan from ChatGPT, then import its JSON here. Preparing or importing a plan does not demonstrate mastery.</p>
-        <CourseLessonCard key={`${query.id}/${selected.id}`} text={modulePlanningCard(query.id, result.course, [selected])} />
+    {result && query.id && selected && <section className="panel" id="module-plan">
+      <h2>{steps.length ? "Review lesson plan" : "Prepare lesson plan"} · {selected.id}</h2>
+      {steps.length ? <>
+        <p className="muted">Ask ChatGPT to check this module for missing prerequisites, jumps in difficulty, or exercises that need a worked example. Use its feedback in the same chat.</p>
+        <details className="course-disclosure"><summary>Get the plan review request</summary>
+          <CourseLessonCard key={selected.id} label="Copy plan review request" text={moduleReviewPrompt(result.course, selected, steps)} />
+        </details>
+      </> : <>
+        <p><strong>{selected.title}</strong> is in your roadmap and needs its lesson steps. Copy the request into your course chat, then import the file it returns.</p>
+        <CourseLessonCard key={`${query.id}/${selected.id}`} label="Copy lesson plan request" text={modulePlanningCard(query.id, result.course, [selected])} />
+        <div className="lesson-section"><h3>Import this module&apos;s plan</h3>
+          <InboxImporter key={`${query.id}/${selected.id}`} moduleScope={{ courseId: query.id, moduleId: selected.id }} />
+        </div>
+        {unplanned > 1 && <p><Link className="text-link" href="#batch-plans">Plan several modules at once</Link></p>}
       </>}
-      <details open={!steps.length}><summary>Import a plan</summary>
-        <InboxImporter key={`${query.id}/${selected.id}`} openCourse moduleScope={{ courseId: query.id, moduleId: selected.id }} />
-      </details>
-      {!!steps.length && <details><summary>Review lesson plan with ChatGPT</summary>
-        <p>Check for missing prerequisites, jumps in difficulty and exercises that need a better example. The review gives feedback for the tutor to use and leaves the saved plan and progress intact.</p>
-        <CourseLessonCard key={selected.id} label="Copy plan review request" text={moduleReviewPrompt(result.course, selected, steps)} />
-      </details>}
     </section>}
     {result && query.id && selected && query.step && !currentStep && <p role="status">Lesson not found in this module.</p>}
     {result && query.id && selected && currentStep && <section className="panel" id="lesson-focus"><h2>{currentStep.id} · Study lesson</h2>
-      <h3>What you&apos;ll learn</h3><p>{currentStep.goal}</p>
-      <h3>Study with ChatGPT</h3><p>Say <strong>start</strong> in the chat that created your course, or ask to continue at {currentStep.id}. Use the saved lesson request when switching chats or asking for an assessment tied to this lesson.</p>
-      <details><summary>Get a saved lesson request</summary>
-        <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
-      </details>
-      <details><summary>Lesson details and sources</summary><p>Done when: {currentStep.done_when}</p><p>Sources: {currentStep.sources.join(", ")}.</p></details>
-      <h3>After studying</h3><p>Finish the explanation and exercises in ChatGPT, then mark this lesson done here to continue.</p>
-      <p role="status">Status: {currentStep.completed_at ? "Done" : "Not started"}. Marking a lesson done records study activity, not mastery.</p>
-      <CourseStepAction key={currentStep.row_id} courseId={query.id} step={currentStep} />
-      {currentStep.completed_at && next && <p><Link className="text-link" href={{
-        pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) },
-        hash: next.step ? "lesson-focus" : "module-plan",
-      }}>{next.step ? "Go to next lesson" : "Prepare the next lesson plan"}</Link></p>}
-      <details className="optional-assessment"><summary>{assessment ? "Assessment and review" : "Optional: assess your understanding"}</summary>
-        <p>Use this after practicing independently. If ChatGPT returns an assessment receipt, import it through <Link className="text-link" href="/inbox">Inbox</Link>, then review it in <Link className="text-link" href="/assessments">Assessments</Link>. You can continue studying without an assessment.</p>
-        <LessonControls assessment={assessment} />
-      </details>
+      <p className="lesson-goal">{currentStep.goal}</p>
+      <div className="lesson-section">
+        <h3>Study with ChatGPT</h3>
+        <p>In the chat that created your course, say <strong>start</strong> for the first lesson or ask to continue at <strong>{currentStep.id}</strong>.</p>
+        <details className="course-disclosure"><summary>Get a saved lesson request</summary>
+          <p className="muted small">Use this if you switch chats, ChatGPT loses your place, or you want to request an assessment.</p>
+          <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
+        </details>
+      </div>
+      <div className="lesson-section">
+        <h3>After studying</h3>
+        <div className="lesson-outcome">
+          <h4>What you should be able to do</h4>
+          <p>{currentStep.done_when}</p>
+        </div>
+        <p className="muted small">Lesson sources · {currentStep.sources.join(", ")}</p>
+        <div className="import-actions lesson-completion">
+          <span className="lesson-state" role="status">{currentStep.completed_at ? "Done" : "Not started"}</span>
+          <CourseStepAction key={currentStep.row_id} courseId={query.id} step={currentStep} />
+          {currentStep.completed_at && next && <Link className="button button-accent" href={{
+            pathname: "/courses", query: { id: query.id, module: next.module.id, ...(next.step ? { step: next.step.row_id } : {}) },
+            hash: next.step ? "lesson-focus" : "module-plan",
+          }}>{next.step ? "Go to next lesson" : "Prepare the next lesson plan"}</Link>}
+        </div>
+      </div>
+      <div className="lesson-section">
+        <h3>Optional assessment</h3>
+        <p className="muted small">Mark done is enough to continue. Request an assessment if you want to record what you can do independently.</p>
+        <details className="course-disclosure"><summary>{assessment ? "View assessment and request a new one" : "How to request an assessment"}</summary>
+          <ol>
+            <li>Complete the exercise and show your own work in ChatGPT.</li>
+            <li>Copy the saved lesson request above into that chat. Ask ChatGPT to assess your attempt and return an assessment file for this lesson.</li>
+            <li>Upload the file in <Link className="text-link" href="/inbox">Inbox</Link>, then review and approve it in <Link className="text-link" href="/assessments">Assessments</Link>.</li>
+          </ol>
+          {assessment && <LessonControls assessment={assessment} />}
+        </details>
+      </div>
     </section>}
     <section className="panel" id="saved-courses"><h2>Saved courses</h2>
       {recent.length ? <ul>{recent.slice(0, 20).map(row => <li key={row.id}>
@@ -151,11 +178,11 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         {recent.length > 20 && <Link href={{ pathname: "/courses", query: { id: query.id, page: page + 1 }, hash: "saved-courses" }}>Older courses</Link>}
       </div>
     </section>
-    {result && query.id && <BatchModulePlanner key={query.id} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
     {result && <CourseReviewCard key={query.id} course={result.course} />}
-    <section className="panel"><details open={!result}><summary>Import from ChatGPT</summary>
-      <p>Choose the file with your course and first lesson plan, or paste the ChatGPT response.</p><InboxImporter openCourse />
-      <p><Link href="/library">Prepare a Library snapshot</Link> · <Link href="/portfolio">Plan repository courses</Link></p>
-    </details></section>
-  </>;
+    <div className="import-actions">
+      <Link className="button button-accent" href="/inbox">Import a course from ChatGPT</Link>
+      {!result && <Link className="button button-light" href="/library">Prepare a Library snapshot</Link>}
+      <Link className="text-link" href="/portfolio">Plan repository courses</Link>
+    </div>
+  </div>;
 }

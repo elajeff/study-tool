@@ -31,6 +31,7 @@ export async function importInbox(_previous: { error?: string; results?: InboxRe
   if (started || form.get("open_course") === "true") {
     const saved = started ?? savedResults.find(result => result.kind === "course" || result.kind === "module");
     if (saved && "course_id" in saved) {
+      if (saved.kind === "course" && saved.created === false) redirect(`/courses?id=${saved.course_id}#course-path`);
       const savedModule = prepared.find(block => block.kind === "module" && block.course_id === saved.course_id);
       const moduleKey = saved.module ?? (savedModule?.kind === "module" ? savedModule.plan.module : undefined);
       redirect(moduleKey ? courseStudyHref(saved.course_id, moduleKey) : `/courses?id=${saved.course_id}#course-path`);

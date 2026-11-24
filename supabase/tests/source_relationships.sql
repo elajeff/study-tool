@@ -20,8 +20,6 @@ begin
   perform public.accept_obsidian_import(src,'[{"artifact_id":null,"expected_path":null,"expected_revision_id":null,"expected_note_hash":null,"path":"Basics.md","content":"# Basics","decision":"replace"}]');
   perform public.accept_obsidian_import('90000000-0000-4000-8000-000000000002','[{"artifact_id":null,"expected_path":null,"expected_revision_id":null,"expected_note_hash":null,"path":"Basics.md","content":"# Other vault","decision":"replace"}]');
   select artifact_id,revision_id into file_id,original_revision from public.vault_import_state(src,array['Basics.md']);
-  insert into public.assessment_receipts(user_id,fingerprint,topic,date,level,task,evidence,independent,hints,status,reviewed_at)
-    values(auth.uid(),'connections-approved','source/'||file_id,'2026-11-12',3,'Synthetic task','Synthetic evidence',true,'none','approved',now());
   select jsonb_build_object('artifact_id',artifact_id,'expected_path',path,'expected_revision_id',revision_id,
     'expected_note_hash',note_hash,'path','Renamed.md','content','# Basics','decision','keep') into entry
     from public.vault_import_state(src,array['Basics.md']);
@@ -38,7 +36,6 @@ begin
   assert (select content='# Basics' from public.source_revisions where id=original_revision);
   perform public.accept_obsidian_import(src,'[{"artifact_id":null,"expected_path":null,"expected_revision_id":null,"expected_note_hash":null,"path":"Basics.md","content":"# Reused path","decision":"replace"}]');
   assert (select count(distinct artifact_id)=2 from public.source_path_aliases where source_id=src and path='Basics.md');
-  assert (select count(*)=1 from public.assessment_receipts where topic='source/'||file_id and status='approved' and level=3);
   assert not has_table_privilege(current_user,'public.source_path_aliases','INSERT,UPDATE,DELETE');
 end $$;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000042',true);
@@ -57,4 +54,4 @@ begin
   end;
 end $$;
 rollback;
-\echo 'PASS: source path history, current revisions, retained assessments, and RLS'
+\echo 'PASS: source path history, current revisions and RLS'

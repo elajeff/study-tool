@@ -7,7 +7,7 @@ import { CourseLessonCard } from "./CourseLessonCard";
 export function CourseReviewCard({ course }: { course: Course }) {
   const [request, setRequest] = useState("");
   return <section className="panel"><details><summary>Review outline with ChatGPT</summary>
-    <p>Use this request in the chat that created the outline to check scope, prerequisites and assessment setup before lessons begin.</p>
+    <p>Use this request in the chat that created the outline to check scope, prerequisites and independent exercises before lessons begin.</p>
     <label htmlFor="review-request">Original learning request (optional)</label>
     <textarea id="review-request" className="input" rows={3} value={request} onChange={event => setRequest(event.target.value)} />
     <p>Include your original request if it is unavailable in that chat. The generated course goal may differ from what you asked for.</p>

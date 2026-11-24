@@ -25,7 +25,7 @@ export default async function RemoveCollectionPage({ params }: { params: Promise
       <h1>Remove {source.name}?</h1>
       <p>This permanently removes the collection, its imported revisions and any editable notes linked to it.</p>
       {exports.length > 0 && <>
-        <p>Removing these snapshots also removes courses based on them, including their progress and lesson assessments.</p>
+        <p>Removing these snapshots also removes courses based on them, including their lesson plans and progress.</p>
         <ul>{exports.map(snapshot => <li key={snapshot.id}><Link href={`/library/exports/${snapshot.id}`}>
           {new Date(snapshot.created_at).toLocaleString("en-GB", { timeZone: "UTC" })} UTC · {snapshot.id.slice(0, 9)}
         </Link></li>)}</ul>

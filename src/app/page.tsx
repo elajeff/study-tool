@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle2, FileText, MessageSquare, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, FileText, MessageSquare } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { LandingHeader } from "@/components/LandingHeader";
 import { createClient } from "@/lib/supabase/server";
@@ -26,7 +26,6 @@ export default async function HomePage() {
             { icon: BookOpen, title: "Courses", description: "Save the course outline and first lesson plan in one import." },
             { icon: MessageSquare, title: "ChatGPT tutor", description: "Start studying in the chat that created your course." },
             { icon: FileText, title: "Study Library", description: "Organize notes, exported conversations and repository files for ChatGPT." },
-            { icon: Sparkles, title: "Assessments", description: "Only approved assessment receipts affect mastery. Reading a lesson does not count." },
           ].map(({ icon: Icon, title, description }) => <article key={title} className="feature-card"><span className="feature-icon"><Icon size={22} /></span><h3>{title}</h3><p>{description}</p></article>)}
         </div>
       </section>

@@ -1,13 +1,13 @@
 # Architecture
 
-Study Tool is a Next.js application backed by Supabase. Each account owns its imported sources, editable notes, Library snapshots, courses and assessment receipts. Supabase Auth handles sign-in; row-level security limits database access to the owning account. Importing, organizing and planning require no AI API or local instruction model.
+Study Tool is a Next.js application backed by Supabase. Each account owns its imported sources, editable notes, Library snapshots and courses. Supabase Auth handles sign-in; row-level security limits database access to the owning account. Importing, organizing and planning require no AI API or local instruction model.
 
 ## Data
 
 - `study_profiles` stores learning goals and starting knowledge.
 - `notes` stores editable Markdown, display paths, and optional source/artifact links. `imported_revision_id` records the last source revision reviewed by the import workflow.
-- `lesson_progress` stores legacy v0.1 self-ratings. It is retained during the upgrade but no longer determines mastery.
-- `assessment_receipts` stores pending, approved, and rejected evidence. The current score for a topic comes from its most recent approved receipt.
+- `lesson_progress` retains legacy v0.1 self-ratings. Current course completion is stored on `course_steps.completed_at`.
+- `assessment_receipts` retains legacy records. Migration 028 disables imports and authenticated writes for new or revised receipts. The app no longer reads the table for learning progress.
 
 The curriculum is computed from editable notes. Existing topic keys are retained in the artifact's read-only `legacy_topic`; new imported topics use `source/<artifact UUID>` and manual notes use `note/<note UUID>`. Lesson routes derive from these stable keys, so content updates and reconciled renames do not reset approved progress. Prerequisites and wikilinks resolve within one vault. Ambiguous names require a full path; unresolved prerequisites are reported and are not recommended as ready.
 
@@ -15,7 +15,7 @@ The curriculum is computed from editable notes. Existing topic keys are retained
 
 Sources and artifacts also have short reading references, such as `R1/F001`. Migration 007 assigns them to existing records and new imports. They stay with the same record through content updates and confirmed renames; the UUIDs remain the database identities. Each owner's source numbering is separate.
 
-Conversation imports use the provider's conversation ID within a selected source. Migration 008 accepts prepared transcripts and UTF-8 message offsets in one transaction. The RPC checks ownership, provider, message boundaries and expected saved revisions before publishing. Each accepted import keeps its metadata even when unchanged text reuses an existing revision. ChatGPT sources use `C` references, Claude sources use `K`, and conversations use `T` references. Saved conversations do not create editable notes or assessment evidence.
+Conversation imports use the provider's conversation ID within a selected source. Migration 008 accepts prepared transcripts and UTF-8 message offsets in one transaction. The RPC checks ownership, provider, message boundaries and expected saved revisions before publishing. Each accepted import keeps its metadata even when unchanged text reuses an existing revision. ChatGPT sources use `C` references, Claude sources use `K`, and conversations use `T` references. Saved conversations do not create editable notes.
 
 The Obsidian importer publishes source records and editable notes together. Repository and conversation imports save source text without creating notes. Conversation readers reconstruct the selected ChatGPT branch or Claude messages, preserve code and mathematics, and report omitted content. Reading pages break before user turns; they do not replace the saved transcript.
 
@@ -36,7 +36,7 @@ The function locks the source while publishing, so imports into the same source 
 
 Migration `003_source_identities.sql` creates one `legacy_notes` source per account with notes. Each artifact reuses its note UUID and keeps its current path and text. These are migration-time snapshots, not recovered originals or a history of earlier edits. Later edits in the current note editor do not update the snapshots.
 
-Migration `004` links these artifacts to editable notes without changing their text or approved receipts. Notes added between migrations receive additional labelled snapshots. Every legacy import baseline starts unconfirmed: the migration snapshot is never assumed to be the current editable text or the original vault file. Differing incoming text requires a choice before the first acceptance. Raw source-only records are not included in the curriculum, and matching paths in another vault never inherit existing assessments.
+Migration `004` links these artifacts to editable notes without changing their text. Notes added between migrations receive additional labelled snapshots. Every legacy import baseline starts unconfirmed: the migration snapshot is never assumed to be the current editable text or the original vault file. Differing incoming text requires a choice before the first acceptance. Raw source-only records are not included in the curriculum.
 
 ## Obsidian import and reimport
 
@@ -44,9 +44,9 @@ Migration `004` links these artifacts to editable notes without changing their t
 
 ZIP entries are read in decompressed chunks, with at most 500,000 bytes retained per file. Oversized entries are paused and skipped before the full text is accumulated; declared sizes are not trusted. JSZip may finish processing its current compressed chunk after pausing.
 
-`accept_obsidian_import` locks the owned vault and affected notes, then checks the source revision, previous path, and current editable text hash against the preview. Any mismatch rejects the whole batch. It calls the internal publisher and applies each keep/replace decision in the same transaction. Keeping local text still records the incoming raw revision. Deleting an editable note retains the artifact and its assessment alias; restoration requires a preview decision.
+`accept_obsidian_import` locks the owned vault and affected notes, then checks the source revision, previous path, and current editable text hash against the preview. Any mismatch rejects the whole batch. It calls the internal publisher and applies each keep/replace decision in the same transaction. Keeping local text still records the incoming raw revision. Deleting an editable note retains the source artifact and its stable topic key; restoration requires a preview decision.
 
-Clients can edit note bodies but cannot directly change source links, import baselines, or assessment aliases. The editor also checks its last-seen timestamp before saving and retains typed text if a concurrent save/import made it stale. Imports never change assessment approval or score calculations, and nothing is written back to Obsidian.
+Clients can edit note bodies but cannot directly change source links, import baselines, or stable topic keys. The editor also checks its last-seen timestamp before saving and retains typed text if a concurrent save/import made it stale. Imports do not write back to Obsidian.
 
 ### Database checks
 
@@ -54,7 +54,7 @@ CI starts a disposable Supabase database, applies the schema and numbered migrat
 
 ## Explicit connections and provenance
 
-`noteRelationships` is shared by wikilinks, curriculum prerequisites/recommendations, and the note connection list. It classifies named prerequisite/background sections, ignores fenced/inline code and attachment embeds, and returns the target, kind, heading, and one-based source line. Ordinary links never become prerequisites. No inferred relationships or assessment evidence are generated.
+`noteRelationships` is shared by wikilinks, curriculum prerequisites/recommendations, and the note connection list. It classifies named prerequisite/background sections, ignores fenced/inline code and attachment embeds, and returns the target, kind, heading, and one-based source line. Ordinary links never become prerequisites. The app uses explicit links.
 
 Relationships are calculated from the selected text, not cached in another table. Saved text is identified by source, artifact, and immutable revision UUIDs. Citations open that revision and its original import path at the recorded line. Current editable text is labelled separately if it differs; legacy collection snapshots are not presented as recovered originals. Changed imports use the artifact's current revision; historical revisions remain readable.
 
@@ -80,7 +80,7 @@ ChatGPT is asked to inspect maps and relevant source items, use general knowledg
 
 `courses` retains the returned outline and export reference. `course_modules` stores imported module plans; `course_steps` gives each lesson a persistent UUID. The Inbox parses supported response blocks, loads owned snapshots and course identities, and validates references, prerequisite order and required fields before one atomic save. A malformed block rejects the whole response. Identical reimports preserve existing identities; different saved module plans are rejected rather than replacing progress.
 
-Lesson requests carry those saved identities, relevant source references and the latest approved assessment. ChatGPT teaches externally. Done/Reopen changes only `course_steps.completed_at`; continuation follows the first unfinished lesson and stops at modules without plans. The progress bar counts saved lessons, with unplanned modules reported separately. Assessment receipts begin pending and affect mastery only after owner review.
+Lesson requests carry the saved identity, source references, and the completion condition. The export and saved lesson request use the same tutoring instructions. Exercises and feedback stay in the tutoring chat. Done/Reopen updates `course_steps.completed_at`. Continuation follows the first unfinished lesson and stops at modules without plans.
 
 ## Tutor handoff
 

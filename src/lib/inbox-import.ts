@@ -2,18 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { InboxBlock } from "./inbox.ts";
 import { parseCourse, validateModule, validateModuleSteps, type Course, type ModulePlan, type ModuleStep } from "./course.ts";
 import { validateDigest, type DigestBlock } from "./library-digest.ts";
-import { validateEvidence, evidenceFingerprint, type Evidence } from "./assessments.ts";
 import { loadExportManifest } from "./export-queries.ts";
 import type { ExportManifest } from "./library-pack.ts";
 
-type EvidenceImport = { kind: "evidence"; receipt: Evidence; fingerprint: string };
 export type InboxImport = { kind: "course"; course: Course; first_steps?: ModuleStep[] } | { kind: "module"; course_id: string; plan: ModulePlan }
-  | { kind: "digest"; export_id: string; items: DigestBlock["items"] }
-  | EvidenceImport;
+  | { kind: "digest"; export_id: string; items: DigestBlock["items"] };
 export type InboxResult = { kind: "course" | "module"; id: string; course_id: string; created?: boolean; module?: string }
-  | { kind: "digest"; export_id: string; new_items: number } | { kind: "evidence"; id: string; created: boolean };
+  | { kind: "digest"; export_id: string; new_items: number };
 
-export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBlock[], legacyTopics: Set<string> = new Set()): Promise<InboxImport[]> {
+export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBlock[]): Promise<InboxImport[]> {
   const manifests = new Map<string, ExportManifest>(), courses = new Map<string, Course>();
   async function manifest(id: unknown) {
     if (typeof id !== "string" || !/^X[a-f0-9]{64}$/.test(id)) throw new Error("Use the export_id supplied in the Library instructions.");
@@ -51,27 +48,7 @@ export async function prepareInboxImport(client: SupabaseClient, blocks: InboxBl
       const snapshot = await manifest(course.export_id);
       try { prepared.push({ kind: "module", course_id: id, plan: validateModule(value, id, course, moduleId, snapshot) }); }
       catch (error) { throw new Error(`${moduleId || "Module plan"}: ${error instanceof Error ? error.message : "Invalid module plan."}`); }
-    } else {
-      prepared.push(evidenceImport(validateEvidence(value)));
     }
   }
-  const receipts = prepared.flatMap(block => block.kind === "evidence" ? [block.receipt] : []);
-  await checkAssessmentTopics(client, receipts, legacyTopics);
   return prepared;
-}
-
-export function evidenceImport(receipt: Evidence): EvidenceImport {
-  return { kind: "evidence", receipt, fingerprint: evidenceFingerprint(receipt) };
-}
-
-export async function checkAssessmentTopics(client: SupabaseClient, receipts: Evidence[], legacyTopics: Set<string>) {
-  const stepIds = [...new Set(receipts.flatMap(receipt => receipt.step ? [receipt.step] : []))];
-  const steps = new Set<string>();
-  if (stepIds.length) {
-    const { data, error } = await client.from("course_steps").select("id").in("id", stepIds);
-    if (error) throw new Error("Could not load assessment steps.");
-    data.forEach(step => steps.add(step.id));
-  }
-  if (receipts.some(receipt => receipt.step ? !steps.has(receipt.step) : !legacyTopics.has(receipt.topic)))
-    throw new Error("Assessment topic or saved step is not available in this account.");
 }

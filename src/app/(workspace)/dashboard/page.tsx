@@ -3,9 +3,6 @@ import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
 import { loadCourse, loadCourseSteps, UnreadableCourseError } from "@/lib/course-queries";
 import { courseOverview } from "@/lib/course-overview";
-import { loadAssessments } from "@/lib/assessment-queries";
-import { latestApproved, type Assessment } from "@/lib/progress";
-import { ProgressExport } from "@/components/ProgressExport";
 import { coursePositionToResume } from "@/lib/course-position";
 import { useWeeklyStudyHours } from "@/app/pace-actions";
 import { parseStudyPace } from "@/lib/study-pace";
@@ -58,19 +55,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const hoursPerWeek = pace ? pace.hoursPerDay * pace.daysPerWeek : profile.data?.hours_per_week ?? null;
   const overview = courseOverview(saved.course, steps, minutesPerLesson, hoursPerWeek);
   const next = coursePositionToResume(jar.get(`study-position-${user.id}`)?.value, courseId, saved.course, steps);
-  const assessments = new Map<string, Assessment>();
-  const topics = steps.map(step => `course-step:${step.row_id}`);
-  // Keep filter URLs short and limit concurrent requests for large courses.
-  for (let start = 0; start < topics.length; start += 400) {
-    const batches = [];
-    for (let offset = start; offset < Math.min(start + 400, topics.length); offset += 100) {
-      batches.push(loadAssessments(supabase, "approved", topics.slice(offset, offset + 100)));
-    }
-    for (const records of await Promise.all(batches)) {
-      for (const [topic, receipt] of latestApproved(records)) assessments.set(topic, receipt);
-    }
-  }
-  const assessed = steps.filter(step => assessments.has(`course-step:${step.row_id}`)).length;
   const nextQuery = new URLSearchParams({ id: courseId });
   if (next) { nextQuery.set("module", next.module.id); if (next.step) nextQuery.set("step", next.step.row_id); }
   return <>
@@ -89,27 +73,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     </section>
     <div className="stat-grid course-dashboard-stats">
       <div className="stat"><span>Lessons marked done</span><strong>{overview.completedLessons}</strong></div>
-      <div className="stat"><span>Lessons with approved assessments</span><strong>{assessed}</strong></div>
+      <div className="stat"><span>Planned lessons remaining</span><strong>{overview.plannedLessons - overview.completedLessons}</strong></div>
       <div className="stat"><span>Modules needing lesson plans</span><strong>{overview.unplannedModules}</strong></div>
     </div>
-    <div className="dashboard-grid">
-      <section className="panel"><h2>Estimated time remaining</h2>
-        <p><strong>{Math.ceil(overview.remainingHours * 10) / 10} hours</strong>{overview.calendarDays !== null ? ` · about ${overview.calendarDays} calendar days at ${hoursPerWeek} hours/week` : " · Set weekly hours to estimate days."}</p>
-        <p>Based on {overview.remainingLessons} remaining lessons at {minutesPerLesson} minutes each. Unplanned modules use the outline&apos;s lesson-count estimates.</p>
-        {pace && <p>About {Math.ceil(overview.remainingHours / pace.hoursPerDay)} study days at {pace.hoursPerDay} hours per day, {pace.daysPerWeek} days per week.</p>}
-        <StudyPaceForm pace={pace ?? { hoursPerDay: (profile.data?.hours_per_week ?? 5) / 5, daysPerWeek: 5, minutesPerLesson }} />
-        {pace ? <form action={useWeeklyStudyHours}>
-          <button className="button button-light">Use weekly hours from Settings</button>
-        </form> : <p><Link className="text-link" href="/settings">Change weekly study hours</Link></p>}
-        <p className="muted small">A planning estimate, not measured study time. Days assume your weekly hours are spread evenly. Practice, reviews and difficult lessons can take longer.</p>
-      </section>
-      <section className="panel"><h2>Learning records</h2>
-        <p>Marking lessons done records activity. Approved assessments record demonstrated knowledge separately.</p>
-        {!!steps.length && <ProgressExport rows={steps.map(step => {
-          const record = assessments.get(`course-step:${step.row_id}`);
-          return { title: step.goal, path: `course-step:${step.row_id}`, level: record?.level ?? null, date: record?.date ?? null };
-        })} />}
-      </section>
-    </div>
+    <section className="panel"><h2>Estimated time remaining</h2>
+      <p><strong>{Math.ceil(overview.remainingHours * 10) / 10} hours</strong>{overview.calendarDays !== null ? ` · about ${overview.calendarDays} calendar days at ${hoursPerWeek} hours/week` : " · Set weekly hours to estimate days."}</p>
+      <p>Based on {overview.remainingLessons} remaining lessons at {minutesPerLesson} minutes each. Unplanned modules use the outline&apos;s lesson-count estimates.</p>
+      {pace && <p>About {Math.ceil(overview.remainingHours / pace.hoursPerDay)} study days at {pace.hoursPerDay} hours per day, {pace.daysPerWeek} days per week.</p>}
+      <StudyPaceForm pace={pace ?? { hoursPerDay: (profile.data?.hours_per_week ?? 5) / 5, daysPerWeek: 5, minutesPerLesson }} />
+      {pace ? <form action={useWeeklyStudyHours}>
+        <button className="button button-light">Use weekly hours from Settings</button>
+      </form> : <p><Link className="text-link" href="/settings">Change weekly study hours</Link></p>}
+      <p className="muted small">A planning estimate, not measured study time. Days assume your weekly hours are spread evenly. Practice, reviews and difficult lessons can take longer.</p>
+    </section>
   </>;
 }

@@ -12,7 +12,7 @@ export function LibrarySnapshotForm({ sources }: { sources: LibrarySource[] }) {
       </label>)}
       <p><label><input type="checkbox" name="learning" value="include" /> Include learning history</label></p>
     </fieldset>
-    <p>Adds saved course titles and reviewed assessment summaries from this account. Leave unchecked to export only the selected sources.</p>
+    <p>Adds recent course titles from this account. Leave unchecked to export only the selected sources.</p>
     <p>Repositories with import history use the latest saved batch. Open a collection below to exclude individual items before saving.</p>
     {state?.error && <p role="alert">{state.error}</p>}
     {pending && <p role="status">Preparing and saving your selected sources. This may take a while for large collections.</p>}

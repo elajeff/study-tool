@@ -1,6 +1,6 @@
-export type InboxKind = "course" | "course-start" | "module" | "digest" | "evidence";
+export type InboxKind = "course" | "course-start" | "module" | "digest";
 export type InboxBlock = { kind: InboxKind; value: Record<string, unknown> };
-const formats = new Map<string, InboxKind>([["study-course/1", "course"], ["study-course-start/1", "course-start"], ["study-module/1", "module"], ["study-digest/1", "digest"], ["study-evidence/1", "evidence"]]);
+const formats = new Map<string, InboxKind>([["study-course/1", "course"], ["study-course-start/1", "course-start"], ["study-module/1", "module"], ["study-digest/1", "digest"]]);
 
 // Remove trailing commas only outside strings; code examples and quoted punctuation stay intact.
 function parseJson(raw: string): unknown {
@@ -34,6 +34,7 @@ export function parseInbox(raw: string, expected?: ModuleImportScope): { blocks:
     if (blocks.length > 20) throw new Error("Import at most 20 Study Tool blocks at once.");
   }
   function add(body: string, label = "") {
+    if (label === "study-evidence") { ignored++; return; }
     const explicit = label.startsWith("study-");
     let value: unknown;
     try { value = parseJson(body); }
@@ -48,8 +49,8 @@ export function parseInbox(raw: string, expected?: ModuleImportScope): { blocks:
       ignored++; return;
     }
     const record = value as Record<string, unknown>;
-    const kind = typeof record.format === "string" ? formats.get(record.format)
-      : label === "study-evidence" || (record.topic !== undefined && record.level !== undefined && record.evidence !== undefined) ? "evidence" : undefined;
+    if (record.format === "study-evidence/1") { ignored++; return; }
+    const kind = typeof record.format === "string" ? formats.get(record.format) : undefined;
     if (!kind) {
       if (explicit || (typeof record.format === "string" && record.format.startsWith("study-")))
         throw new Error("Unsupported or missing Study Tool format. Nothing was saved.");
@@ -77,7 +78,7 @@ export function parseInbox(raw: string, expected?: ModuleImportScope): { blocks:
     if (fence && (fence.label.startsWith("study-") || /"format"\s*:\s*"study-/.test(fence.lines.join("\n"))))
       throw new Error("A Study Tool fence is not closed. Nothing was saved.");
   }
-  if (!blocks.length) throw new Error("No supported blocks found. Paste course, module, digest or assessment JSON from Study Tool instructions.");
+  if (!blocks.length) throw new Error("No supported blocks found. Use course, lesson plan or source summary JSON from Study Tool instructions.");
   if (batch) {
     const seen = new Set<string>();
     for (const block of blocks) {

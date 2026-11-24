@@ -80,20 +80,30 @@ test("mixed imports reuse existing validators and one exact saved manifest; no w
  await assert.rejects(prepareInboxImport(client, [{ kind: "digest", value: { ...digest, items: [{ id: "V1/N999", summary: "Unknown" }] } }]), /IDs/);
 });
 
-test("module and evidence preparation requires owned saved identities and rejects a missing snapshot", async () => {
- const courseId = "00000000-0000-4000-8000-000000000001", stepId = "00000000-0000-4000-8000-000000000002";
+test("module preparation requires owned saved identities and rejects a missing snapshot", async () => {
+ const courseId = "00000000-0000-4000-8000-000000000001";
  const plan = { format: "study-module/1", course_id: courseId, export_id: exportId, module: "M01", steps: [{ id: "M01.S1", kind: "exercise", goal: "Sow seeds", sources: ["general"], done_when: "Explain without hints" }] };
- const receipt = { topic: `course-step:${stepId}`, step: stepId, date: "2026-11-17", level: 2, task: "Explain seeds", evidence: "Explained a new example with guidance.", independent: false, hints: "major", artifact: "", next_step: "Try alone" };
  let available = true;
  const client = createClient("http://example.test", "fixture", { auth: { persistSession: false }, global: { fetch: async (input, init) => {
   assert.equal(init?.method, "GET");
   const path = new URL(String(input)).pathname;
-  return Response.json(path.endsWith("course_steps") ? available ? [{ id: stepId }] : [] : path.endsWith("courses") ? { raw_block: course, export_id: exportId }
+  return Response.json(path.endsWith("courses") ? { raw_block: course, export_id: exportId }
    : available ? { manifest: { format: "study-export/3", export_id: exportId, sources: [], maps: [], items: [{ id: "V1/N001" }] } } : null);
  } } });
- const prepared = await prepareInboxImport(client, [{ kind: "module", value: plan }, { kind: "evidence", value: receipt }]);
- assert.deepEqual(prepared.map(item => item.kind), ["module", "evidence"]);
+ const prepared = await prepareInboxImport(client, [{ kind: "module", value: plan }]);
+ assert.deepEqual(prepared.map(item => item.kind), ["module"]);
  available = false;
  await assert.rejects(prepareInboxImport(client, [{ kind: "course", value: course }]), /snapshot not found/);
- await assert.rejects(prepareInboxImport(client, [{ kind: "evidence", value: receipt }]), /not available/);
+});
+
+test("an old receipt cannot block a valid course response", () => {
+ const reply = [
+  '~~~study-course', JSON.stringify(course), '~~~',
+  '~~~study-evidence', '{"level":2}', '~~~',
+  '~~~json', '{"format":"study-evidence/1"}', '~~~',
+ ].join("\n");
+ const result = parseInbox(reply);
+ assert.deepEqual(result.blocks, [{ kind: "course", value: course }]);
+ assert.equal(result.ignored, 2);
+ assert.throws(() => parseInbox('{"format":"study-evidence/1"}'), /No supported blocks/);
 });

@@ -20,7 +20,7 @@ export function ManageCourse({ courseId, name, fromDashboard }: { courseId: stri
       <form className="stack" action={remove}>
         <input type="hidden" name="course" value={courseId} />
         {fromDashboard && <input type="hidden" name="from_dashboard" value="yes" />}
-        <p>This permanently deletes this course, its lesson plans, progress and lesson assessments. Your Library and ChatGPT conversation stay available.</p>
+        <p>This permanently deletes this course, its lesson plans and progress. Your Library and ChatGPT conversation stay available.</p>
         <label><input type="checkbox" name="confirm" value="yes" required /> I want to delete this course</label>
         <button className="button button-danger" disabled={renaming || removing}>{removing ? "Deleting…" : "Delete course"}</button>
         {deleteMessage && <p role="alert">{deleteMessage}</p>}

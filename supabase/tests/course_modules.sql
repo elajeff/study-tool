@@ -37,23 +37,9 @@ begin
   assert exists(select 1 from public.course_steps where id=first_step);
   assert (select count(*)=5 from public.course_steps);
   assert (select completed_at is null from public.course_steps where id=first_step);
-  insert into public.assessment_receipts(user_id,fingerprint,topic,step_id,date,level,task,evidence,independent,hints)
-    values(auth.uid(),'lesson-review','course-step:'||first_step,first_step,'2026-11-17',2,'Explain a changed ratio','Explained units with guided hints.',false,'major');
-  assert (select status='pending' from public.assessment_receipts where fingerprint='lesson-review');
-  update public.assessment_receipts set status='approved',reviewed_at=now() where fingerprint='lesson-review';
-  insert into public.assessment_receipts(user_id,fingerprint,topic,step_id,date,level,task,evidence,independent,hints,status)
-    values(auth.uid(),'lesson-review','course-step:'||first_step,first_step,'2026-11-17',2,'Explain a changed ratio','Explained units with guided hints.',false,'major','pending')
-    on conflict(user_id,fingerprint) do nothing;
-  assert (select status='approved' from public.assessment_receipts where fingerprint='lesson-review');
-  begin
-    insert into public.assessment_receipts(user_id,fingerprint,topic,step_id,date,level,task,evidence,independent,hints)
-      values(auth.uid(),'mismatched-topic','M01.S1',first_step,'2026-11-17',2,'Explain','Explained a changed example.',false,'major');
-    raise exception 'Mismatched receipt topic accepted';
-  exception when check_violation then null; end;
   update public.course_steps set completed_at='2026-11-17T12:00:00Z' where id=first_step;
   perform public.save_course_module(course_id,plan);
   assert (select completed_at='2026-11-17T12:00:00Z' from public.course_steps where id=first_step);
-  assert (select step_id=first_step from public.assessment_receipts where fingerprint='lesson-review');
   update public.course_steps set completed_at=null where id=first_step;
   assert (select completed_at is null from public.course_steps where id=first_step);
   begin
@@ -87,11 +73,6 @@ begin
   update public.course_steps set completed_at=now() where id=first_step;
   assert not found, 'Foreign progress was updated';
   begin
-    insert into public.assessment_receipts(user_id,fingerprint,topic,step_id,date,level,task,evidence,independent,hints)
-      values(auth.uid(),'foreign-step','course-step:'||first_step,first_step,'2026-11-17',2,'Explain','Explained a changed example.',false,'major');
-    raise exception 'Foreign lesson receipt accepted';
-  exception when foreign_key_violation then null; end;
-  begin
     perform public.save_course_module(course_id,plan);
     raise exception 'Foreign course accepted';
   exception when insufficient_privilege then null; end;
@@ -99,18 +80,16 @@ begin
   assert (select completed_at is null from public.course_steps where id=first_step);
 
   module_uuid := public.save_course_module(other_course, jsonb_set(plan,'{course_id}',to_jsonb(other_course)));
+  -- Seed a receipt created before assessment imports were retired.
+  reset role;
   insert into public.assessment_receipts(user_id,fingerprint,topic,step_id,date,level,task,evidence,independent,hints)
     select auth.uid(),'remove-with-course','course-step:'||id,id,'2026-11-17',2,'Explain','Explained units.',false,'major'
     from public.course_steps where module_id=module_uuid and position=1;
+  set local role authenticated;
+  assert exists(select 1 from public.assessment_receipts where fingerprint='remove-with-course');
   perform public.delete_course(other_course);
   assert (select count(*)=1 from public.courses) and (select count(*)=1 from public.library_exports);
   assert not exists(select 1 from public.course_steps where module_id=module_uuid);
   assert not exists(select 1 from public.assessment_receipts where fingerprint='remove-with-course');
-  assert exists(select 1 from public.assessment_receipts where fingerprint='lesson-review');
-end $$;
-reset role;
-delete from public.course_modules where user_id='00000000-0000-4000-8000-000000000100';
-do $$ begin
-  assert (select step_id is null and topic like 'course-step:%' from public.assessment_receipts where fingerprint='lesson-review');
 end $$;
 rollback;

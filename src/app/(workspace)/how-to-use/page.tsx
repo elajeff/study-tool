@@ -29,8 +29,8 @@ export default function HowToUsePage() {
           <p>Upload the single JSON file from ChatGPT in <Link href="/inbox">Inbox</Link>. Study Tool saves the full roadmap and the first module&apos;s lesson plan together, then opens the first unfinished lesson. If ChatGPT only gives you a code block, use the paste option in Inbox.</p>
         </li>
         <li><h2>Study in the same chat</h2>
-          <p>Say <strong>start</strong> in the ChatGPT chat that created your course. Ask for the next lesson there when ready.</p>
-          <p>Check <strong>After studying</strong> in <Link href="/courses">Courses</Link> to see what you should be able to do. Click <strong>Mark done</strong> when you&apos;ve finished, then <strong>Go to next lesson</strong>. <Link href="/dashboard">Dashboard</Link> shows your saved place.</p>
+          <p>Say <strong>start</strong> in the ChatGPT chat that created your course. ChatGPT explains the topic, works through an example, then gives you a fresh exercise. Solve it yourself and share your attempt in the same chat for feedback.</p>
+          <p>Check <strong>After studying</strong> in <Link href="/courses">Courses</Link> to see what you should be able to do. Click <strong>Mark done</strong> when you can do it. When <strong>Go to next lesson</strong> appears, open it and ask ChatGPT to continue at the lesson ID shown. <Link href="/dashboard">Dashboard</Link> shows your saved place.</p>
           <p>On <Link href="/dashboard">Dashboard</Link>, use <strong>Switch course</strong> to change roadmaps or <strong>Manage course</strong> to rename or delete the current one. Import another course to keep studying both.</p>
         </li>
         <li><h2>Prepare more lessons when needed</h2>
@@ -38,8 +38,6 @@ export default function HowToUsePage() {
           <p>When you see <strong>Prepare the next lesson plan</strong> or a module marked <strong>Needs a lesson plan</strong>, copy that module&apos;s request into your course chat. Import the file ChatGPT returns. To plan ahead, use <Link href="/courses#batch-plans">Plan several modules at once</Link> when two or more modules still need lessons.</p>
         </li>
       </ol>
-      <h2>Optional assessments</h2>
-      <p>You can finish a course using <strong>Mark done</strong> alone. An assessment records what you demonstrated. After attempting an exercise independently, open the lesson&apos;s <strong>Optional assessment</strong> section in <Link href="/courses">Courses</Link> and follow the steps to ask ChatGPT to assess your work. Import the assessment file through <Link href="/inbox">Inbox</Link> and approve it in <Link href="/assessments">Assessments</Link> if it accurately reflects your attempt.</p>
       <p>Added or changed your imports? Save and download a new <Link href="/library#library-snapshot">Library snapshot</Link> and upload its files to ChatGPT. Existing snapshots keep their original source versions.</p>
     </section>
   </>;

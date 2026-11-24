@@ -9,7 +9,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000096'
 insert into public.sources(id,user_id,kind,name) values('96000000-0000-4000-8000-000000000001',auth.uid(),'repository','Synthetic source');
 select public.accept_source_import('96000000-0000-4000-8000-000000000001','[{"path":"one.md","content":"Source text","artifact_id":null,"expected_path":null,"expected_revision_id":null}]');
 do $$
-declare manifest jsonb; outline jsonb; plan jsonb; batch jsonb; result jsonb; course_uuid uuid; step_uuid uuid; receipt jsonb; key text := 'X'||repeat('6',64);
+declare manifest jsonb; outline jsonb; plan jsonb; batch jsonb; result jsonb; course_uuid uuid; key text := 'X'||repeat('6',64);
   start_block jsonb; started_course uuid; started_step uuid;
 begin
  select jsonb_build_object('format','study-export/3','export_id',key,
@@ -29,16 +29,6 @@ begin
  plan := jsonb_build_object('format','study-module/1','course_id',course_uuid,'export_id',key,'module','M01',
   'steps',jsonb_build_array(jsonb_build_object('id','M01.S1','kind','explain','goal','Explain source','sources','["R1/F001"]'::jsonb,'done_when','Explain without help')));
  perform public.save_study_inbox(jsonb_build_array(jsonb_build_object('kind','module','course_id',course_uuid,'plan',plan)));
- select id into step_uuid from public.course_steps;
- receipt := jsonb_build_object('topic','course-step:'||step_uuid::text,'step',step_uuid,'date','2026-11-15','level',3,'task','Explain independently',
-  'evidence','A concrete independent explanation for this synthetic check.','independent',true,'hints','none','artifact','','next_step','Practice','status','approved');
- batch := jsonb_build_array(jsonb_build_object('kind','evidence','receipt',receipt,'fingerprint',repeat('a',64)));
- result := public.save_study_inbox(batch);
- assert result->0->>'created'='true';
- assert (select status='pending' from public.assessment_receipts);
- update public.assessment_receipts set status='approved',reviewed_at=now();
- result := public.save_study_inbox(batch);assert result->0->>'created'='false';
- assert (select status='approved' from public.assessment_receipts);
  begin
   perform public.save_study_inbox(jsonb_build_array(
    jsonb_build_object('kind','course','course',outline||jsonb_build_object('title','Must roll back')),
@@ -48,6 +38,11 @@ begin
  exception when unique_violation then null; end;
  assert (select count(*)=1 from public.courses);
  assert (select count(*)=1 from public.source_digests);
+ begin
+  perform public.save_study_inbox('[{"kind":"evidence"}]');
+  assert false,'Old assessment imports must be rejected';
+ exception when invalid_parameter_value then null; end;
+ assert not has_table_privilege(current_user,'public.assessment_receipts','INSERT,UPDATE');
  start_block := jsonb_build_object('kind','course','course',outline||jsonb_build_object('title','Start together'),'first_steps',plan->'steps');
  begin
   perform public.save_study_inbox(jsonb_build_array(jsonb_set(start_block,'{first_steps,0,sources}','["unknown"]')));
@@ -64,9 +59,7 @@ begin
  assert result->0->>'created'='false' and result->0->>'id'=started_course::text;
  assert (select completed_at is not null from public.course_steps where id=started_step);
  perform set_config('test.inbox_start',start_block::text,true);
- perform set_config('test.inbox_step',step_uuid::text,true);
  perform set_config('test.inbox_course',outline::text,true);
- perform set_config('test.inbox_receipt',receipt::text,true);
 end $$;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000097',true);
 do $$ begin
@@ -79,9 +72,5 @@ do $$ begin
   perform public.save_study_inbox(jsonb_build_array(jsonb_build_object('kind','course','course',current_setting('test.inbox_course')::jsonb)));
   assert false,'Foreign exports cannot be imported';
  exception when insufficient_privilege then null; end;
- begin
-  perform public.save_study_inbox(jsonb_build_array(jsonb_build_object('kind','evidence','receipt',current_setting('test.inbox_receipt')::jsonb,'fingerprint',repeat('b',64))));
-  assert false,'Foreign persistent step references must fail';
- exception when foreign_key_violation then null; end;
 end $$;
 rollback;

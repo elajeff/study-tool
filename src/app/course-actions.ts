@@ -25,7 +25,7 @@ export async function deleteCourse(_previous: string, form: FormData): Promise<s
   const jar = await cookies();
   if (jar.get(`study-course-${user.id}`)?.value === id) jar.delete(`study-course-${user.id}`);
   if (jar.get(`study-position-${user.id}`)?.value.startsWith(`${id}.`)) jar.delete(`study-position-${user.id}`);
-  for (const path of ["/courses", "/dashboard", "/assessments", "/portfolio"]) revalidatePath(path);
+  for (const path of ["/courses", "/dashboard", "/portfolio"]) revalidatePath(path);
   redirect(form.get("from_dashboard") === "yes" ? "/dashboard" : "/courses#saved-courses");
 }
 

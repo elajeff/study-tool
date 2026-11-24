@@ -39,12 +39,11 @@ export function InboxImporter({ allowPaste = false, moduleScope }: { allowPaste?
     {pending && <p role="status">Checking and saving{fileName ? ` ${fileName}` : " your response"}… Keep this page open.</p>}
     {(fileError || state?.error) && !pending && <p role="alert">{fileError || state?.error}</p>}
     {(fileError || state?.error) && !pending && <p>Correct the reported issue, then import the corrected response.</p>}
-    {state?.results && !pending && !fileError && <div role="status"><p>Response saved. Repeated outlines, summaries and assessments are kept without duplicates.</p>
+    {state?.results && !pending && !fileError && <div role="status"><p>Response saved. Repeated outlines and summaries are kept without duplicates.</p>
       {!!state.ignored && <p>{state.ignored} unrelated JSON blocks ignored.</p>}
       <ul>{state.results.map((result, index) => <li key={index}>
-        {result.kind === "course" || result.kind === "module" ? <Link href={{ pathname: "/courses", query: { id: result.course_id, ...(result.module ? { module: result.module } : {}) }, hash: result.module ? "module-plan" : undefined }}>{result.kind === "course" ? result.created ? "Course saved" : "Existing course kept" : `${result.module ?? "Module"} plan ready`}</Link>
-          : result.kind === "digest" ? <Link href={`/library/exports/${result.export_id}`}>{result.new_items} new item summaries</Link>
-            : <Link href="/assessments">{result.created ? "Assessment saved for review" : "Existing assessment kept"}</Link>}
+        {result.kind === "digest" ? <Link href={`/library/exports/${result.export_id}`}>{result.new_items} new item summaries</Link>
+          : <Link href={{ pathname: "/courses", query: { id: result.course_id, ...(result.module ? { module: result.module } : {}) }, hash: result.module ? "module-plan" : undefined }}>{result.kind === "course" ? result.created ? "Course saved" : "Existing course kept" : `${result.module ?? "Module"} plan ready`}</Link>}
       </li>)}</ul>
     </div>}
   </form>;

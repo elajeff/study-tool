@@ -104,7 +104,7 @@ textarea.input { resize: vertical; }
 .feature-section { border-top: 1px solid var(--border); padding: 32px 0 48px; }
 .feature-section > div:first-child { max-width: 640px; }
 .feature-section h2 { font-size: 24px; font-weight: 600; letter-spacing: -.6px; margin: 0 0 12px; }
-.feature-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
 .feature-card { border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 .feature-icon { color: var(--icon); }
 .feature-card h3 { font-size: 15px; font-weight: 600; margin: 14px 0 8px; }
@@ -164,7 +164,6 @@ textarea.input { resize: vertical; }
 .stat > span { display: block; font-size: 12px; color: var(--muted); }
 .stat strong { font-size: 27px; line-height: 1.2; letter-spacing: -.7px; display: block; margin-top: 9px; font-weight: 600; }
 .stat strong small { color: var(--muted); font-size: 13px; font-weight: 400; }
-.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
 .course-dashboard-stats { margin-top: 16px; }
 .module-filters { flex-wrap: wrap; align-items: center; }
 .module-filters .input { flex: 1 1 240px; }
@@ -187,7 +186,6 @@ textarea.input { resize: vertical; }
 .lesson-row:last-child { border-bottom: 0; }
 .lesson-row:hover { background: var(--hover); }
 .lesson-index { display: flex; justify-content: center; flex: 0 0 27px; text-align: center; font-size: 11px; color: var(--icon); font-variant-numeric: tabular-nums; }
-.lesson-index.done { color: var(--accent); }
 .lesson-row > div { flex: 1; min-width: 0; }
 .lesson-row strong { display: block; font-size: 13px; font-weight: 550; }
 .lesson-row small { display: block; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -218,7 +216,7 @@ textarea.input { resize: vertical; }
 .tutor-actions { display: flex; gap: 9px; margin-top: 14px; flex-wrap: wrap; }
 .tutor-panel p.hint { margin: 14px 0 0; font-size: 12px; }
 
-/* Notes and assessments */
+/* Notes */
 .vault-import { margin-bottom: 16px; }
 .profile-import { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
 .profile-repositories { max-height: 400px; overflow: auto; margin: 16px 0; }
@@ -309,13 +307,6 @@ textarea.input { resize: vertical; }
 .source-context .selected-line { background: var(--accent-soft); }
 .source-context a { display: inline-block; min-width: 4ch; margin-right: 12px; }
 .danger-panel { border-color: var(--error-border); }
-.assessment-import, .assessment-list { margin-bottom: 16px; }
-.assessment-record { padding: 18px 0; border-top: 1px solid var(--border); }
-.assessment-heading, .assessment-history { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
-.assessment-heading span, .assessment-history span:last-child { color: var(--muted); font-size: 12px; }
-.assessment-record p { margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; }
-.review-actions { display: flex; gap: 8px; margin-top: 14px; }
-.assessment-history { border-top: 1px solid var(--border); padding: 11px 0; }
 
 /* Course outline */
 .course-name, .next-panel, .course-path { overflow-wrap: anywhere; }
@@ -405,7 +396,7 @@ textarea.input { resize: vertical; }
 
 @media (max-width: 1000px) {
   .content { width: calc(100% - 42px); }
-  .dashboard-grid, .notes-grid { grid-template-columns: 1fr; }
+  .notes-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
   .vault-controls { grid-template-columns: minmax(0, 1fr); }

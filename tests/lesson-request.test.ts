@@ -2,9 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { lessonStudyCard } from "../src/lib/lesson-request.ts";
 import type { Course, SavedCourseStep } from "../src/lib/course.ts";
-import type { Assessment } from "../src/lib/progress.ts";
+import { PROJECT_INSTRUCTIONS } from "../src/lib/library-pack.ts";
 
-test("lesson requests identify one saved step, its sources and prerequisites without inventing mastery", () => {
+test("lesson requests identify one saved step, its sources and prerequisites and require practice before continuing", () => {
   const course: Course = { format: "study-course/1", export_id: "X" + "a".repeat(64), title: "Ratios", goal: "Understand ratios", target: "Solve independently", assumed_level: "Beginner",
     modules: ["M01", "M02"].map((id, index) => ({ id, title: `Module ${index + 1}`, outcome: "Explain units", proof: "Solve a changed problem", needs: index ? ["M01"] : [], sources: ["general"], steps_estimate: 5 })),
     not_covered: [], open_questions: [] };
@@ -16,14 +16,8 @@ test("lesson requests identify one saved step, its sources and prerequisites wit
   assert.equal(context.export_id, course.export_id);
   assert.deepEqual(context.current_step, step);
   assert.equal(context.prerequisites[0].id, "M01");
-  assert.equal(context.approved_assessment, null);
-  assert.ok(card.includes(`"course-step:${step.row_id}"`));
-  const assessment: Assessment = { id: "approved-record", topic: `course-step:${step.row_id}`, date: "2026-11-17", level: 2,
-    task: "Compare fresh ratios", evidence: "Explained the units with hints.", independent: false, hints: "major", artifact: "", next_step: "Try without hints",
-    status: "approved", submitted_at: "2026-11-17T12:00:00Z", reviewed_at: "2026-11-17T12:05:00Z" };
-  const assessedContext = JSON.parse(lessonStudyCard("course-id", course, course.modules[1], step, assessment).split("REFERENCE DATA (JSON):\n")[1]);
-  assert.equal(assessedContext.approved_assessment.id, assessment.id);
-  assert.equal(assessedContext.approved_assessment.level, 2);
-  assert.equal(assessedContext.approved_assessment.hints, "major");
-  assert.equal(assessedContext.approved_assessment.next_step, assessment.next_step);
+  for (const prompt of [card, PROJECT_INSTRUCTIONS]) {
+    assert.match(prompt, /concrete example.*fresh independent exercise.*Wait for their attempt.*specific feedback.*Move to the next lesson only after/s);
+    assert.doesNotMatch(prompt, /study-evidence/);
+  }
 });

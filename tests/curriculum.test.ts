@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildCurriculum } from "../src/lib/curriculum.ts";
-import { latestApproved, demonstratedLessons, type Assessment } from "../src/lib/progress.ts";
 
 const profile = { experience: "Basic Java", goals: "Build a backend project", focus: "Java", hours_per_week: 6 };
 const vault = [
@@ -44,7 +43,7 @@ test("source conflicts and cycles are reported", () => {
   assert.equal(cycle.lessons.reduce((count, lesson) => count + lesson.prerequisites.length, 0), 2);
 });
 
-test("same paths in separate vaults keep separate topics and prerequisites; renames retain approved progress", () => {
+test("same paths in separate vaults keep separate topics and prerequisites; renames keep the same topic ID", () => {
   const notes = ["vault-a", "vault-b"].flatMap((source_id) => [
     { path: "Basics.md", title: "Basics", body: "# Basics", source_id, topic: `source/${source_id}-basics` },
     { path: "Next.md", title: "Next", body: "## Prerequisites\n[[Basics]]", source_id, topic: `source/${source_id}-next` },
@@ -53,8 +52,6 @@ test("same paths in separate vaults keep separate topics and prerequisites; rena
   assert.deepEqual(issues, []);
   assert.equal(new Set(lessons.map((lesson) => lesson.id)).size, 4);
   assert.deepEqual(lessons.map((lesson) => lesson.id), buildCurriculum(notes, profile).lessons.map((lesson) => lesson.id));
-  const unrelated = latestApproved([{ id: "old", topic: "Basics", status: "approved", date: "2026-11-12", level: 3, reviewed_at: "2026-11-12" } as Assessment]);
-  assert.equal(demonstratedLessons(lessons, unrelated).size, 0);
   for (const vault of ["vault-a", "vault-b"]) {
     assert.deepEqual(lessons.find((lesson) => lesson.topic === `source/${vault}-next`)?.prerequisites,
       [lessons.find((lesson) => lesson.topic === `source/${vault}-basics`)!.id]);
@@ -64,8 +61,6 @@ test("same paths in separate vaults keep separate topics and prerequisites; rena
   const renamed = buildCurriculum([{ ...original, path: "Lessons/Java/Renamed.md", topic: "Lessons/Java/Methods", source_id: "legacy" }], profile).lessons[0];
   assert.equal(renamed.id, before.id);
   assert.equal(renamed.topic, before.topic);
-  const latest = latestApproved([{ id: "approved", topic: before.topic, status: "approved", date: "2026-11-12", level: 3, reviewed_at: "2026-11-12" } as Assessment]);
-  assert.deepEqual([...demonstratedLessons([renamed], latest)], [before.id]);
 });
 
 test("ambiguous prerequisite names are reported rather than linked to an arbitrary note", () => {

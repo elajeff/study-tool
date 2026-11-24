@@ -2,7 +2,7 @@
 
 A study app that uses your notes, code and past AI conversations as material for learning. Ask to learn a repository, work through a portfolio or study a new subject, then keep the course and your place in it here.
 
-Built with Next.js, TypeScript and Supabase. The app organizes imports into a saved Library; you upload its files to ChatGPT, which writes the course and teaches the lessons. Returned JSON files bring the outline, lesson plans and assessment records back into the app. No paid AI API or local model download is required.
+Built with Next.js, TypeScript and Supabase. The app organizes imports into a saved Library; you upload its files to ChatGPT, which writes the course and teaches the lessons. Returned JSON files bring the outline and lesson plans back into the app. No paid AI API or local model download is required.
 
 ## What it does
 
@@ -13,7 +13,7 @@ Try the [demo course](https://study-tool-cat.vercel.app/demo) without signing in
 - Packages selected material with maps and course-writing instructions for ChatGPT. Related material can supply familiar examples; subjects outside the Library are still available.
 - Imports course outlines and module plans, shows numbered lesson cards and continues at the next unfinished lesson.
 - Prepares separate repository course requests and a request to combine them into one learning journey.
-- Records Done/Reopen activity separately from reviewed assessments of independent work.
+- Tracks which lessons you finish and where to resume.
 
 ## Running it
 
@@ -26,7 +26,7 @@ You need Node.js 24+ (or Node.js 22.13+ within the Node 22 release line) and a S
    - **Existing database:** apply any missing numbered migrations in order. Skip `schema.sql` on upgrades.
    - Apply each file once. They create tables or policies that already exist if rerun.
 
-   The migrations retain existing notes, profiles, progress, and assessment receipts. Existing assessment topic keys are kept when notes are linked to source artifacts. Legacy self-ratings no longer determine mastery; approved assessment receipts do.
+   The migrations retain saved notes, profiles, courses and progress. Migration 028 disables new assessment receipts and preserves existing rows.
 4. Enable email sign-in in Supabase Authentication. Set the Site URL to `http://localhost:3000` for development and allow `http://localhost:3000/auth/confirm` as a redirect.
 5. For the email sign-in callback, use this link in the Supabase email template:
 
@@ -43,11 +43,11 @@ For deployment, configure the production site URL and redirect URL in Supabase, 
 1. Sign in and import material through **Notes**, **Repositories** or **Conversations**. Review the preview before saving.
 2. In **Library**, select the collections to include and choose **Save Library snapshot**.
 3. Download the Study Library and upload it to a ChatGPT Project. For a ZIP, extract it and upload all included Markdown files. The authoring instructions are included.
-4. Ask ChatGPT for a course and say **start** when it returns the outline and first lesson plan.
-5. Import the returned file through **Inbox** or **Courses**. Study Tool checks both parts and opens the first unfinished lesson.
-6. Mark lessons done as you study. Request later lesson plans in batches and review assessment receipts separately.
+4. Ask ChatGPT for a course. It returns the outline and first module plan together.
+5. Import the returned file through **Inbox**. Study Tool checks both parts and opens the first unfinished lesson.
+6. Say **start** in the course chat. Try each exercise, get feedback, then mark the lesson done in Study Tool. Request more lesson plans when the roadmap needs them.
 
-Reusing the same import collection preserves source identities. Existing Library snapshots keep their original revisions. [The usage guide](docs/USAGE.md) covers reimports, file limits, source summaries, portfolio requests and assessments.
+Reusing the same import collection preserves source identities. Existing Library snapshots keep their original revisions. [The usage guide](docs/USAGE.md) covers reimports, file limits, source summaries and portfolio requests.
 
 ## Tests
 
@@ -58,7 +58,7 @@ npm run lint
 npm run build
 ```
 
-The unit tests cover import parsing, source identities, Library packaging, response validation, course continuation and assessment rules. They use fixtures and simulated network responses; they do not call an AI provider or prove teaching quality. GitHub Actions runs these commands on pull requests and pushes to main.
+The unit tests cover import parsing, source identities, Library packaging, response validation, course continuation and tutoring prompts. They use fixtures and simulated network responses; they do not call an AI provider or prove teaching quality. GitHub Actions runs these commands on pull requests and pushes to main.
 
 Database ownership and transaction checks are separate SQL scripts under `supabase/tests/`. Run them against a disposable database after applying the schema and migrations; see [database checks](docs/ARCHITECTURE.md#database-checks).
 
@@ -83,7 +83,7 @@ Previewing files happens in the browser. Accepting an import saves its prepared 
 
 - ChatGPT uploads and response imports are manual. The app does not automate ChatGPT Web or receive its conversation history automatically.
 - Valid references and a complete-looking outline do not prove correct explanations or curriculum coverage. ChatGPT can miss uploaded material or make mistakes.
-- Done means studied, not mastered. Assessment receipts need owner review and are not independently graded by the app.
+- Lesson feedback stays in ChatGPT. Study Tool tracks the lessons you mark done.
 - Import and upload budgets are bounded. Large collections may need separate selections, and ChatGPT's own file allowances still apply.
 - There is no live Obsidian sync. Imported code is read as text and never executed.
 

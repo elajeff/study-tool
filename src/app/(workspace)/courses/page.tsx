@@ -8,9 +8,6 @@ import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { modulePlanningCard, moduleReviewPrompt } from "@/lib/module-request";
 import { lessonStudyCard } from "@/lib/lesson-request";
 import { nextCourseLesson } from "@/lib/course";
-import { loadAssessments } from "@/lib/assessment-queries";
-import { latestApproved } from "@/lib/progress";
-import { LessonControls } from "@/components/LessonControls";
 import { CourseReviewCard } from "@/components/CourseReviewCard";
 import { CourseModules } from "@/components/CourseModules";
 import { CourseStepAction } from "@/components/CourseStepAction";
@@ -66,8 +63,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const plannedIds = [...new Set(allSteps.map(step => step.module_key))];
   const unplanned = result ? result.course.modules.length - plannedIds.length : 0;
   const { not_covered: exclusions = [], open_questions: questions = [] } = result?.course ?? {};
-  const assessmentTopic = currentStep ? `course-step:${currentStep.row_id}` : undefined;
-  const assessment = assessmentTopic ? latestApproved(await loadAssessments(supabase, "approved", assessmentTopic)).get(assessmentTopic) : undefined;
+
   return <div className="course-workspace">
     {result && query.id && <RememberCourse userId={user.id} courseId={query.id} moduleIndex={selected ? result.course.modules.indexOf(selected) : undefined} stepId={currentStep?.row_id} />}
     <div className="page-heading"><h1>Courses</h1></div>
@@ -134,8 +130,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <h3>Study with ChatGPT</h3>
         <p>In the chat that created your course, say <strong>start</strong> for the first lesson or ask to continue at <strong>{currentStep.id}</strong>.</p>
         <details className="course-disclosure"><summary>Get a saved lesson request</summary>
-          <p className="muted small">Use this if you switch chats, ChatGPT loses your place, or you want to request an assessment.</p>
-          <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep, assessment)} />
+          <p className="muted small">Use this if you switch chats, ChatGPT loses your place, or it skips independent practice.</p>
+          <CourseLessonCard key={currentStep.row_id} label="Copy lesson request" text={lessonStudyCard(query.id, result.course, selected, currentStep)} />
         </details>
       </div>
       <div className="lesson-section">
@@ -144,6 +140,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
           <h4>What you should be able to do</h4>
           <p>{currentStep.done_when}</p>
         </div>
+        <p>Try the exercise yourself and get feedback in ChatGPT before marking this lesson done.</p>
         <p className="muted small">Lesson sources · {currentStep.sources.join(", ")}</p>
         <div className="import-actions lesson-completion">
           <span className="lesson-state" role="status">{currentStep.completed_at ? "Done" : "Not started"}</span>
@@ -153,18 +150,6 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
             hash: next.step ? "lesson-focus" : "module-plan",
           }}>{next.step ? "Go to next lesson" : "Prepare the next lesson plan"}</Link>}
         </div>
-      </div>
-      <div className="lesson-section">
-        <h3>Optional assessment</h3>
-        <p className="muted small">Mark done is enough to continue. Request an assessment if you want to record what you can do independently.</p>
-        <details className="course-disclosure"><summary>{assessment ? "View assessment and request a new one" : "How to request an assessment"}</summary>
-          <ol>
-            <li>Complete the exercise and show your own work in ChatGPT.</li>
-            <li>Copy the saved lesson request above into that chat. Ask ChatGPT to assess your attempt and return an assessment file for this lesson.</li>
-            <li>Upload the file in <Link className="text-link" href="/inbox">Inbox</Link>, then review and approve it in <Link className="text-link" href="/assessments">Assessments</Link>.</li>
-          </ol>
-          {assessment && <LessonControls assessment={assessment} />}
-        </details>
       </div>
     </section>}
     <section className="panel" id="saved-courses"><h2>Saved courses</h2>

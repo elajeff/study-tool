@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FileText, FolderGit2, Inbox, Library, MessagesSquare, Settings } from "lucide-react";
+import { BookOpen, ChartNoAxesCombined, CircleHelp, FileText, FolderGit2, Inbox, Library, MessagesSquare, Settings } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", mobileLabel: "Home", icon: ChartNoAxesCombined },
@@ -13,7 +13,6 @@ const links = [
   { href: "/repositories", label: "Repositories", mobileLabel: "Code", icon: FolderGit2 },
   { href: "/inbox", label: "Inbox", mobileLabel: "Inbox", icon: Inbox },
   { href: "/courses", label: "Courses", mobileLabel: "Courses", icon: BookOpen },
-  { href: "/assessments", label: "Assessments", mobileLabel: "Reviews", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", mobileLabel: "Settings", icon: Settings },
 ];
 

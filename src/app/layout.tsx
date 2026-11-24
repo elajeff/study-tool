@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Study Tool", template: "%s · Study Tool" },
-  description: "Import Markdown notes, organize study topics, and track progress through approved assessments.",
+  description: "Organize notes, chats and repositories, then follow a ChatGPT course and track your progress.",
   icons: { icon: "/favicon.ico" },
 };
 

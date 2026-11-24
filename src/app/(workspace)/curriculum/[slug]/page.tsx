@@ -1,21 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { NoteMarkdown } from "@/components/NoteMarkdown";
-import { ArrowLeft, BookOpen, Lightbulb } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { loadStudy } from "@/lib/study";
 import { getLesson } from "@/lib/curriculum";
-import { latestApproved } from "@/lib/progress";
-import { LessonControls } from "@/components/LessonControls";
 import { TutorHandoff } from "@/components/TutorHandoff";
-
-import { loadAssessments } from "@/lib/assessment-queries";
 
 export default async function LessonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { supabase, profile, lessons, tracks } = await loadStudy();
+  const { profile, lessons, tracks } = await loadStudy();
   const lesson = getLesson(lessons, slug);
   if (!lesson) notFound();
-  const assessment = latestApproved(await loadAssessments(supabase, "approved", lesson.topic)).get(lesson.topic);
   const track = tracks.find((item) => item.id === lesson.track);
 
   return <div className="lesson-page">
@@ -30,15 +25,10 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           <div className="panel-kicker"><BookOpen size={17} /> Source note</div>
           <div className="markdown-body"><NoteMarkdown body={lesson.sourceBody} /></div>
         </section>
-        <section className="panel lesson-section">
-          <div className="panel-kicker"><Lightbulb size={17} /> Practice</div>
-          <p>Demonstrate the skill with a new exercise before approving an assessment.</p>
-        </section>
-        <TutorHandoff lesson={lesson} topic={lesson.topic} profile={profile!}
+        <TutorHandoff lesson={lesson} profile={profile!}
           prerequisiteNames={lesson.prerequisites.map((id) => getLesson(lessons, id)?.title ?? id)} />
       </article>
       <aside className="lesson-aside">
-        <LessonControls assessment={assessment} />
         <section className="panel prerequisites"><h3>Prerequisites</h3>
           {lesson.prerequisites.length ? <ul>{lesson.prerequisites.map((id) => {
             const related = getLesson(lessons, id);

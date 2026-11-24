@@ -22,18 +22,25 @@ export type ImportPreview = {
 };
 
 export async function readMarkdownFiles(selected: File[]) {
-  // ChatBridge files are read for references only, even inside a wrapped vault.
-  const result = await readImportFiles(selected, (path) => !!cleanNotePath(path), vaultRoot);
   const chatReferences: ChatReference[] = [];
+  const result = await readImportFiles(selected, shouldImportNote, vaultRoot, async (path, readPrefix) => {
+    if (!cleanNotePath(path)) return;
+    // Only the frontmatter identifies a ChatBridge conversation.
+    let prefix: string | null;
+    try { prefix = await readPrefix(8192); }
+    catch (error) { if (error instanceof TypeError) return; throw error; }
+    const reference = prefix && chatBridgeReference(prefix);
+    if (reference) chatReferences.push({ path, ...reference });
+  });
+  if (!result.files.length && !chatReferences.length) throw new Error("No supported text files were found.");
   for (const file of result.files) {
     const reference = chatBridgeReference(file.body);
     if (reference) chatReferences.push({ path: file.path, ...reference });
   }
-  const notes = result.files.filter(file => shouldImportNote(file.path));
-  const reviewed = notes.map(file => ({ ...file, ...inspectImportText(file.body) }));
+  const reviewed = result.files.map(file => ({ ...file, ...inspectImportText(file.body) }));
   const blocked = reviewed.flatMap(file => file.blocked ? [{ path: file.path, message: file.blocked }] : []);
   const files = reviewed.filter(file => !file.blocked);
-  return { files, blocked, chatReferences, skipped: result.skipped.length + result.files.length - notes.length };
+  return { files, blocked, chatReferences, skipped: result.skipped.length };
 }
 
 export function previewImport(files: ImportFile[], state: VaultState[], bindings: Record<string, string> = {}): ImportPreview[] {

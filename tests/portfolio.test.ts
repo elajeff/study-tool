@@ -22,7 +22,8 @@ const course = (source: string): Course => ({
 test("portfolio merge keeps exact source versions and namespaces draft module IDs", () => {
   const drafts = [{ id: "draft1", course: course("R1/F001") }, { id: "draft2", course: course("R2/F001") }];
   drafts[0].course.modules.push({ ...drafts[0].course.modules[0], id: "M02", needs: ["M01"] });
-  drafts[0].course.not_covered.push({ id: "R1/F002", why: "Fixture subsystem not inspected" });
+  const omittedHere = { id: "R1/F002", why: "Fixture subsystem not inspected" };
+  drafts[0].course.not_covered.push(omittedHere, { id: "R2/F001", why: "Outside this repository draft" });
   drafts[0].course.open_questions.push("Fixture prerequisite is uncertain");
   const prompt = portfolioMergePrompt("export", repositories, drafts);
   assert.match(prompt, /study-course-start\/1/);
@@ -30,7 +31,7 @@ test("portfolio merge keeps exact source versions and namespaces draft module ID
   assert.deepEqual(reference.drafts[0].modules[1].needs, ["R1/M01"]);
   assert.deepEqual(reference.drafts[0].modules[0].sources, ["R1/F001"]);
   assert.deepEqual(reference.drafts.map((draft: { modules: { id: string }[] }) => draft.modules[0].id), ["R1/M01", "R2/M01"]);
-  assert.deepEqual(reference.drafts[0].not_covered, drafts[0].course.not_covered);
+  assert.deepEqual(reference.drafts[0].not_covered, [omittedHere]);
   assert.deepEqual(reference.drafts[0].open_questions, drafts[0].course.open_questions);
   assert.throws(() => portfolioMergePrompt("other", repositories, drafts), /same exact/);
   assert.throws(() => portfolioMergePrompt("export", repositories, [drafts[0]]), /every repository/);

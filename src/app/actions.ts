@@ -38,12 +38,17 @@ export async function updateNote(formData: FormData): Promise<{ error: string } 
   return { updatedAt: data.updated_at as string };
 }
 
-export async function removeNote(formData: FormData) {
+export async function removeNote(_previous: string | null, formData: FormData) {
   const { supabase, user } = await requireAccount();
   const id = String(formData.get("id") ?? "");
-  if (!/^[a-f\d-]{36}$/i.test(id)) throw new Error("Invalid note.");
-  const { error } = await supabase.from("notes").delete().eq("id", id).eq("user_id", user.id);
-  if (error) throw new Error("Could not remove the note.");
+  const updatedAt = String(formData.get("updated_at") ?? "");
+  if (!/^[a-f\d-]{36}$/i.test(id) || !updatedAt) return "Invalid note.";
+  if (formData.get("confirm") !== "on") return "Confirm deletion first.";
+  const { data, error } = await supabase.from("notes").delete()
+    .eq("id", id).eq("user_id", user.id).eq("updated_at", updatedAt)
+    .select("id").maybeSingle();
+  if (error) return "Could not delete this note. Try again.";
+  if (!data) return "This note changed or is no longer available. Reload before deleting.";
   revalidatePath("/notes");
   redirect("/notes");
 }

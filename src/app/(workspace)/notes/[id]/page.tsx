@@ -5,7 +5,7 @@ import { NoteMarkdown } from "@/components/NoteMarkdown";
 import { requireAccount } from "@/lib/auth";
 import { loadNotes } from "@/lib/note-queries";
 import { loadSourceAliases, loadSourceRevision } from "@/lib/source-queries";
-import { removeNote } from "@/app/actions";
+import { DeleteNoteForm } from "@/components/DeleteNoteForm";
 import { NoteEditor } from "@/components/NoteEditor";
 import { NoteConnections } from "@/components/NoteConnections";
 
@@ -19,7 +19,7 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
     loadSourceRevision(supabase, artifact?.current_revision_id ?? null)]);
   return <><Link href="/notes" className="back-link"><ArrowLeft size={16} /> Back to notes</Link><div className="page-heading"><span className="eyebrow">{note.path}</span><h1>{note.title}</h1></div>
     <div className="notes-grid"><section className="panel"><h2>Edit Markdown</h2><NoteEditor key={note.id} id={note.id} body={note.body} updatedAt={note.updated_at} /><hr className="soft-divider" /><h3>Preview</h3><div className="markdown-preview"><NoteMarkdown body={note.body} /></div></section>
-      <aside><NoteConnections body={note.body} notes={all} aliases={aliases} original={original} /><section className="panel danger-panel"><h3>Delete note</h3><p className="muted small">Deletes the editable note. Source revisions are kept; your vault is unchanged.</p><form action={removeNote}><input type="hidden" name="id" value={note.id} /><button className="button button-danger">Delete note</button></form></section></aside>
+      <aside><NoteConnections body={note.body} notes={all} aliases={aliases} original={original} /><section className="panel danger-panel"><h3>Delete note</h3><p className="muted small">Deletes the editable note. Source revisions are kept; your vault is unchanged.</p><DeleteNoteForm id={note.id} updatedAt={note.updated_at} /></section></aside>
     </div>
   </>;
 }

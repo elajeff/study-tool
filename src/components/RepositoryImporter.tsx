@@ -183,7 +183,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
     {busy && !!queue.length && <p role="status">Working on {queue[0].name}…</p>}
     {message && <p role="status" className="import-message">{message}</p>}
     {files.length > 0 && <div className="import-preview"><h3>Preview ({files.length})</h3>
-      <p>Review the selected files. Other text files start unselected. Possible credential values stay selected with a warning; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
+      <p>Review the selected files. Other text files start unselected and only fill space left in the preview. Possible credential values stay selected with a warning; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
       {skipped.length > 0 && <details><summary>Skipped files ({skipped.length})</summary><ul>{skipped.map((path, index) => <li key={index}><code>{path}</code></li>)}</ul></details>}
       {files.map((file) => {
         const row = rowsByPath.get(file.path);

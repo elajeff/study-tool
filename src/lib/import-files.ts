@@ -50,28 +50,41 @@ export async function readImportFiles(selected: File[], include: (path: string) 
   const skipped: string[] = [];
   let total = 0;
   const paths = new Set<string>();
-  async function add(raw: string, bytes: number, read: (prefixBytes?: number) => Promise<string | null>) {
+  const extraFiles: (() => Promise<void>)[] = [];
+  type ReadFile = (prefixBytes?: number) => Promise<string | null>;
+
+  async function queueFile(raw: string, bytes: number, read: ReadFile) {
     const path = cleanSourcePath(raw);
     if (!path) { skipped.push(raw); return; }
     const kind = include(path);
     if (!kind) {
       await inspectExcluded?.(path, read);
       skipped.push(raw);
-      return;
+    } else if (kind === "optional") {
+      extraFiles.push(() => add(path, bytes, read, true));
+    } else {
+      await add(path, bytes, read, false);
     }
+  }
+
+  async function add(path: string, bytes: number, read: ReadFile, optional: boolean) {
+    if (optional && (files.length >= 2000 || paths.has(path.toLowerCase()))) { skipped.push(path); return; }
     if (bytes > 500000) { skipped.push(path); return; }
     let body;
     try { body = await read(); }
     catch (error) {
       if (!(error instanceof TypeError)) throw error;
-      if (kind === "optional") { skipped.push(path); return; }
+      if (optional) { skipped.push(path); return; }
       throw new Error(`${path} is not valid UTF-8. Save it as UTF-8 and import it again.`);
     }
     if (body === null) { skipped.push(path); return; }
-    if (kind === "optional" && /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(body)) { skipped.push(path); return; }
+    if (optional && /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(body)) { skipped.push(path); return; }
     const bodyBytes = new Blob([body]).size;
+    if (total + bodyBytes > 35 * 1024 * 1024) {
+      if (optional) { skipped.push(path); return; }
+      throw new Error("The selected files exceed 35 MiB. Select fewer files.");
+    }
     total += bodyBytes;
-    if (total > 35 * 1024 * 1024) throw new Error("The selected files exceed 35 MiB. Select fewer files.");
     if (body.includes("\0")) throw new Error(`${path} contains unsupported binary text.`);
     if (bodyBytes > 500000) { skipped.push(path); return; }
     if (paths.has(path.toLowerCase())) throw new Error(`Duplicate path: ${path}. Select files from one source.`);
@@ -100,11 +113,11 @@ export async function readImportFiles(selected: File[], include: (path: string) 
           const raw = entry.unsafeOriginalName ?? entry.name;
           const path = cleanSourcePath(raw);
           if (!path || (root && !path.startsWith(`${root}/`))) { skipped.push(raw); continue; }
-          await add(root ? path.slice(root.length + 1) : path, 0, (prefixBytes) => readZipText(entry, prefixBytes));
+          await queueFile(root ? path.slice(root.length + 1) : path, 0, (prefixBytes) => readZipText(entry, prefixBytes));
         }
       } else {
         const raw = file.webkitRelativePath || file.name;
-        await add(raw, file.size, async (prefixBytes) => {
+        await queueFile(raw, file.size, async (prefixBytes) => {
           const input = prefixBytes === undefined ? file : file.slice(0, prefixBytes);
           return new TextDecoder("utf-8", { fatal: true }).decode(await input.arrayBuffer(), { stream: input.size < file.size });
         });
@@ -113,6 +126,7 @@ export async function readImportFiles(selected: File[], include: (path: string) 
       throw new Error(`${file.name}: ${error instanceof Error ? error.message : "Could not read this file."}`);
     }
   }
+  for (const extra of extraFiles) await extra();
   if (!files.length && !inspectExcluded) throw new Error("No supported text files were found.");
   return { files, skipped };
 }

@@ -47,3 +47,14 @@ test("repository preview can opt in to unfamiliar text without admitting binary 
   assert.equal(shouldImportRepositoryFile("Model.cs"), false);
   assert.equal(shouldImportRepositoryFile("Model.cs", true), "optional");
 });
+
+test("other text files cannot crowd recognized files out of a full preview", async () => {
+  const zip = new JSZip();
+  for (let i = 0; i < 2000; i++) zip.file(`extras/${i}.swift`, "struct Example {}");
+  zip.file("README.md", "Keep this file.");
+  const result = await readImportFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "repository.zip")],
+    path => shouldImportRepositoryFile(path, true));
+  assert.equal(result.files.length, 2000);
+  assert.equal(result.files[0].path, "README.md");
+  assert.deepEqual(result.skipped, ["extras/1999.swift"]);
+});

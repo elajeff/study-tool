@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireAccount } from "@/lib/auth";
+import { updateCoursePositions } from "@/lib/course-position";
 
 export async function renameCourse(_previous: string, form: FormData): Promise<string> {
   const name = String(form.get("name") ?? "").trim();
@@ -25,7 +26,13 @@ export async function deleteCourse(_previous: string, form: FormData): Promise<s
   if (error) return "Could not delete this course.";
   const jar = await cookies();
   if (jar.get(`study-course-${user.id}`)?.value === id) jar.delete(`study-course-${user.id}`);
-  if (jar.get(`study-position-${user.id}`)?.value.startsWith(`${id}.`)) jar.delete(`study-position-${user.id}`);
+  const positionKey = `study-position-${user.id}`;
+  const previous = jar.get(positionKey)?.value;
+  const positions = updateCoursePositions(previous, id);
+  if (positions !== previous) {
+    if (positions) jar.set(positionKey, positions, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+    else if (previous) jar.delete(positionKey);
+  }
   for (const path of ["/courses", "/courses/study", "/dashboard", "/portfolio"]) revalidatePath(path);
   redirect(form.get("from_dashboard") === "yes" ? "/dashboard" : "/courses#saved-courses");
 }

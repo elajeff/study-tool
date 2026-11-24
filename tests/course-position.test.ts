@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { coursePositionToResume, savedCoursePosition } from "../src/lib/course-position.ts";
+import { coursePositionToResume, savedCoursePosition, updateCoursePositions } from "../src/lib/course-position.ts";
 import type { Course, SavedCourseStep } from "../src/lib/course.ts";
 
 const course = { modules: [{ id: "M1" }, { id: "M2" }] } as Course;
@@ -25,4 +25,13 @@ test("resume prefers the saved unfinished lesson and does not reopen a finished 
   assert.equal(coursePositionToResume("course.0.first", "course", course, planned)?.step?.row_id, "step");
   planned[1].completed_at = "2026-11-20";
   assert.equal(coursePositionToResume("course.1.step", "course", course, planned), null);
+});
+
+test("switching courses and deleting one preserves the other course's position", () => {
+  const positions = updateCoursePositions("first.1.step", "second", "0.");
+  assert.equal(savedCoursePosition(positions, "first", course, steps)?.step, steps[0]);
+  assert.equal(savedCoursePosition(positions, "second", course, steps)?.module.id, "M1");
+  const remaining = updateCoursePositions(positions, "second");
+  assert.equal(savedCoursePosition(remaining, "second", course, steps), null);
+  assert.equal(savedCoursePosition(remaining, "first", course, steps)?.step, steps[0]);
 });

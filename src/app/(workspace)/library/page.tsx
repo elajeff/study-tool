@@ -62,7 +62,7 @@ export default async function LibraryPage({ searchParams }: {
           const item = entry.artifact;
           return <li key={entry.id}>{href ? <Link href={href}>{entry.id} · {entry.label}</Link>
             : <span>{entry.id} · {entry.label}</span>}
-            {item && (latest && !latest.has(item.id) ? <p className="muted small">Older import · excluded from new snapshots</p>
+            {item && (latest && !latest.items.has(item.id) ? <p className="muted small">Older import · excluded from new snapshots</p>
               : <form action={setLibraryItemExclusion}>
                 <input type="hidden" name="item" value={item.id} />
                 <input type="hidden" name="exclude" value={item.exclude_from_library ? "no" : "yes"} />

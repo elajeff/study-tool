@@ -54,8 +54,9 @@ export async function removeLibraryCollection(_previous: string, form: FormData)
   const { error } = await supabase.rpc("remove_library_source", {
     p_source_id: String(form.get("source_id") ?? ""),
     p_expected_exports: form.getAll("export_id").map(String),
+    p_expected_courses: form.getAll("course_id").map(String),
   });
-  if (error?.code === "40001") return "The snapshots changed. Reload this page and review the list again.";
+  if (error?.code === "40001") return "The snapshots or courses changed. Reload this page and review the lists again.";
   if (error) return "Could not remove this collection.";
   revalidatePath("/library");
   redirect("/library");

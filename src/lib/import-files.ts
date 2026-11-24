@@ -9,7 +9,7 @@ function cleanSourcePath(raw: string): string | null {
   return path;
 }
 
-function readZipText(entry: JSZip.JSZipObject): Promise<string | null> {
+function readZipText(entry: JSZip.JSZipObject, prefixBytes?: number): Promise<string | null> {
   // JSZip documents internalStream, but its bundled ZipObject type omits it.
   const stream = (entry as JSZip.JSZipObject & {
     internalStream(type: "uint8array"): JSZip.JSZipStreamHelper<Uint8Array>;
@@ -18,12 +18,19 @@ function readZipText(entry: JSZip.JSZipObject): Promise<string | null> {
     const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
     let bytes = 0;
     let body = "";
-    let oversized = false;
+    let stopped = false;
     stream.on("data", (chunk) => {
-      if (oversized) return;
+      if (stopped) return;
+      if (prefixBytes !== undefined && bytes + chunk.byteLength >= prefixBytes) {
+        stopped = true;
+        stream.pause();
+        try { resolve(body + decoder.decode(chunk.subarray(0, prefixBytes - bytes), { stream: true })); }
+        catch (error) { reject(error); }
+        return;
+      }
       bytes += chunk.byteLength;
       if (bytes > 500000) {
-        oversized = true;
+        stopped = true;
         stream.pause();
         resolve(null);
       } else {
@@ -37,14 +44,21 @@ function readZipText(entry: JSZip.JSZipObject): Promise<string | null> {
   });
 }
 
-export async function readImportFiles(selected: File[], include: (path: string) => boolean, findRoot?: (paths: string[], directories: string[]) => string | null) {
+export async function readImportFiles(selected: File[], include: (path: string) => boolean, findRoot?: (paths: string[], directories: string[]) => string | null,
+  inspectExcluded?: (path: string, readPrefix: (bytes: number) => Promise<string | null>) => Promise<void>) {
   const files: ImportFile[] = [];
   const skipped: string[] = [];
   let total = 0;
   const paths = new Set<string>();
-  async function add(raw: string, bytes: number, read: () => Promise<string | null>) {
+  async function add(raw: string, bytes: number, read: (prefixBytes?: number) => Promise<string | null>) {
     const path = cleanSourcePath(raw);
-    if (!path || !include(path) || bytes > 500000) { skipped.push(raw); return; }
+    if (!path) { skipped.push(raw); return; }
+    if (!include(path)) {
+      await inspectExcluded?.(path, read);
+      skipped.push(raw);
+      return;
+    }
+    if (bytes > 500000) { skipped.push(path); return; }
     let body;
     try { body = await read(); }
     catch (error) {
@@ -83,17 +97,20 @@ export async function readImportFiles(selected: File[], include: (path: string) 
           const raw = entry.unsafeOriginalName ?? entry.name;
           const path = cleanSourcePath(raw);
           if (!path || (root && !path.startsWith(`${root}/`))) { skipped.push(raw); continue; }
-          await add(root ? path.slice(root.length + 1) : path, 0, () => readZipText(entry));
+          await add(root ? path.slice(root.length + 1) : path, 0, (prefixBytes) => readZipText(entry, prefixBytes));
         }
       } else {
         const raw = file.webkitRelativePath || file.name;
-        await add(raw, file.size, async () => new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()));
+        await add(raw, file.size, async (prefixBytes) => {
+          const input = prefixBytes === undefined ? file : file.slice(0, prefixBytes);
+          return new TextDecoder("utf-8", { fatal: true }).decode(await input.arrayBuffer(), { stream: input.size < file.size });
+        });
       }
     } catch (error) {
       throw new Error(`${file.name}: ${error instanceof Error ? error.message : "Could not read this file."}`);
     }
   }
-  if (!files.length) throw new Error("No supported text files were found.");
+  if (!files.length && !inspectExcluded) throw new Error("No supported text files were found.");
   return { files, skipped };
 }
 

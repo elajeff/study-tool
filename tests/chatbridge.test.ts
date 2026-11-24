@@ -29,6 +29,16 @@ test("vault preview reports raw chat provenance while preserving notes copied el
   assert.equal(parsed.skipped, 1);
 });
 
+test("excluded chat files do not use the vault note budget", async () => {
+  const zip = new JSZip();
+  zip.file("Note.md", "A note");
+  for (let i = 0; i < 2000; i++) zip.file(`AI Chats/${i}.md`, i === 0 ? header + "x".repeat(510000) : "Raw chat");
+  const parsed = await readMarkdownFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "vault.zip")]);
+  assert.deepEqual(parsed.files.map(file => file.path), ["Note.md"]);
+  assert.deepEqual(parsed.chatReferences, [{ path: "AI Chats/0.md", provider: "chatgpt", id }]);
+  assert.equal(parsed.skipped, 2000);
+});
+
 test("reference lookup keeps providers separate and reports ambiguous saved copies without choosing one", async () => {
   const client = createClient("http://example.test", "synthetic-key", { auth: { persistSession: false }, global: {
     fetch: async input => {

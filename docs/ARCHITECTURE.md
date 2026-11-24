@@ -88,7 +88,7 @@ The browser copies context when someone opens ChatGPT Web or Codex. Neither serv
 
 ## Import boundaries
 
-Imported content is treated as data, not instructions. The Obsidian reader skips `.obsidian/`, raw chat archives and generated progress folders; conversation exports use their dedicated importer. ChatBridge references are checked against saved conversation identities to identify overlap. Raw HTML in Markdown is not executed. Imports and exported notes are scoped to the signed-in user.
+Imported content is treated as data, not instructions. The Obsidian reader skips `.obsidian/` and raw ChatBridge archives under `AI Chats/`; conversation exports use their dedicated importer. ChatBridge references are checked against saved conversation identities to identify overlap. Raw HTML in Markdown is not executed. Imports and exported notes are scoped to the signed-in user.
 
 ## Known limits
 

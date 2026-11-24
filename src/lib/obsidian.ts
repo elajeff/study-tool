@@ -1,6 +1,7 @@
 import { chatBridgeReference, type ChatReference } from "./chatbridge.ts";
 import { cleanNotePath, shouldImportNote, vaultRoot } from "./notes.ts";
 import { readImportFiles, matchImportFiles, type ImportFile } from "./import-files.ts";
+import { inspectImportText } from "./import-privacy.ts";
 
 export type Vault = { id: string; name: string; kind: "obsidian" | "legacy_notes" };
 export type VaultState = {
@@ -28,8 +29,11 @@ export async function readMarkdownFiles(selected: File[]) {
     const reference = chatBridgeReference(file.body);
     if (reference) chatReferences.push({ path: file.path, ...reference });
   }
-  const files = result.files.filter(file => shouldImportNote(file.path));
-  return { files, chatReferences, skipped: result.skipped.length + result.files.length - files.length };
+  const notes = result.files.filter(file => shouldImportNote(file.path));
+  const reviewed = notes.map(file => ({ ...file, ...inspectImportText(file.body) }));
+  const blocked = reviewed.flatMap(file => file.blocked ? [{ path: file.path, message: file.blocked }] : []);
+  const files = reviewed.filter(file => !file.blocked);
+  return { files, blocked, chatReferences, skipped: result.skipped.length + result.files.length - notes.length };
 }
 
 export function previewImport(files: ImportFile[], state: VaultState[], bindings: Record<string, string> = {}): ImportPreview[] {

@@ -2,6 +2,8 @@
 -- Fixtures and all imports are rolled back, including when an assertion fails.
 \set ON_ERROR_STOP on
 begin;
+-- Allow the fixture to create records in the format used before origin and context tracking.
+grant execute on function public.accept_source_import(uuid,jsonb) to authenticated;
 set local plpgsql.check_asserts = on;
 
 insert into auth.users(id, email) values

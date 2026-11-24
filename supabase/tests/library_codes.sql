@@ -1,6 +1,8 @@
 -- Run after migration 007 in a disposable database. All fixtures are rolled back.
 \set ON_ERROR_STOP on
 begin;
+-- Allow the fixture to create records in the format used before origin and context tracking.
+grant execute on function public.accept_source_import(uuid,jsonb) to authenticated;
 set local plpgsql.check_asserts = on;
 insert into auth.users(id,email) values
   ('00000000-0000-4000-8000-000000000071','library-a@example.test'),

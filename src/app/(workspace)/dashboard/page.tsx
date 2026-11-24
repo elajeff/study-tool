@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { requireAccount } from "@/lib/auth";
-import { loadCourse, loadCourseSteps, UnreadableCourseError } from "@/lib/course-queries";
+import { loadCourse, loadCourseProgress, UnreadableCourseError } from "@/lib/course-queries";
 import { courseOverview } from "@/lib/course-overview";
 import { coursePositionToResume, courseStudyHref } from "@/lib/course-position";
 import { useWeeklyStudyHours } from "@/app/pace-actions";
@@ -51,7 +51,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="import-actions"><Link className="button button-dark" href="/inbox">Import a course</Link><Link className="button button-light" href="/how-to-use">How to use</Link></div>
     </section>
   </>;
-  const steps = await loadCourseSteps(supabase, courseId);
+  const steps = await loadCourseProgress(supabase, courseId);
   const hoursPerWeek = pace ? pace.hoursPerDay * pace.daysPerWeek : profile.data?.hours_per_week ?? null;
   const overview = courseOverview(saved.course, steps, minutesPerLesson, hoursPerWeek);
   const next = coursePositionToResume(jar.get(`study-position-${user.id}`)?.value, courseId, saved.course, steps);

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseCourse, type SavedCourseStep } from "./course.ts";
+import { parseCourse, type CourseProgressStep, type SavedCourseStep } from "./course.ts";
 
 export class UnreadableCourseError extends Error {}
 
@@ -20,15 +20,23 @@ export async function loadCourse(client: SupabaseClient, id: string) {
   }
 }
 
-export async function loadCourseSteps(client: SupabaseClient, courseId: string): Promise<SavedCourseStep[]> {
-  const steps: SavedCourseStep[] = [];
+export function loadCourseSteps(client: SupabaseClient, courseId: string) {
+  return loadSteps<Omit<SavedCourseStep, "module_key">>(client, courseId, "row_id:id,id:key,position,kind,goal,sources,done_when,completed_at");
+}
+
+export function loadCourseProgress(client: SupabaseClient, courseId: string) {
+  return loadSteps<Omit<CourseProgressStep, "module_key">>(client, courseId, "row_id:id,position,goal,completed_at");
+}
+
+async function loadSteps<T>(client: SupabaseClient, courseId: string, columns: string) {
+  const steps: (T & { module_key: string })[] = [];
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await client.from("course_steps")
-      .select("row_id:id,id:key,position,kind,goal,sources,done_when,completed_at,module:course_modules!inner(key)")
+      .select(`${columns},module:course_modules!inner(key)`)
       .eq("module.course_id", courseId).order("id").range(offset, offset + 499)
-      .returns<(Omit<SavedCourseStep, "module_key"> & { module: { key: string } })[]>();
+      .returns<(T & { module: { key: string } })[]>();
     if (error) throw new Error("Could not load saved lesson steps.");
-    steps.push(...data.map(({ module, ...step }) => ({ ...step, module_key: module.key })));
+    steps.push(...data.map(({ module, ...step }) => ({ ...step as T, module_key: module.key })));
     if (data.length < 500) return steps;
   }
 }

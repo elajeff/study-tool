@@ -1,6 +1,6 @@
-import type { Course, SavedCourseStep } from "./course.ts";
+import type { Course, CourseProgressStep } from "./course.ts";
 
-export function courseOverview(course: Course, steps: SavedCourseStep[], minutesPerLesson: number, hoursPerWeek: number | null) {
+export function courseOverview(course: Course, steps: CourseProgressStep[], minutesPerLesson: number, hoursPerWeek: number | null) {
   let completedModules = 0, unplannedModules = 0, remainingLessons = 0;
   for (const courseModule of course.modules) {
     const planned = steps.filter(step => step.module_key === courseModule.id);

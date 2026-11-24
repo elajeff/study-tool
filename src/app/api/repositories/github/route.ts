@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const result = await downloadGitHubRepository(String(form.get("url") ?? ""), String(form.get("ref") ?? ""));
     return new Response(new Blob([result.archive.buffer]).stream(), { headers: { "Content-Type": "application/zip", "Cache-Control": "no-store",
-      "X-Repository-URL": result.url, "X-Repository-Commit": result.commit, "X-Repository-Name": result.name } });
+      "X-Repository-URL": result.url, "X-Repository-Commit": result.commit } });
   } catch (error) {
     return new Response(error instanceof Error ? error.message : "Could not download repository.", { status: 400 });
   }

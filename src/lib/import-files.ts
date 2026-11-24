@@ -44,7 +44,7 @@ function readZipText(entry: JSZip.JSZipObject, prefixBytes?: number): Promise<st
   });
 }
 
-export async function readImportFiles(selected: File[], include: (path: string) => boolean, findRoot?: (paths: string[], directories: string[]) => string | null,
+export async function readImportFiles(selected: File[], include: (path: string) => boolean | "optional", findRoot?: (paths: string[], directories: string[]) => string | null,
   inspectExcluded?: (path: string, readPrefix: (bytes: number) => Promise<string | null>) => Promise<void>) {
   const files: ImportFile[] = [];
   const skipped: string[] = [];
@@ -53,7 +53,8 @@ export async function readImportFiles(selected: File[], include: (path: string) 
   async function add(raw: string, bytes: number, read: (prefixBytes?: number) => Promise<string | null>) {
     const path = cleanSourcePath(raw);
     if (!path) { skipped.push(raw); return; }
-    if (!include(path)) {
+    const kind = include(path);
+    if (!kind) {
       await inspectExcluded?.(path, read);
       skipped.push(raw);
       return;
@@ -63,9 +64,11 @@ export async function readImportFiles(selected: File[], include: (path: string) 
     try { body = await read(); }
     catch (error) {
       if (!(error instanceof TypeError)) throw error;
+      if (kind === "optional") { skipped.push(path); return; }
       throw new Error(`${path} is not valid UTF-8. Save it as UTF-8 and import it again.`);
     }
     if (body === null) { skipped.push(path); return; }
+    if (kind === "optional" && /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(body)) { skipped.push(path); return; }
     const bodyBytes = new Blob([body]).size;
     total += bodyBytes;
     if (total > 35 * 1024 * 1024) throw new Error("The selected files exceed 35 MiB. Select fewer files.");

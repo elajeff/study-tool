@@ -7,13 +7,15 @@ export function repositoryArchiveRoot(paths: string[]): string | null {
   return root && paths.every(path => path.startsWith(`${root}/`)) ? root : null;
 }
 
-export function shouldImportRepositoryFile(path: string) {
+export function shouldImportRepositoryFile(path: string, includeOtherText = false) {
   if (/(^|\/)(\.git|node_modules|vendor|dist|build|target|out|coverage|\.next|\.venv|venv|__pycache__|\.idea)(\/|$)/i.test(path)) return false;
   const name = path.split("/").at(-1)!;
   if (/^(\.env(?:\..*)?|id_(rsa|dsa|ecdsa|ed25519)|credentials(?:\..*)?|secrets?\.(json|ya?ml|txt)|package-lock\.json|pnpm-lock\.yaml)$/i.test(name)
     || /\.(pem|key|p12|pfx|jks|keystore|min\.js|map)$/i.test(name)) return false;
-  return /\.(java|tsx?|[cm]?jsx?|py|sql|ya?ml|json|md|markdown|rst|html|css|scss|xml|properties|toml|conf|cfg|ini|gradle|sh|ps1|bat|cmd|txt|c|h|cpp|go|rs|kt|rb)$/i.test(name)
+  const supported = /\.(java|tsx?|[cm]?jsx?|py|sql|ya?ml|json|md|markdown|rst|html|css|scss|xml|properties|toml|conf|cfg|ini|gradle|sh|ps1|bat|cmd|txt|c|h|cpp|go|rs|kt|rb)$/i.test(name)
     || /^(Dockerfile|Makefile|mvnw|gradlew|\.gitignore|\.dockerignore)$/i.test(name);
+  if (supported) return true;
+  return includeOtherText && !path.split("/").some(part => part.startsWith(".")) ? "optional" as const : false;
 }
 
 export { inspectImportText as inspectRepositoryText } from "./import-privacy.ts";

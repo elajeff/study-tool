@@ -90,7 +90,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <progress className="course-progress" aria-label="Planned lessons completed" value={completed} max={allSteps.length || 1} />
         {unplanned > 0 && <p>{unplanned} {unplanned === 1 ? "module needs" : "modules need"} a lesson plan.</p>}
       </div>
-      {unplanned > 1 && <BatchModulePlanner key={`${query.id}:${unplanned}`} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
+      {unplanned > 1 && <BatchModulePlanner chatUrl={result.chatUrl} key={`${query.id}:${unplanned}`} courseId={query.id} course={result.course} plannedIds={plannedIds} />}
       <CourseModules key={query.id} courseId={query.id} course={result.course} steps={allSteps} selectedModule={selected?.id ?? resume?.module.id} nextModule={next?.module.id} nextStep={next?.step?.row_id} />
       {!!(exclusions.length || questions.length || result.unassigned.length) && <details className="course-disclosure">
         <summary>Course coverage and open questions</summary>
@@ -109,11 +109,11 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       {steps.length ? <>
         <p className="muted">Ask ChatGPT to check this module for missing prerequisites, jumps in difficulty, or exercises that need a worked example. Use its feedback in the same chat.</p>
         <details className="course-disclosure"><summary>Get the plan review request</summary>
-          <CourseLessonCard key={selected.id} label="Copy plan review request" text={moduleReviewPrompt(result.course, selected, steps)} />
+          <CourseLessonCard chatUrl={result.chatUrl} key={selected.id} label="Copy plan review request" text={moduleReviewPrompt(result.course, selected, steps)} />
         </details>
       </> : <>
         <p><strong>{selected.title}</strong> is in your roadmap and needs its lesson steps. Copy the request into your course chat, then import the file it returns.</p>
-        <CourseLessonCard key={`${query.id}/${selected.id}`} label="Copy lesson plan request" text={modulePlanningCard(query.id, result.course, [selected])} />
+        <CourseLessonCard chatUrl={result.chatUrl} key={`${query.id}/${selected.id}`} label="Copy lesson plan request" text={modulePlanningCard(query.id, result.course, [selected])} />
         <div className="lesson-section"><h3>Import this module&apos;s plan</h3>
           <InboxImporter key={`${query.id}/${selected.id}`} moduleScope={{ courseId: query.id, moduleId: selected.id }} />
         </div>
@@ -131,7 +131,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         {recent.length > 20 && <Link href={{ pathname: "/courses", query: { id: query.id, page: page + 1 }, hash: "saved-courses" }}>Older courses</Link>}
       </div>
     </section>
-    {result && <CourseReviewCard key={query.id} course={result.course} />}
+    {result && <CourseReviewCard chatUrl={result.chatUrl} key={query.id} course={result.course} />}
     <div className="import-actions">
       <Link className="button button-accent" href="/inbox">Import a course from ChatGPT</Link>
       {!result && <Link className="button button-light" href="/library">Prepare a Library snapshot</Link>}

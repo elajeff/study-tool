@@ -40,7 +40,7 @@ Files flagged for possible credential values stay selected and show a warning. D
 
 Repository imports include reStructuredText documentation, `.conf`, `.cfg` and `.ini` configuration, Windows scripts, and the `mvnw` and `gradlew` build scripts. These are imported as text.
 
-New repository imports record skipped and deselected paths. ZIP imports leave the original commit unknown. Library snapshots record the import in which each revision was first saved, including its available origin and exclusions. Unchanged reimports do not relabel old text as a newer checkout. A collection may span imports; it is not a verified current repository checkout. Older imports without this metadata remain unknown.
+New repository imports record skipped and deselected paths. ZIP imports leave the original commit unknown. Library snapshots record the import in which each revision was first saved, including its available origin and exclusions. New snapshots also show the GitHub commit of the accepted batch. Unchanged files keep the origin of their saved text. A collection may span imports; it is not a verified current repository checkout. Older imports without this metadata remain unknown.
 
 Reuse the same repository when reimporting. Review the file list and text, deselect anything unwanted, then accept the selected files. Confirm renames by selecting the existing saved file; equal text alone does not establish identity. Missing files remain saved.
 

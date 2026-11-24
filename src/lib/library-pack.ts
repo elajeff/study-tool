@@ -19,7 +19,7 @@ export type ExportManifest = {
 };
 export type ExportRevision = { id: string; artifact_id: string; content: string; content_hash: string; import_id?: string; repository_origin?: RepositoryOrigin | null };
 
-export function prepareLibraryExport(collections: { source: LibrarySource; artifacts: LibraryArtifact[] }[], revisions: ExportRevision[], contexts: Map<string, ConversationContext>, candidates: LibraryDigest[] = [], learning?: LearningSnapshot): ExportManifest {
+export function prepareLibraryExport(collections: { source: LibrarySource; artifacts: LibraryArtifact[]; repositoryCommit?: string | null }[], revisions: ExportRevision[], contexts: Map<string, ConversationContext>, candidates: LibraryDigest[] = [], learning?: LearningSnapshot): ExportManifest {
   if (!collections.length || new Set(collections.map(({ source }) => source.id)).size !== collections.length
     || new Set(collections.map(({ source }) => source.short_code)).size !== collections.length)
     throw new Error("Select distinct Library sources with unique codes.");
@@ -46,7 +46,7 @@ export function prepareLibraryExport(collections: { source: LibrarySource; artif
     return digest ? [{ id: item.id, digest_id: digest.id, summary: digest.summary }] : [];
   });
   const summaries = new Map([...selected].map(([artifactId, digest]) => [artifactId, digest.summary]));
-  const maps = ordered.flatMap(({ source, artifacts }) => buildLibraryMaps(source, artifacts, summaries).map(({ id, text }) => ({ id, text })));
+  const maps = ordered.flatMap(({ source, artifacts, repositoryCommit }) => buildLibraryMaps(source, artifacts, summaries, repositoryCommit).map(({ id, text }) => ({ id, text })));
   const card = buildLibraryCard(ordered, revisions, learning);
   const origins: ExportRepositoryOrigin[] = [];
   for (const item of items) {

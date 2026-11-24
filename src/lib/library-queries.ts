@@ -31,7 +31,7 @@ export async function loadLibraryArtifacts(client: SupabaseClient, sourceId: str
 }
 
 export async function loadLatestRepositoryItems(client: SupabaseClient, sourceId: string) {
-  const { data: run, error } = await client.from("source_imports").select("id").eq("source_id", sourceId)
+  const { data: run, error } = await client.from("source_imports").select("id,commit:repository_origin->>commit").eq("source_id", sourceId)
     .not("repository_origin", "is", null).order("accepted_at", { ascending: false }).order("id").limit(1).maybeSingle();
   if (error) throw new Error("Could not load the latest repository import.");
   if (!run) return null;
@@ -42,11 +42,11 @@ export async function loadLatestRepositoryItems(client: SupabaseClient, sourceId
       .eq("import_id", run.id).order("artifact_id").range(offset, offset + 499);
     if (error) throw new Error("Could not load files from the latest repository import.");
     for (const { artifact_id, revision_id, path } of data) items.set(artifact_id, { revision_id, path });
-    if (data.length < 500) return items;
+    if (data.length < 500) return { items, commit: typeof run.commit === "string" ? run.commit : null };
   }
 }
 
-export function selectLibraryArtifacts(artifacts: LibraryArtifact[], latest: Awaited<ReturnType<typeof loadLatestRepositoryItems>>) {
+export function selectLibraryArtifacts(artifacts: LibraryArtifact[], latest: ReadonlyMap<string, { revision_id: string; path: string }> | null) {
   return artifacts.flatMap(artifact => {
     if (artifact.exclude_from_library) return [];
     if (!latest) return [artifact];

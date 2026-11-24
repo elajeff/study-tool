@@ -69,6 +69,20 @@ test("new exports use the latest accepted repository paths and keep prior snapsh
   assert.ok(!buildLibraryFiles(next, [revision])[0].text.includes("old-name.md"));
 });
 
+test("a newer checkout gets its own snapshot while unchanged files retain their first-save origin", () => {
+  const origin = { format: "study-repository/1" as const, kind: "github" as const, url: "https://github.com/example/project",
+    commit: "a".repeat(40), excluded: [] };
+  const recorded = { ...revision, import_id: "first-run", repository_origin: origin };
+  const latestCommit = "b".repeat(40);
+  const collections = [{ source, artifacts: [artifact] }];
+  const first = prepareLibraryExport([{ ...collections[0], repositoryCommit: origin.commit }], [recorded], new Map());
+  const second = prepareLibraryExport([{ ...collections[0], repositoryCommit: latestCommit }], [recorded], new Map());
+  assert.notEqual(second.export_id, first.export_id);
+  assert.deepEqual(second.items, first.items);
+  assert.deepEqual(second.origins, first.origins);
+  assert.ok(buildLibraryFiles(second, [recorded])[0].text.includes(`Selected files from imported GitHub commit ${latestCommit}`));
+});
+
 test("snapshots keep mixed-source identities and hashes stable regardless of selection order", () => {
   const notes = { ...source, id: "notes", short_code: "V1", kind: "obsidian" };
   const note = { ...artifact, id: "note", short_code: "N001", current_revision_id: "note-revision" };

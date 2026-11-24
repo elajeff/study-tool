@@ -34,7 +34,7 @@ function pages(prefix: string, heading: string, entries: MapEntry[]): LibraryMap
   });
 }
 
-export function buildLibraryMaps(source: LibrarySource, artifacts: LibraryArtifact[], summaries = new Map<string, string>()): LibraryMap[] {
+export function buildLibraryMaps(source: LibrarySource, artifacts: LibraryArtifact[], summaries = new Map<string, string>(), repositoryCommit?: string | null): LibraryMap[] {
   const folders = new Map<string, LibraryArtifact[]>();
   for (const artifact of artifacts) {
     const path = artifact.path ?? "";
@@ -56,6 +56,9 @@ export function buildLibraryMaps(source: LibrarySource, artifacts: LibraryArtifa
     directoryEntries.push({ id: maps[0].id, label: `${label(folder || "/")} — items: ${files.length}; pages: ${maps.length}` });
     details.push(...maps);
   }
-  const heading = `${label(source.name)}: ${artifacts.length} saved items. This collection may span imports. Original omissions are unknown.`;
+  const scope = repositoryCommit
+    ? `Selected files from imported GitHub commit ${repositoryCommit}.`
+    : "This collection may span imports. Original omissions are unknown.";
+  const heading = `${label(source.name)}: ${artifacts.length} saved items. ${scope}`;
   return [...pages(`${source.short_code}/MAP`, heading, directoryEntries), ...details];
 }

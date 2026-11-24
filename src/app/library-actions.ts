@@ -21,7 +21,7 @@ export async function prepareProjectExport(_previous: { error: string } | null, 
     for (const source of sources) {
       const [items, latest] = await Promise.all([loadLibraryArtifacts(supabase, source.id),
         source.kind === "repository" ? loadLatestRepositoryItems(supabase, source.id) : null]);
-      collections.push({ source, artifacts: selectLibraryArtifacts(items, latest) });
+      collections.push({ source, artifacts: selectLibraryArtifacts(items, latest?.items ?? null), repositoryCommit: latest?.commit });
     }
     const ids = collections.flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
     const revisions = await loadExportRevisions(supabase, sources.map(source => source.id), ids);

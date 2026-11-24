@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readMarkdownFiles } from "../src/lib/obsidian.ts";
 import { cleanNotePath, noteRelationships, resolveNoteLink, type SourceAlias } from "../src/lib/notes.ts";
 
 test("note imports reject unsafe paths and non-Markdown files", () => {
@@ -46,4 +47,14 @@ test("accepted path history retains renamed targets but never guesses after path
   assert.deepEqual(resolveNoteLink("Old", [note, { path: "Old.md", artifact_id: "other-file" }], [alias]), { state: "ambiguous" });
   assert.deepEqual(resolveNoteLink("Old", [], [alias]), { state: "missing" });
   assert.deepEqual(resolveNoteLink("Absent", [note], [alias]), { state: "missing" });
+});
+
+test("vault previews exclude likely keys and warn about ambiguous passwords", async () => {
+  const { files, blocked } = await readMarkdownFiles([
+    new File(["-----BEGIN PRIVATE KEY-----"], "Key.md"),
+    new File(["password = example"], "Example.md"),
+  ]);
+  assert.deepEqual(files.map(file => file.path), ["Example.md"]);
+  assert.match(files[0].review ?? "", /Possible credential/);
+  assert.deepEqual(blocked.map(file => file.path), ["Key.md"]);
 });

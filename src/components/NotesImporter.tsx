@@ -9,14 +9,14 @@ import { createClient } from "@/lib/supabase/client";
 import { cleanNotePath } from "@/lib/notes";
 import { loadNotes } from "@/lib/note-queries";
 import { previewImport, readMarkdownFiles, type Vault, type VaultState } from "@/lib/obsidian";
-import type { ImportFile } from "@/lib/import-files";
 
 export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   const router = useRouter();
   const [vaults, setVaults] = useState(initialVaults);
   const [sourceId, setSourceId] = useState(initialVaults[0]?.id ?? "");
   const [name, setName] = useState("");
-  const [files, setFiles] = useState<ImportFile[]>([]);
+  const [files, setFiles] = useState<Awaited<ReturnType<typeof readMarkdownFiles>>["files"]>([]);
+  const [blocked, setBlocked] = useState<{ path: string; message: string }[]>([]);
   const [vaultState, setVaultState] = useState<VaultState[]>([]);
   const [bindings, setBindings] = useState<Record<string, string>>({});
   const [renamePath, setRenamePath] = useState("");
@@ -25,6 +25,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const rows = previewImport(files, vaultState, bindings);
+  const warnings = new Map(files.map(file => [file.path, file.review]));
   const assigned = new Set(rows.map(row => row.previous?.artifact_id));
   const unresolved = rows.some((row) => row.identityConflict || !(choices[row.file.path] || row.decision));
   const canImport = vaults.some((vault) => vault.id === sourceId);
@@ -51,16 +52,17 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       const { data, error } = await supabase.from("sources").insert({ user_id: user.id, kind: "obsidian", name: name.trim() })
         .select("id,name,kind").single();
       if (error) throw new Error("Could not create this vault. Enter a name between 1 and 160 characters.");
-      setVaults([...vaults, data as Vault]); setSourceId(data.id); setName(""); setFiles([]); setChatMatches([]);
+      setVaults([...vaults, data as Vault]); setSourceId(data.id); setName(""); setFiles([]); setBlocked([]); setChatMatches([]);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not create vault."); }
     finally { setBusy(false); }
   }
 
   async function prepare(selected: FileList | null) {
     if (!selected?.length) return;
-    setBusy(true); setMessage("Reading selected notes and archives…"); setFiles([]); setChatMatches([]);
+    setBusy(true); setMessage("Reading selected notes and archives…"); setFiles([]); setBlocked([]); setChatMatches([]);
     try {
       const parsed = await readMarkdownFiles(Array.from(selected));
+      setBlocked(parsed.blocked);
       setMessage("Checking saved notes for changes and conflicts…");
       const state = parsed.files.length ? await loadState(parsed.files.map((file) => file.path)) : [];
       setChatMatches(await matchChatReferences(createClient(), parsed.chatReferences));
@@ -98,7 +100,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       if (new Blob([JSON.stringify(entries)]).size > 35 * 1024 * 1024) throw new Error("The import exceeds 35 MiB of JSON. Select fewer files.");
       const { error } = await createClient().rpc("accept_obsidian_import", { p_source_id: sourceId, p_entries: entries });
       if (error) throw new Error(error.message);
-      setFiles([]); setChatMatches([]); setMessage(`${entries.length} notes saved. Open Library to include them in a snapshot.`); router.refresh();
+      setFiles([]); setBlocked([]); setChatMatches([]); setMessage(`${entries.length} notes saved. Open Library to include them in a snapshot.`); router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import could not be confirmed. Refresh before retrying."); }
     finally { setBusy(false); }
   }
@@ -132,7 +134,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
     <p>Choose the same vault when reimporting. Preview files before accepting them. Original files are not changed.</p>
     <div className="vault-controls">
       <div><label htmlFor="import-vault">Vault</label><select className="input" id="import-vault" value={sourceId} disabled={busy}
-        onChange={(event) => { setSourceId(event.target.value); setFiles([]); setMessage(""); setChatMatches([]); }}>
+        onChange={(event) => { setSourceId(event.target.value); setFiles([]); setBlocked([]); setMessage(""); setChatMatches([]); }}>
         <option value="">All notes (export only)</option><option value="manual">Manual notes (export only)</option>
         {vaults.map((vault) => <option value={vault.id} key={vault.id}>{vault.name}{vaults.some((other) => other.id !== vault.id && other.name === vault.name) ? ` (${vault.id})` : ""}{vault.kind === "legacy_notes" ? " (legacy snapshots)" : ""}</option>)}
       </select></div>
@@ -150,6 +152,9 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
     <details className="import-export"><summary>Export saved notes</summary><p>
       <button className="button button-light" disabled={busy} type="button" onClick={() => void exportNotes()}><Download size={16} /> Export ZIP</button></p></details>
     {message && <p role="status" className="import-message">{message}</p>}
+    {blocked.length > 0 && <details open><summary>Notes blocked by credential checks ({blocked.length})</summary>
+      <ul>{blocked.map(file => <li key={file.path}>{file.path}: {file.message}</li>)}</ul>
+    </details>}
     {!!chatMatches.length && <details><summary>Conversation references ({chatMatches.length})</summary>
       <p>Provider URLs and IDs identify related saved chats. They do not prove equal text or branches. AI Chats files remain outside note imports; notes elsewhere are kept.</p>
       <ul>{chatMatches.map(reference => <li key={reference.path}>{reference.path}: {reference.items.length === 0 ? "No saved conversation found" : <>
@@ -176,6 +181,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
             </select>
           </label>}
         </>}
+        {warnings.get(row.file.path) && <p>{warnings.get(row.file.path)}</p>}
         {row.identityConflict && <p role="alert">This path is occupied. Select its existing artifact or rename the file before importing.</p>}
         {!row.identityConflict && row.decision === "" && <label>Decision for {row.file.path}
           <select className="input" value={choices[row.file.path] ?? ""} disabled={busy}
@@ -190,7 +196,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
       </article>)}
       <div className="import-save" aria-label="Save Obsidian import"><div><h3>Save notes to your vault</h3><p>{rows.length} notes · {vaults.find(vault => vault.id === sourceId)?.name}</p>
         {!!unresolved && <p>Resolve the marked conflicts before saving.</p>}</div><div className="import-actions"><button className="button button-dark" disabled={busy || unresolved} type="button" onClick={() => void accept()}>{busy ? "Saving…" : "Save notes to vault"}</button>
-        <button className="button button-light" disabled={busy} type="button" onClick={() => { setFiles([]); setMessage(""); setChatMatches([]); }}>Cancel preview</button></div>
+        <button className="button button-light" disabled={busy} type="button" onClick={() => { setFiles([]); setBlocked([]); setMessage(""); setChatMatches([]); }}>Cancel preview</button></div>
       </div>
     </div>}
   </section>;

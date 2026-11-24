@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { noteRelationships, resolveNoteLink, type Note, type SourceAlias } from "@/lib/notes";
+import { noteRelationships, resolveNoteLink, type SourceAlias } from "@/lib/notes";
+import type { NoteLinkTarget } from "@/lib/note-queries";
 import type { SourceRevision } from "@/lib/source-queries";
 
 type Target = { path: string; artifact_id: string | null; href: string | null };
@@ -19,7 +20,7 @@ function Connections({ body, targets, aliases, revisionId }: { body: string; tar
   })}</ul> : <p className="muted small">No explicit note links.</p>;
 }
 
-export function NoteConnections({ body, notes, aliases, original }: { body: string; notes: Note[]; aliases: SourceAlias[]; original: SourceRevision | null }) {
+export function NoteConnections({ body, notes, aliases, original }: { body: string; notes: NoteLinkTarget[]; aliases: SourceAlias[]; original: SourceRevision | null }) {
   const targets = notes.map((note) => ({ path: note.path, artifact_id: note.artifact_id, href: `/notes/${note.id}` }));
   const originalTargets = [...new Map(aliases.map((alias) => [alias.artifact_id, {
     artifact_id: alias.artifact_id, path: alias.current_path ?? alias.path,

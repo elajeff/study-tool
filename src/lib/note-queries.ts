@@ -32,3 +32,17 @@ export async function loadNotes(supabase: SupabaseClient, sourceId?: string | nu
     if (data.length < 500) return notes;
   }
 }
+
+export type NoteLinkTarget = Pick<Note, "id" | "path" | "artifact_id">;
+
+export async function loadNoteLinkTargets(supabase: SupabaseClient, sourceId: string | null): Promise<NoteLinkTarget[]> {
+  const targets: NoteLinkTarget[] = [];
+  for (let offset = 0; ; offset += 500) {
+    let query = supabase.from("notes").select("id,path,artifact_id");
+    query = sourceId === null ? query.is("source_id", null) : query.eq("source_id", sourceId);
+    const { data, error } = await query.order("id").range(offset, offset + 499);
+    if (error) throw new Error("Could not load note links.");
+    targets.push(...data);
+    if (data.length < 500) return targets;
+  }
+}

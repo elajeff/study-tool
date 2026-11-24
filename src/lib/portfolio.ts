@@ -17,6 +17,7 @@ Keep this draft scoped to ${source.short_code}. Other repositories will receive 
 
 export function portfolioMergePrompt(exportId: string, repositories: LibrarySource[], drafts: RepositoryDraft[]): string {
   if (repositories.length < 2) throw new Error("Select a Library export containing at least two repositories.");
+  const repositoryCodes = new Set(repositories.map(source => source.short_code));
   const used = new Set<string>();
   const reference = drafts.map(draft => {
     if (draft.course.export_id !== exportId) throw new Error("All drafts must use the same exact Library export.");
@@ -25,7 +26,11 @@ export function portfolioMergePrompt(exportId: string, repositories: LibrarySour
     used.add(code);
     return { course_id: draft.id, repository: code, title: draft.course.title,
       goal: draft.course.goal, target: draft.course.target, assumed_level: draft.course.assumed_level,
-      not_covered: draft.course.not_covered, open_questions: draft.course.open_questions,
+      not_covered: draft.course.not_covered.filter(item => {
+        const source = item.id.split("/")[0];
+        return source === code || !repositoryCodes.has(source);
+      }),
+      open_questions: draft.course.open_questions,
       modules: draft.course.modules.map(module => ({
         ...module, id: `${code}/${module.id}`, needs: module.needs.map(id => `${code}/${id}`),
       })) };

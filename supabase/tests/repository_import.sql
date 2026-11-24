@@ -1,4 +1,4 @@
--- Run after migration 006 against a disposable development database.
+-- Run after all migrations against a disposable development database.
 \set ON_ERROR_STOP on
 begin;
 set local plpgsql.check_asserts = on;
@@ -16,7 +16,15 @@ returns jsonb language sql as $$
   from (select 1) singleton left join public.source_artifacts a on a.source_id=src
     and (case when file_id is null then a.path=file_path else a.id=file_id end);
 $$;
+create function pg_temp.import_repository(src uuid, entries jsonb)
+returns uuid language sql as $$
+  select public.accept_repository_import(src, entries, '{"format":"study-repository/1","kind":"archive","excluded":[]}');
+$$;
 set local role authenticated;
+do $$ begin
+  assert not has_function_privilege('public.accept_source_import(uuid,jsonb)', 'execute'),
+    'Signed-in clients must use the current import functions';
+end $$;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000051',true);
 do $$
 declare
@@ -26,16 +34,16 @@ declare
   entry jsonb;
   run_count bigint;
 begin
-  perform public.accept_source_import(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Main.java','class Main {}')));
+  perform pg_temp.import_repository(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Main.java','class Main {}')));
   select id,current_revision_id into file_id,first_revision from public.source_artifacts where source_id=src;
   perform set_config('test.repository_file',file_id::text,true);
-  perform public.accept_source_import('a0000000-0000-4000-8000-000000000002',jsonb_build_array(
+  perform pg_temp.import_repository('a0000000-0000-4000-8000-000000000002',jsonb_build_array(
     pg_temp.repository_entry('a0000000-0000-4000-8000-000000000002','src/Main.java','class Main {}')));
   assert (select count(distinct id)=2 from public.source_artifacts where path='src/Main.java');
-  perform public.accept_source_import(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Main.java','class Main {}')));
+  perform pg_temp.import_repository(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Main.java','class Main {}')));
   assert (select count(*)=1 from public.source_revisions where artifact_id=file_id);
-  perform public.accept_source_import(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Main.java','class Main { int n; }')));
-  perform public.accept_source_import(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Renamed.java','class Main { int n; }',file_id)));
+  perform pg_temp.import_repository(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Main.java','class Main { int n; }')));
+  perform pg_temp.import_repository(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Renamed.java','class Main { int n; }',file_id)));
   assert (select path='src/Renamed.java' from public.source_artifacts where id=file_id);
   assert (select count(*)=2 from public.source_revisions where artifact_id=file_id);
   assert (select content='class Main {}' from public.source_revisions where id=first_revision);
@@ -43,10 +51,10 @@ begin
   assert not exists(select 1 from public.assessment_receipts where user_id=auth.uid());
 
   entry := pg_temp.repository_entry(src,'src/Renamed.java','Stale overwrite');
-  perform public.accept_source_import(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Renamed.java','class Main { int updated; }')));
+  perform pg_temp.import_repository(src,jsonb_build_array(pg_temp.repository_entry(src,'src/Renamed.java','class Main { int updated; }')));
   select count(*) into run_count from public.source_imports where source_id=src;
   begin
-    perform public.accept_source_import(src,jsonb_build_array(pg_temp.repository_entry(src,'must-rollback.py','pass'),entry));
+    perform pg_temp.import_repository(src,jsonb_build_array(pg_temp.repository_entry(src,'must-rollback.py','pass'),entry));
     assert false,'Stale previews must reject the entire import';
   exception when serialization_failure then null;
   end;
@@ -56,19 +64,19 @@ begin
     pg_temp.repository_entry(src,'../escape.py','pass'),
     pg_temp.repository_entry(src,'oversized.py',repeat('π',250001)))) loop
     begin
-      perform public.accept_source_import(src,jsonb_build_array(entry));
+      perform pg_temp.import_repository(src,jsonb_build_array(entry));
       assert false,'Missing previews, unsafe paths, and oversized UTF-8 files must be denied';
     exception when invalid_parameter_value then null;
     end;
   end loop;
   begin
-    perform public.accept_source_import(src,jsonb_build_array(
+    perform pg_temp.import_repository(src,jsonb_build_array(
       pg_temp.repository_entry(src,'one.java','same',file_id),pg_temp.repository_entry(src,'two.java','same',file_id)));
     assert false,'Two incoming files cannot claim one saved identity';
   exception when unique_violation then null;
   end;
   begin
-    perform public.accept_source_import('a0000000-0000-4000-8000-000000000002',jsonb_build_array(
+    perform pg_temp.import_repository('a0000000-0000-4000-8000-000000000002',jsonb_build_array(
       pg_temp.repository_entry('a0000000-0000-4000-8000-000000000002','foreign.java','wrong repository',file_id)));
     assert false,'File identities cannot cross repositories';
   exception when insufficient_privilege then null;
@@ -83,12 +91,12 @@ begin
   assert not exists(select 1 from public.source_artifacts);
   assert not exists(select 1 from public.source_revisions);
   begin
-    perform public.accept_source_import('a0000000-0000-4000-8000-000000000001','[]');
+    perform pg_temp.import_repository('a0000000-0000-4000-8000-000000000001','[]');
     assert false,'Foreign repository imports must be denied';
   exception when insufficient_privilege then null;
   end;
   begin
-    perform public.accept_source_import('a0000000-0000-4000-8000-000000000003',jsonb_build_array(
+    perform pg_temp.import_repository('a0000000-0000-4000-8000-000000000003',jsonb_build_array(
       pg_temp.repository_entry('a0000000-0000-4000-8000-000000000003','foreign.java','wrong owner',current_setting('test.repository_file')::uuid)));
     assert false,'Foreign file identities must be denied';
   exception when insufficient_privilege then null;

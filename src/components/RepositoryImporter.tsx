@@ -158,7 +158,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       <select id="repository-source" className="input" value={sourceId} disabled={busy} onChange={(event) => {
         setBusy(true); setFiles([]); setSkipped([]); router.push(`/repositories?source=${event.target.value}`);
       }}>
-        {!repositories.length && <option value="">Create a repository first</option>}
+        {!sourceId && <option value="" disabled>{repositories.length ? "Choose a repository" : "Create a repository first"}</option>}
         {repositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}{repositories.some((other) => other.id !== repository.id && other.name === repository.name) ? ` (${repository.id})` : ""}</option>)}
       </select></div>
       <form onSubmit={createRepository}><label htmlFor="repository-name">New repository name</label><div className="search-row">

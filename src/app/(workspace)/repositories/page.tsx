@@ -8,11 +8,12 @@ export default async function RepositoriesPage({ searchParams }: { searchParams:
   const { source, search = "" } = await searchParams;
   const { data: repositories, error } = await supabase.from("sources").select("id,name").eq("kind", "repository").order("created_at").order("id");
   if (error) throw new Error("Could not load repositories.");
-  const selected = repositories.find((repository) => repository.id === source) ?? repositories[0];
+  const selected = source ? repositories.find(repository => repository.id === source) : repositories[0];
   const files = selected ? await loadRepositoryFiles(supabase, selected.id) : [];
   const filtered = files.filter((file) => !search || file.path?.toLowerCase().includes(search.toLowerCase()));
   return <>
     <div className="page-heading"><h1>Repositories</h1><p>Saved source files. Importing or reading code does not count as demonstrated knowledge.</p></div>
+    {source && !selected && <p role="status">This repository collection is unavailable. Choose a collection below.</p>}
     <RepositoryImporter key={selected?.id ?? "new"} repositories={repositories} sourceId={selected?.id ?? ""} />
     <section className="panel"><h2>{selected?.name ?? "Files"} ({filtered.length})</h2>
       <form className="search-row" method="GET"><input type="hidden" name="source" value={selected?.id ?? ""} />

@@ -71,6 +71,8 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .button-dark:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .button-light { color: var(--text); background: var(--surface); border-color: var(--input-border); }
 .button-light:hover { background: var(--hover); }
+.button-accent { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-border); }
+.button-accent:hover { border-color: var(--accent); }
 .button-danger { color: var(--error); background: var(--surface); border-color: var(--error-border); }
 .button-danger:hover { background: var(--error-bg); }
 .button-wide { width: 100%; }
@@ -166,8 +168,6 @@ textarea.input { resize: vertical; }
 .course-dashboard-stats { margin-top: 16px; }
 .module-filters { flex-wrap: wrap; align-items: center; }
 .module-filters .input { flex: 1 1 240px; }
-.optional-assessment { margin-top: 24px; }
-.optional-assessment > summary { cursor: pointer; color: var(--muted); }
 .batch-modules { max-height: 16rem; overflow: auto; }
 .batch-modules label { display: block; padding: 4px 0; }
 .panel-kicker { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .7px; margin-bottom: 16px; }
@@ -319,9 +319,27 @@ textarea.input { resize: vertical; }
 
 /* Course outline */
 .course-name, .next-panel, .course-path { overflow-wrap: anywhere; }
+.course-workspace > .panel + .panel { margin-top: 16px; }
+.course-workspace > .import-actions { margin-top: 16px; }
+.course-disclosure { margin: 12px 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; }
+.course-disclosure > summary, .course-options > summary { cursor: pointer; font-weight: 600; }
+.course-disclosure > summary:hover, .course-options > summary:hover { color: var(--accent); }
+#batch-plans { scroll-margin-top: 22px; }
+.module-filter { display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--input-border); border-radius: 6px; cursor: pointer; }
+.module-filter.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-border); }
+.module-filter input { margin: 0; accent-color: var(--accent-fill); }
+.lesson-goal { font-size: 16px; }
+.lesson-section { margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--border); }
+.lesson-outcome { padding: 12px 16px; background: var(--accent-soft); border-left: 3px solid var(--accent-border); border-radius: 6px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.lesson-outcome h4 { margin: 0 0 4px; }
+.lesson-outcome p { margin: 0; }
+.lesson-completion { align-items: center; }
+.lesson-state { color: var(--muted); font-size: 13px; }
 .course-options { margin-top: 14px; }
 .course-options .stack { max-width: 32rem; margin-top: 12px; }
 .course-options .stack > p { margin: 0; }
+.course-delete > summary { width: fit-content; padding: 7px 12px; color: var(--error); border: 1px solid var(--error-border); border-radius: 6px; background: var(--error-bg); }
+.course-delete > summary:hover { color: var(--error); border-color: var(--error); }
 #saved-courses { scroll-margin-top: 22px; }
 .course-path { --done: #206e59; --done-bg: #edf7f2; --done-border: #b9dcca; scroll-margin-top: 24px; }
 :root[data-theme="dark"] .course-path { --done: #92d8bd; --done-bg: #20352e; --done-border: #416756; }

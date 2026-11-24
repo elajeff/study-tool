@@ -21,7 +21,9 @@ export function CourseModules({ courseId, course, steps, selectedModule, nextMod
   return <>
     <div className="search-row module-filters">
       <input type="search" className="input" aria-label="Search modules by title or ID" placeholder="Search modules by title or ID" value={query} onChange={event => setQuery(event.target.value)} />
-      <label><input type="checkbox" checked={readyOnly} onChange={event => setReadyOnly(event.target.checked)} /> Ready to study</label>
+      <label className={`module-filter${readyOnly ? " is-active" : ""}`}>
+        <input type="checkbox" checked={readyOnly} onChange={event => setReadyOnly(event.target.checked)} /> Show only modules with unfinished lessons
+      </label>
     </div>
     <p role="status" className="muted small">{visible.length} of {course.modules.length} modules shown</p>
     {!visible.length && <p>No matching modules. Try changing the search or filter.</p>}
@@ -31,7 +33,7 @@ export function CourseModules({ courseId, course, steps, selectedModule, nextMod
       <details open={selectedModule === module.id || current}>
         <summary><span className="module-number">{finished ? <Check size={18} aria-label="Lessons done" /> : String(index + 1).padStart(2, "0")}</span>
           <span className="module-name"><strong>{module.id} · {module.title}</strong>
-            <span>{finished ? "Done" : saved.length ? "Ready to study" : "Lesson plan needed"} · {saved.length ? `${done} / ${saved.length} lessons done` : "Outline imported"}{current ? " · Up next" : ""}</span>
+            <span>{finished ? "Done" : saved.length ? "Lessons ready" : "Needs a lesson plan"} · {saved.length ? `${done} / ${saved.length} lessons done` : "Outline imported"}{current ? " · Up next" : ""}</span>
           </span><ChevronDown size={17} className="module-chevron" />
         </summary>
         <div className="module-content"><p>{module.outcome}</p>

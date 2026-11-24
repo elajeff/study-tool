@@ -80,7 +80,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <progress className="course-progress" aria-label="Course modules completed" value={overview.completedModules} max={saved.course.modules.length} />
       <p>{overview.completedModules} of {saved.course.modules.length} modules finished · {overview.completedLessons} of {overview.plannedLessons} planned lessons done</p>
       <div className="import-actions"><Link className="button button-dark" href={`/courses?${nextQuery}#${next?.step ? "lesson-focus" : next ? "module-plan" : "course-path"}`}>
-        {next ? "Continue studying" : "View completed course"}
+        {next?.step ? "Continue studying" : next ? "Prepare the next lesson plan" : "View completed course"}
       </Link><Link className="button button-light" href={`/courses?id=${courseId}`}>Open roadmap</Link>
       <Link className="button button-light" href="/inbox">Import another course</Link></div>
       {switcher(courseId)}

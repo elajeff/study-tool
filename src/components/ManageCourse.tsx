@@ -12,10 +12,10 @@ export function ManageCourse({ courseId, name, fromDashboard }: { courseId: stri
       <input type="hidden" name="course" value={courseId} />
       <label htmlFor="course-name">Course name</label>
       <input className="input" id="course-name" name="name" key={name} defaultValue={name} maxLength={160} required />
-      <button className="button button-light" disabled={renaming || removing}>{renaming ? "Saving…" : "Rename course"}</button>
+      <button className="button button-accent" disabled={renaming || removing}>{renaming ? "Saving…" : "Rename course"}</button>
       {renameMessage && <p role="status">{renameMessage}</p>}
     </form>
-    <details className="course-options">
+    <details className="course-options course-delete">
       <summary>Delete course</summary>
       <form className="stack" action={remove}>
         <input type="hidden" name="course" value={courseId} />

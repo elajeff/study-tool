@@ -27,6 +27,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
   const [url, setUrl] = useState(""), [ref, setRef] = useState("");
   const [githubSnapshot, setGitHubSnapshot] = useState<{ url: string; commit: string } | null>(null);
   const [name, setName] = useState("");
+  const [includeOtherText, setIncludeOtherText] = useState(false);
   const [files, setFiles] = useState<ReviewedFile[]>([]);
   const [skipped, setSkipped] = useState<string[]>([]);
   const [selected, setSelected] = useState(new Set<string>());
@@ -59,14 +60,14 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
     setBusy(true); setMessage(`Reading ${file.name}…`); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
     try {
       if (!file.name.toLowerCase().endsWith(".zip")) throw new Error("Select a ZIP archive.");
-      const parsed = await readImportFiles([file], shouldImportRepositoryFile, snapshot ? repositoryArchiveRoot : undefined);
+      const parsed = await readImportFiles([file], path => shouldImportRepositoryFile(path, includeOtherText), snapshot ? repositoryArchiveRoot : undefined);
       setMessage("Comparing files with the saved repository…");
       const current = targetSourceId ? await loadRepositoryFiles(createClient(), targetSourceId) : [];
       const reviewed = parsed.files.map((file) => ({ ...file, ...inspectRepositoryText(file.body) }));
       setState(current); setBindings({}); setRenamePath(""); setFiles(reviewed); setSkipped(parsed.skipped);
       setDestinationId(targetSourceId);
       setGitHubSnapshot(snapshot ?? null);
-      setSelected(new Set(reviewed.filter((file) => !file.blocked).map((file) => file.path)));
+      setSelected(new Set(reviewed.filter((file) => !file.blocked && shouldImportRepositoryFile(file.path)).map((file) => file.path)));
       setMessage(`${reviewed.length} files ready for review. Nothing has been saved yet.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the archive."); }
     finally { setBusy(false); }
@@ -142,6 +143,8 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
   }
 
   return <section className="panel vault-import"><h2>Import repository</h2>
+    <label><input type="checkbox" checked={includeOtherText} disabled={busy || files.length > 0}
+      onChange={event => setIncludeOtherText(event.target.checked)} /> Show other text files in preview</label>
     {!queue.length && !files.length && <GitHubProfilePicker disabled={busy} onSelect={items => {
       setQueue(items); setBatchSize(items.length); void prepareNext(items[0]);
     }} />}
@@ -180,7 +183,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
     {busy && !!queue.length && <p role="status">Working on {queue[0].name}…</p>}
     {message && <p role="status" className="import-message">{message}</p>}
     {files.length > 0 && <div className="import-preview"><h3>Preview ({files.length})</h3>
-      <p>Review the selected files. Possible credential values stay selected with a warning; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
+      <p>Review the selected files. Other text files start unselected. Possible credential values stay selected with a warning; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
       {skipped.length > 0 && <details><summary>Skipped files ({skipped.length})</summary><ul>{skipped.map((path, index) => <li key={index}><code>{path}</code></li>)}</ul></details>}
       {files.map((file) => {
         const row = rowsByPath.get(file.path);

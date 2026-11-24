@@ -33,3 +33,17 @@ test("repository previews distinguish new, updated, unchanged, and conflicting p
     assert.equal(previewRepository([{ path, hash, body: "text" }], [saved])[0].status, status);
   assert.equal(previewRepository([{ path: "src/New.java", hash: "old", body: "text" }], [saved], { "src/New.java": saved.artifact_id })[0].previous?.artifact_id, saved.artifact_id);
 });
+
+test("repository preview can opt in to unfamiliar text without admitting binary files or secret paths", async () => {
+  const zip = new JSZip();
+  zip.file("Model.cs", "class Model {}");
+  zip.file("App.swift", "struct App {}");
+  zip.file("artifact.bin", new Uint8Array([0, 1, 2]));
+  zip.file(".env", "PASSWORD=example");
+  zip.file("build/Generated.swift", "struct Generated {}");
+  const result = await readImportFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "repository.zip")],
+    path => shouldImportRepositoryFile(path, true));
+  assert.deepEqual(result.files.map(file => file.path), ["Model.cs", "App.swift"]);
+  assert.equal(shouldImportRepositoryFile("Model.cs"), false);
+  assert.equal(shouldImportRepositoryFile("Model.cs", true), "optional");
+});

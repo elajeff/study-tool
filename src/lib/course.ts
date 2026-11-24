@@ -45,7 +45,9 @@ export type ModuleStep = { id: string; kind: typeof stepKinds[number]; goal: str
 export type ModulePlan = { format: "study-module/1"; course_id: string; export_id: string; module: string; steps: ModuleStep[] };
 export type SavedCourseStep = ModuleStep & { row_id: string; module_key: string; position: number; completed_at: string | null };
 
-export function nextCourseLesson(course: Course, steps: SavedCourseStep[]) {
+export type CourseProgressStep = Pick<SavedCourseStep, "row_id" | "module_key" | "position" | "completed_at" | "goal">;
+
+export function nextCourseLesson<T extends CourseProgressStep>(course: Course, steps: T[]) {
   for (const current of course.modules) {
     const planned = steps.filter(step => step.module_key === current.id).sort((a, b) => a.position - b.position);
     if (!planned.length) return { module: current };

@@ -195,8 +195,6 @@ textarea.input { resize: vertical; }
 .lesson-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 16px; align-items: start; }
 .lesson-body, .lesson-aside { display: grid; gap: 16px; min-width: 0; }
 .lesson-section > p { font-size: 13px; }
-.progress-panel > p { margin: 8px 0; }
-.progress-panel .button { margin-top: 12px; }
 .prerequisites p, .prerequisites li { font-size: 13px; color: var(--muted); }
 .prerequisites ul { padding-left: 18px; }
 .prerequisites li { padding: 4px 0; }

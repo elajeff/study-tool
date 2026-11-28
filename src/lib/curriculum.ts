@@ -27,6 +27,10 @@ function sourceId(path: string) {
   return `note-${createHash("sha256").update(path.toLowerCase()).digest("hex").slice(0, 20)}`;
 }
 
+export function noteTopicId(topic: string): string {
+  return sourceId(`${topic}.md`);
+}
+
 function summary(body: string) {
   const paragraphs = body.replace(/^# [^\n]+\n/, "").split(/\n\s*\n/);
   const paragraph = paragraphs.find((part) => part.trim() && !part.trim().startsWith("#"));
@@ -37,8 +41,9 @@ function summary(body: string) {
 export function buildCurriculum(notes: SourceNote[], aliases: SourceAlias[] = []): { tracks: Track[]; lessons: Lesson[]; issues: string[] } {
   const issues: string[] = [];
   const paths = new Map<string, string>();
-  const ids = new Map(notes.map((note) => [note, sourceId(note.topic ? `${note.topic}.md` : note.path)]));
+  const ids = new Map(notes.map(note => [note, note.topic ? noteTopicId(note.topic) : sourceId(note.path)]));
   const scopes = new Map<string | null, SourceNote[]>();
+  const conflictingScopes = new Set<string | null>();
   const aliasScopes = new Map<string, SourceAlias[]>();
   for (const alias of aliases) {
     const group = aliasScopes.get(alias.source_id) ?? [];
@@ -52,12 +57,14 @@ export function buildCurriculum(notes: SourceNote[], aliases: SourceAlias[] = []
     scopes.set(scope, group);
     const key = `${scope ?? ""}:${note.path.toLowerCase()}`;
     const previous = paths.get(key);
-    if (previous) issues.push(`Conflicting note paths: ${previous} and ${note.path}. Remove or rename one conflicting note before continuing.`);
+    if (previous) {
+      issues.push(`Conflicting note paths in ${note.source_name ?? "Notes"}: ${previous} and ${note.path}. Remove or rename one to browse this vault.`);
+      conflictingScopes.add(scope);
+    }
     paths.set(key, note.path);
   }
-  if (issues.length) return { tracks: [], lessons: [], issues };
   const tracks = new Map<string, Track>();
-  const lessons: Lesson[] = [...notes].sort((a, b) =>
+  const lessons: Lesson[] = notes.filter(note => !conflictingScopes.has(note.source_id ?? null)).sort((a, b) =>
     (a.source_name ?? "").localeCompare(b.source_name ?? "") ||
     a.path.localeCompare(b.path, undefined, { numeric: true })).map((note) => {
     const folder = note.path.includes("/") ? note.path.split("/")[0] : "";

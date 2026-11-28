@@ -3,16 +3,16 @@ import { notFound } from "next/navigation";
 import { NoteMarkdown } from "@/components/NoteMarkdown";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { requireAccount } from "@/lib/auth";
-import { loadNoteTopics, loadStudyProfile } from "@/lib/study";
+import { loadNoteTopic, loadStudyProfile } from "@/lib/study";
 import { getLesson } from "@/lib/curriculum";
 import { TutorHandoff } from "@/components/TutorHandoff";
 
 export default async function LessonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { supabase, user } = await requireAccount();
-  const [{ lessons, tracks }, profile] = await Promise.all([loadNoteTopics(supabase), loadStudyProfile(supabase, user.id)]);
-  const lesson = getLesson(lessons, slug);
-  if (!lesson) notFound();
+  const [topic, profile] = await Promise.all([loadNoteTopic(supabase, slug), loadStudyProfile(supabase, user.id)]);
+  if (!topic) notFound();
+  const { lesson, lessons, tracks } = topic;
   const track = tracks.find((item) => item.id === lesson.track);
 
   return <div className="lesson-page">

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { noteRelationships, resolveNoteLink, titleFromPath, type SourceAlias } from "./notes.ts";
+import { noteRelationships, noteLinkResolver, titleFromPath, type SourceAlias } from "./notes.ts";
 
 export type StudyProfile = {
   experience: string;
@@ -64,6 +64,8 @@ export function buildCurriculum(notes: SourceNote[], aliases: SourceAlias[] = []
     paths.set(key, note.path);
   }
   const tracks = new Map<string, Track>();
+  const resolvers = new Map([...scopes].map(([scope, scopedNotes]) =>
+    [scope, noteLinkResolver(scopedNotes, scope ? aliasScopes.get(scope) : undefined)]));
   const lessons: Lesson[] = notes.filter(note => !conflictingScopes.has(note.source_id ?? null)).sort((a, b) =>
     (a.source_name ?? "").localeCompare(b.source_name ?? "") ||
     a.path.localeCompare(b.path, undefined, { numeric: true })).map((note) => {
@@ -74,9 +76,10 @@ export function buildCurriculum(notes: SourceNote[], aliases: SourceAlias[] = []
       tracks.set(track, { id: track, title: folder || source, description: folder ? source : "" });
     }
     const relationships = noteRelationships(note.body);
+    const resolveLink = resolvers.get(note.source_id ?? null)!;
     let prerequisiteWarning = null;
     const links = (kind: "prerequisite" | "recommendation") => [...new Set(relationships.filter((link) => link.kind === kind).flatMap((link) => {
-      const result = resolveNoteLink(link.target, scopes.get(note.source_id ?? null) ?? [], aliasScopes.get(note.source_id ?? ""));
+      const result = resolveLink(link.target);
       if (result.state !== "resolved") {
         issues.push(`Missing or ambiguous link [[${link.target}]] in ${note.source_name ?? "Notes"}: ${note.path}, line ${link.line}. Review the link within the same vault.`);
         if (kind === "prerequisite") prerequisiteWarning = "Review missing or ambiguous prerequisites in this note.";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { noteRelationships, resolveNoteLink, type SourceAlias } from "@/lib/notes";
+import { noteRelationships, noteLinkResolver, type SourceAlias } from "@/lib/notes";
 import type { NoteLinkTarget } from "@/lib/note-queries";
 import type { SourceRevision } from "@/lib/source-queries";
 
@@ -8,8 +8,9 @@ const labels = { link: "Link", prerequisite: "Prerequisite", recommendation: "Re
 
 function Connections({ body, targets, aliases, revisionId }: { body: string; targets: Target[]; aliases: SourceAlias[]; revisionId?: string }) {
   const connections = noteRelationships(body);
+  const resolveLink = noteLinkResolver(targets, aliases);
   return connections.length ? <ul className="related-links">{connections.map((connection, index) => {
-    const result = resolveNoteLink(connection.target, targets, aliases);
+    const result = resolveLink(connection.target);
     return <li key={index}>
       {result.state === "resolved" && result.note.href ? <Link href={result.note.href}>{connection.target}</Link>
         : <span>{connection.target} <small>({result.state === "resolved" ? "no source text" : result.state} in this vault)</small></span>}

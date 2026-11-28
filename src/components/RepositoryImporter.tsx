@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { readImportFiles, type ImportFile } from "@/lib/import-files";
 import { inspectRepositoryText, repositoryArchiveRoot, previewRepository, shouldImportRepositoryFile, type RepositoryFile } from "@/lib/repository-import";
-import { loadRepositoryFiles } from "@/lib/source-queries";
+import { loadRepositoryFiles, loadRepositoryGitHubUrl } from "@/lib/source-queries";
 import type { RepositoryOrigin } from "@/lib/repository-origin";
 import type { GitHubPublicRepository } from "@/lib/github-import";
 import { GitHubProfilePicker } from "@/components/GitHubProfilePicker";
@@ -60,6 +60,12 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
     setBusy(true); setMessage(`Reading ${file.name}…`); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
     try {
       if (!file.name.toLowerCase().endsWith(".zip")) throw new Error("Select a ZIP archive.");
+      if (snapshot && targetSourceId) {
+        const savedUrl = await loadRepositoryGitHubUrl(createClient(), targetSourceId);
+        if (savedUrl && savedUrl.toLowerCase() !== snapshot.url.toLowerCase()) {
+          throw new Error("This collection already belongs to another GitHub repository. Choose a different collection.");
+        }
+      }
       const parsed = await readImportFiles([file], path => shouldImportRepositoryFile(path, includeOtherText), snapshot ? repositoryArchiveRoot : undefined);
       setMessage("Comparing files with the saved repository…");
       const current = targetSourceId ? await loadRepositoryFiles(createClient(), targetSourceId) : [];

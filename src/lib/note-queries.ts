@@ -16,19 +16,29 @@ export async function loadNoteList(supabase: SupabaseClient, search: string, pag
 }
 
 export async function loadNotes(supabase: SupabaseClient, sourceId?: string | null): Promise<Note[]> {
-  const notes: Note[] = [];
+  type Row = Omit<Note, "topic" | "source_name"> & { artifact: { legacy_topic: string | null; source: { name: string } } | null };
+  const rows = await readNotes<Row>(supabase,
+    "id,path,title,body,source_id,artifact_id,artifact:source_artifacts!note_artifact_fk(legacy_topic,source:sources(name))", sourceId);
+  return rows.map(({ artifact, ...note }) => ({
+    ...note,
+    topic: artifact?.legacy_topic ?? `${note.artifact_id ? "source" : "note"}/${note.artifact_id ?? note.id}`,
+    source_name: artifact?.source.name ?? "Manual notes",
+  }));
+}
+
+export function loadNotesForExport(supabase: SupabaseClient, sourceId?: string | null) {
+  return readNotes<Pick<Note, "path" | "body" | "source_id">>(supabase, "path,body,source_id", sourceId);
+}
+
+async function readNotes<Row>(supabase: SupabaseClient, columns: string, sourceId: string | null | undefined) {
+  const notes: Row[] = [];
   for (let offset = 0; ; offset += 500) {
-    let query = supabase.from("notes").select("id,path,title,body,updated_at,source_id,artifact_id,artifact:source_artifacts!note_artifact_fk(legacy_topic,source:sources(name))");
+    let query = supabase.from("notes").select(columns);
     if (sourceId === null) query = query.is("source_id", null);
     else if (sourceId !== undefined) query = query.eq("source_id", sourceId);
-    const { data, error } = await query.order("id").range(offset, offset + 499);
-    if (error) throw new Error("Could not load notes. Check that migration 004 was applied.");
-    for (const row of data) {
-      const { artifact: rawArtifact, ...note } = row;
-      const artifact = rawArtifact as unknown as { legacy_topic: string | null; source: { name: string } } | null;
-      notes.push({ ...note, topic: artifact?.legacy_topic ?? `${note.artifact_id ? "source" : "note"}/${note.artifact_id ?? note.id}`,
-        source_name: artifact?.source.name ?? "Manual notes" });
-    }
+    const { data, error } = await query.order("id").range(offset, offset + 499).returns<Row[]>();
+    if (error) throw new Error("Could not load your saved notes.");
+    notes.push(...data);
     if (data.length < 500) return notes;
   }
 }

@@ -3,7 +3,6 @@ export type Note = {
   path: string;
   title: string;
   body: string;
-  updated_at: string;
   source_id: string | null;
   artifact_id: string | null;
   topic: string;

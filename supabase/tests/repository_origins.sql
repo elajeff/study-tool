@@ -1,7 +1,9 @@
 \set ON_ERROR_STOP on
 begin;
 set local plpgsql.check_asserts=on;
-insert into auth.users(id,email) values('00000000-0000-4000-8000-000000000098','origin@example.test');
+insert into auth.users(id,email) values
+ ('00000000-0000-4000-8000-000000000098','origin@example.test'),
+ ('00000000-0000-4000-8000-000000000099','other-origin@example.test');
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000098',true);
 insert into public.sources(id,user_id,kind,name) values('98000000-0000-4000-8000-000000000001',auth.uid(),'repository','Origin fixture');
@@ -32,4 +34,32 @@ begin
   assert false,'Origins cannot be rewritten directly';
  exception when insufficient_privilege then null; end;
 end $$;
+
+do $$
+declare
+  origin jsonb := '{"format":"study-repository/1","kind":"github","url":"https://github.com/example/profile-repo","excluded":[]}'::jsonb
+    || jsonb_build_object('commit',repeat('a',40));
+  entries jsonb := '[{"path":"main.py","content":"Example","artifact_id":null,"expected_path":null,"expected_revision_id":null}]';
+begin
+  begin
+    perform public.create_profile_repository('Profile repository','[]',origin);
+    assert false,'Invalid batch must fail';
+  exception when invalid_parameter_value then null; end;
+  assert not exists(select 1 from public.sources where name='Profile repository'),'Failed import left a collection';
+
+  perform public.create_profile_repository('Profile repository',entries,origin);
+  assert (select count(*)=1 from public.source_imports where repository_origin=origin);
+  begin
+    perform public.create_profile_repository('Profile repository',entries,
+      origin || '{"url":"https://github.com/Example/Profile-Repo"}'::jsonb);
+    assert false,'Retry must reuse the saved repository';
+  exception when serialization_failure then null; end;
+  assert (select count(*)=1 from public.sources where name='Profile repository');
+
+  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000099',true);
+  assert not exists(select 1 from public.source_imports where repository_origin=origin);
+  perform public.create_profile_repository('Profile repository',entries,origin);
+  assert (select count(*)=1 from public.source_imports where repository_origin=origin);
+end $$;
+
 rollback;

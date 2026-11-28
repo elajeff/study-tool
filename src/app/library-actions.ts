@@ -78,7 +78,7 @@ export async function importLibraryDigest(_previous: { error?: string; saved?: n
   try { digest = parseDigest(String(form.get("digest") ?? ""), manifest); }
   catch (error) { return { error: error instanceof Error ? error.message : "Invalid digest JSON." }; }
   const { data, error } = await supabase.rpc("save_library_digest", { p_export_id: manifest.export_id, p_items: digest.items });
-  if (error) return { error: "Could not save summaries. Check migration 015 and retry." };
+  if (error) return { error: "Could not save the source summaries. Try again." };
   revalidatePath("/library");
   return { saved: data as number };
 }

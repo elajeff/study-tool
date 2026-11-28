@@ -1,4 +1,4 @@
-export type InboxKind = "course" | "course-start" | "module" | "digest";
+type InboxKind = "course" | "course-start" | "module" | "digest";
 export type InboxBlock = { kind: InboxKind; value: Record<string, unknown> };
 const formats = new Map<string, InboxKind>([["study-course/1", "course"], ["study-course-start/1", "course-start"], ["study-module/1", "module"], ["study-digest/1", "digest"]]);
 

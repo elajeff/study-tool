@@ -2,8 +2,9 @@ import type { LibraryArtifact } from "./library-queries.ts";
 import type { ExportManifest } from "./library-pack.ts";
 import type { ConversationContext } from "./conversation-context.ts";
 import { inspectImportText } from "./import-privacy.ts";
+import { parseInbox } from "./inbox.ts";
 
-export type DigestContext = ConversationContext["metadata"];
+type DigestContext = ConversationContext["metadata"];
 export type LibraryDigest = { id: string; revision_id: string; path: string; context: DigestContext; summary: string };
 export type ExportDigest = { id: string; digest_id: string; summary: string };
 export type DigestBlock = { format: "study-digest/1"; export_id: string; items: { id: string; summary: string }[] };
@@ -15,9 +16,9 @@ function digestContextKey(context: DigestContext): string {
 
 export function parseDigest(raw: string, manifest: ExportManifest): DigestBlock {
   if (new TextEncoder().encode(raw).length > 200000) throw new Error("Digest text exceeds 200,000 UTF-8 bytes.");
-  const blocks = [...raw.matchAll(/^```(?:study-digest|json)\s*\r?\n([\s\S]*?)^```\s*$/gm)];
-  if (blocks.length > 1) throw new Error("Import one complete digest at a time.");
-  return validateDigest(JSON.parse(blocks.length ? blocks[0][1] : raw), manifest);
+  const { blocks } = parseInbox(raw);
+  if (blocks.length !== 1 || blocks[0].kind !== "digest") throw new Error("Import one complete source summary at a time.");
+  return validateDigest(blocks[0].value, manifest);
 }
 
 export function validateDigest(value: unknown, manifest: ExportManifest): DigestBlock {

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readMarkdownFiles } from "../src/lib/obsidian.ts";
-import { cleanNotePath, noteRelationships, resolveNoteLink, type SourceAlias } from "../src/lib/notes.ts";
+import { cleanNotePath, noteRelationships, noteLinkResolver, type SourceAlias } from "../src/lib/notes.ts";
 
 test("note imports reject unsafe paths and non-Markdown files", () => {
   assert.equal(cleanNotePath("../notes.md"), null);
@@ -11,7 +11,7 @@ test("note imports reject unsafe paths and non-Markdown files", () => {
 });
 
 test("wikilinks resolve a note by its path", () => {
-  const result = resolveNoteLink("Java", [{ path: "Concepts/Java.md" }]);
+  const result = noteLinkResolver([{ path: "Concepts/Java.md" }])("Java");
   assert.equal(result.state === "resolved" && result.note.path, "Concepts/Java.md");
 });
 
@@ -43,10 +43,10 @@ test("relationships retain kind and line references while ignoring code and atta
 test("accepted path history retains renamed targets but never guesses after path reuse or deletion", () => {
   const note = { path: "New.md", artifact_id: "same-file" };
   const alias: SourceAlias = { source_id: "vault", artifact_id: note.artifact_id, path: "Old.md", current_path: note.path, current_revision_id: "revision" };
-  assert.deepEqual(resolveNoteLink("Old", [note], [alias]), { state: "resolved", note });
-  assert.deepEqual(resolveNoteLink("Old", [note, { path: "Old.md", artifact_id: "other-file" }], [alias]), { state: "ambiguous" });
-  assert.deepEqual(resolveNoteLink("Old", [], [alias]), { state: "missing" });
-  assert.deepEqual(resolveNoteLink("Absent", [note], [alias]), { state: "missing" });
+  assert.deepEqual(noteLinkResolver([note], [alias])("Old"), { state: "resolved", note });
+  assert.deepEqual(noteLinkResolver([note, { path: "Old.md", artifact_id: "other-file" }], [alias])("Old"), { state: "ambiguous" });
+  assert.deepEqual(noteLinkResolver([], [alias])("Old"), { state: "missing" });
+  assert.deepEqual(noteLinkResolver([note], [alias])("Absent"), { state: "missing" });
 });
 
 test("vault previews exclude likely keys and warn about ambiguous passwords", async () => {

@@ -56,21 +56,45 @@ export function noteRelationships(markdown: string): NoteRelationship[] {
   return links;
 }
 
-export function resolveNoteLink<T extends { path: string; artifact_id?: string | null }>(target: string, notes: T[], aliases: SourceAlias[] = []):
-  { state: "resolved"; note: T } | { state: "missing" | "ambiguous" } {
-  const normalized = target.replace(/\.md$/i, "").toLowerCase();
-  for (const basename of [false, true]) {
-    const matches = (path: string) => {
-      const clean = path.replace(/\.md$/i, "").toLowerCase();
-      return (basename ? clean.split("/").at(-1) : clean) === normalized;
-    };
-    const identities = new Set(aliases.filter((alias) => matches(alias.path)).map((alias) => alias.artifact_id));
-    const candidates = notes.filter((note) => matches(note.path) || (note.artifact_id && identities.has(note.artifact_id)));
-    for (const note of candidates) identities.add(note.artifact_id ?? note.path);
-    if (identities.size > 1) return { state: "ambiguous" };
-    if (identities.size === 1) return candidates.length === 1 ? { state: "resolved", note: candidates[0] } : { state: "missing" };
+function notePathKey(path: string) {
+  return path.replace(/\.md$/i, "").toLowerCase();
+}
+
+function groupBy<T>(items: T[], keyOf: (item: T) => string | null | undefined) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    if (key == null) continue;
+    const group = groups.get(key);
+    if (group) group.push(item);
+    else groups.set(key, [item]);
   }
-  return { state: "missing" };
+  return groups;
+}
+
+export function noteLinkResolver<T extends { path: string; artifact_id?: string | null }>(notes: T[], aliases: SourceAlias[] = []) {
+  const basename = (path: string) => notePathKey(path.slice(path.lastIndexOf("/") + 1));
+  const paths = [groupBy(notes, note => notePathKey(note.path)), groupBy(notes, note => basename(note.path))];
+  const aliasPaths = [groupBy(aliases, alias => notePathKey(alias.path)), groupBy(aliases, alias => basename(alias.path))];
+  const byArtifact = groupBy(notes, note => note.artifact_id);
+
+  return (target: string): { state: "resolved"; note: T } | { state: "missing" | "ambiguous" } => {
+    const key = notePathKey(target);
+    for (let index = 0; index < paths.length; index++) {
+      const identities = new Set(aliasPaths[index].get(key)?.map(alias => alias.artifact_id));
+      const candidates = new Set(paths[index].get(key));
+      for (const id of identities) {
+        for (const note of byArtifact.get(id) ?? []) candidates.add(note);
+      }
+      for (const note of candidates) identities.add(note.artifact_id ?? note.path);
+      if (identities.size > 1) return { state: "ambiguous" };
+      if (identities.size === 1) {
+        const [note] = candidates;
+        return candidates.size === 1 ? { state: "resolved", note } : { state: "missing" };
+      }
+    }
+    return { state: "missing" };
+  };
 }
 
 

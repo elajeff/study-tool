@@ -32,8 +32,9 @@ test("ordinary note names and folders work across different subjects", () => {
 
 test("source conflicts and cycles are reported", () => {
   const note = (path: string, body = "") => ({ path, title: path, body });
-  const conflict = buildCurriculum([note("Topic.md"), note("topic.md")]);
+  const conflict = buildCurriculum([note("Topic.md"), note("topic.md"), { ...note("Other.md"), source_id: "other-vault" }]);
   assert.match(conflict.issues.join(" "), /Topic.md.*topic.md/);
+  assert.deepEqual(conflict.lessons.map(lesson => lesson.title), ["Other.md"]);
   const cycle = buildCurriculum([
     note("A.md", "## Prerequisites\n[[B]]\n[[C]]"),
     note("B.md", "## Prerequisites\n[[A]]"),

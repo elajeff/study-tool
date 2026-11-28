@@ -21,9 +21,19 @@ export async function loadNotes(supabase: SupabaseClient, sourceId?: string | nu
     "id,path,title,body,source_id,artifact_id,artifact:source_artifacts!note_artifact_fk(legacy_topic,source:sources(name))", sourceId);
   return rows.map(({ artifact, ...note }) => ({
     ...note,
-    topic: artifact?.legacy_topic ?? `${note.artifact_id ? "source" : "note"}/${note.artifact_id ?? note.id}`,
+    topic: noteTopicKey(note, artifact?.legacy_topic),
     source_name: artifact?.source.name ?? "Manual notes",
   }));
+}
+
+function noteTopicKey(note: Pick<Note, "id" | "artifact_id">, legacyTopic?: string | null) {
+  return legacyTopic ?? (note.artifact_id ? `source/${note.artifact_id}` : `note/${note.id}`);
+}
+
+export async function loadNoteTopicReferences(supabase: SupabaseClient) {
+  type Row = Pick<Note, "id" | "source_id" | "artifact_id"> & { artifact: { legacy_topic: string | null } | null };
+  const rows = await readNotes<Row>(supabase, "id,source_id,artifact_id,artifact:source_artifacts!note_artifact_fk(legacy_topic)", undefined);
+  return rows.map(row => ({ sourceId: row.source_id, topic: noteTopicKey(row, row.artifact?.legacy_topic) }));
 }
 
 export function loadNotesForExport(supabase: SupabaseClient, sourceId?: string | null) {

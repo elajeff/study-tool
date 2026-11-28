@@ -39,6 +39,7 @@ declare
   artifact uuid;
   note uuid;
   revision uuid;
+  old_version timestamptz := '2000-01-01 UTC';
 begin
   perform public.accept_obsidian_import(src,jsonb_build_array(pg_temp.preview_entry(src,'Topic.md','Original','replace')));
   select artifact_id,id,imported_revision_id into artifact,note,revision from public.notes where source_id=src;
@@ -48,9 +49,13 @@ begin
   assert (select count(*)=2 from public.notes where path='Topic.md');
   perform public.accept_obsidian_import(src,jsonb_build_array(pg_temp.preview_entry(src,'Topic.md','Original','keep')));
   assert (select count(*)=1 from public.source_revisions where artifact_id=artifact);
+  update public.notes set body='Local edit before rename',updated_at=old_version where id=note;
   perform public.accept_obsidian_import(src,jsonb_build_array(
     pg_temp.preview_entry(src,'Topic.md','Original','keep') || '{"path":"Renamed.md"}'));
   assert (select id=note and artifact_id=artifact and imported_revision_id=revision and path='Renamed.md' from public.notes where id=note);
+  delete from public.notes where id=note and updated_at=old_version;
+  assert not found,'The old form version must not match the renamed note';
+  assert (select body='Local edit before rename' from public.notes where id=note);
 end $$;
 
 -- Keeping local edits accepts the raw revision; stale local or source state rejects the whole batch.

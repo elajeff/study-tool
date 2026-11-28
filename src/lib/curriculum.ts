@@ -34,9 +34,7 @@ function summary(body: string) {
     ?? "Open the source note.";
 }
 
-export function buildCurriculum(notes: SourceNote[], profile: StudyProfile | null, aliases: SourceAlias[] = []): { tracks: Track[]; lessons: Lesson[]; issues: string[] } {
-  if (!profile) return { tracks: [], lessons: [], issues: [] };
-
+export function buildCurriculum(notes: SourceNote[], aliases: SourceAlias[] = []): { tracks: Track[]; lessons: Lesson[]; issues: string[] } {
   const issues: string[] = [];
   const paths = new Map<string, string>();
   const ids = new Map(notes.map((note) => [note, sourceId(note.topic ? `${note.topic}.md` : note.path)]));

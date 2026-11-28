@@ -17,7 +17,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
     <Link href="/curriculum" className="back-link"><ArrowLeft size={16} /> Back to note topics</Link>
     <div className="page-heading"><span className="eyebrow">{track?.title}</span>
       <h1>{lesson.title}</h1><p>{lesson.summary}</p><small>Source: {lesson.sourceName} · {lesson.sourcePath}</small>
-      {lesson.blocked && <p role="alert">Review missing or ambiguous prerequisites in this source note.</p>}
+      {lesson.prerequisiteWarning && <p role="alert">{lesson.prerequisiteWarning}</p>}
     </div>
     <div className="lesson-layout">
       <article className="lesson-body">

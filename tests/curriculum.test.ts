@@ -36,11 +36,16 @@ test("source conflicts and cycles are reported", () => {
   const conflict = buildCurriculum([note("Topic.md"), note("topic.md")], profile);
   assert.match(conflict.issues.join(" "), /Topic.md.*topic.md/);
   const cycle = buildCurriculum([
-    note("A.md", "## Prerequisites\n[[B]]"),
+    note("A.md", "## Prerequisites\n[[B]]\n[[C]]"),
     note("B.md", "## Prerequisites\n[[A]]"),
+    note("C.md", "## Prerequisites\n[[B]]"),
+    note("Self.md", "## Prerequisites\n[[Self]]"),
+    note("Next.md", "## Prerequisites\n[[A]]\n## Recommended reading\n[[Next]]"),
   ], profile);
   assert.match(cycle.issues.join(" "), /Circular prerequisites/);
-  assert.equal(cycle.lessons.reduce((count, lesson) => count + lesson.prerequisites.length, 0), 2);
+  const flagged = cycle.lessons.filter(lesson => lesson.prerequisiteWarning);
+  assert.deepEqual(flagged.map(lesson => lesson.sourcePath).sort(), ["A.md", "B.md", "C.md", "Self.md"]);
+  assert.ok(flagged.every(lesson => lesson.prerequisiteWarning!.includes("circular")));
 });
 
 test("same paths in separate vaults keep separate topics and prerequisites; renames keep the same topic ID", () => {
@@ -69,7 +74,7 @@ test("ambiguous prerequisite names are reported rather than linked to an arbitra
     { path: "Advanced.md", title: "Advanced", body: "## Prerequisites\n[[Basics]]" },
   ], profile);
   const advanced = result.lessons.find((lesson) => lesson.title === "Advanced")!;
-  assert.equal(advanced.blocked, true);
+  assert.match(advanced.prerequisiteWarning!, /missing or ambiguous/);
   assert.deepEqual(advanced.prerequisites, []);
   assert.match(result.issues.join(" "), /ambiguous link/);
 });
@@ -82,12 +87,12 @@ test("only explicit prerequisites block study, and renamed targets stay scoped w
   const aliases = [{ source_id: "vault-a", artifact_id: "base-a", path: "Basics.md", current_path: "Renamed.md", current_revision_id: "revision" }];
   const current = buildCurriculum(notes, profile, aliases);
   const lesson = current.lessons.find((lesson) => lesson.sourcePath === next.path)!;
-  assert.equal(lesson.blocked, false);
+  assert.equal(lesson.prerequisiteWarning, null);
   assert.deepEqual(lesson.prerequisites, [current.lessons.find((lesson) => lesson.sourcePath === base.path)!.id]);
   assert.equal(lesson.recommendations.length, 1);
   assert.deepEqual(current.issues, []);
   const changed = buildCurriculum(notes.map((note) => note === next ? { ...note, body: "[[Optional]]" } : note), profile, aliases);
   assert.deepEqual(changed.lessons.find((candidate) => candidate.id === lesson.id)?.prerequisites, []);
   const reused = buildCurriculum([...notes, { ...base, path: "Basics.md", artifact_id: "new-file", topic: "source/new-file" }], profile, aliases);
-  assert.equal(reused.lessons.find((candidate) => candidate.id === lesson.id)?.blocked, true);
+  assert.match(reused.lessons.find((candidate) => candidate.id === lesson.id)!.prerequisiteWarning!, /missing or ambiguous/);
 });

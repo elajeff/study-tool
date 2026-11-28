@@ -126,15 +126,10 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       if (new Blob([JSON.stringify(entries)]).size > 35 * 1024 * 1024) throw new Error("The import exceeds 35 MiB of JSON. Select fewer files.");
       const origin: RepositoryOrigin = { format: "study-repository/1", kind: githubSnapshot ? "github" : "archive", url: githubSnapshot?.url ?? null, commit: githubSnapshot?.commit ?? null,
         excluded: [...skipped, ...files.filter(file => !selected.has(file.path)).map(file => file.path)] };
-      const client = createClient(); let targetSourceId = destinationId;
-      if (!targetSourceId && queue.length) {
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("Sign in again.");
-        const { data, error } = await client.from("sources").insert({ user_id: user.id, kind: "repository", name: queue[0].name }).select("id").single();
-        if (error) throw new Error("Could not create the repository collection.");
-        targetSourceId = data.id; setDestinationId(targetSourceId);
-      }
-      const { error } = await client.rpc("accept_repository_import", { p_source_id: targetSourceId, p_entries: entries, p_origin: origin });
+      const client = createClient();
+      const { error } = !destinationId && queue.length
+        ? await client.rpc("create_profile_repository", { p_name: queue[0].name, p_entries: entries, p_origin: origin })
+        : await client.rpc("accept_repository_import", { p_source_id: destinationId, p_entries: entries, p_origin: origin });
       if (error) throw new Error(error.message);
       if (queue.length) await advanceQueue();
       else { setFiles([]); setSkipped([]); setGitHubSnapshot(null); setMessage("Import accepted."); router.refresh(); }

@@ -2,6 +2,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SourceAlias } from "./notes.ts";
 import type { RepositoryFile } from "./repository-import.ts";
 
+export async function loadRepositoryGitHubUrl(supabase: SupabaseClient, sourceId: string): Promise<string | null> {
+  const { data, error } = await supabase.from("source_imports").select("url:repository_origin->>url")
+    .eq("source_id", sourceId).eq("repository_origin->>kind", "github")
+    .order("accepted_at", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw new Error("Could not check the saved repository URL.");
+  return typeof data?.url === "string" ? data.url : null;
+}
+
 export async function loadRepositoryFiles(supabase: SupabaseClient, sourceId: string): Promise<RepositoryFile[]> {
   const files: RepositoryFile[] = [];
   for (let offset = 0; ; offset += 500) {

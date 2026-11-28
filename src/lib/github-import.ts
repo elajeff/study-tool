@@ -75,5 +75,5 @@ export async function downloadGitHubRepository(raw: string, ref: string, fetcher
   }
   const archive = new Uint8Array(bytes); let offset = 0;
   for (const chunk of chunks) { archive.set(chunk, offset); offset += chunk.byteLength; }
-  return { archive, url: repository.url, commit, name: repository.repository };
+  return { archive, url: repository.url, commit };
 }

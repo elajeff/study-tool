@@ -21,7 +21,15 @@ begin
   'origins',jsonb_build_array(jsonb_build_object('import_id',run,'source_id','98000000-0000-4000-8000-000000000001','origin',origin)));
  perform public.save_library_export(m);
  entry := entry||jsonb_build_object('artifact_id',artifact_uuid,'expected_path','main.py','expected_revision_id',revision_uuid);
- perform public.accept_repository_import('98000000-0000-4000-8000-000000000001',jsonb_build_array(entry),origin||jsonb_build_object('commit',repeat('b',40)));
+ perform public.accept_repository_import('98000000-0000-4000-8000-000000000001',jsonb_build_array(entry),
+  origin||jsonb_build_object('commit',repeat('b',40),'url','https://github.com/Example/Project'));
+ perform public.accept_repository_import('98000000-0000-4000-8000-000000000001',jsonb_build_array(entry),
+  '{"format":"study-repository/1","kind":"archive","url":null,"commit":null,"excluded":[]}');
+ begin
+  perform public.accept_repository_import('98000000-0000-4000-8000-000000000001',
+    jsonb_build_array(entry||'{"content":"Wrong repository"}'::jsonb),origin||'{"url":"https://github.com/example/other-project"}'::jsonb);
+  assert false,'A local ZIP must not clear the collection GitHub identity';
+ exception when invalid_parameter_value then null; end;
  assert (select count(*)=1 from public.source_revisions);
  assert (select import_id=run from public.source_revisions);
  perform public.save_library_export(m);

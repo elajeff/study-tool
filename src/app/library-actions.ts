@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth";
 import { loadLibrarySources, loadLibraryArtifacts, loadLatestRepositoryItems, selectLibraryArtifacts } from "@/lib/library-queries";
-import { loadExportManifest, loadExportRevisions } from "@/lib/export-queries";
+import { loadExportManifest, loadExportRevisions, loadRepositoryOrigins } from "@/lib/export-queries";
 import { loadConversationContexts } from "@/lib/conversation-queries";
 import { prepareLibraryExport } from "@/lib/library-pack";
 import { parseDigest } from "@/lib/library-digest";
@@ -25,10 +25,18 @@ export async function prepareProjectExport(_previous: { error: string } | null, 
     }
     const ids = collections.flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
     const revisions = await loadExportRevisions(supabase, sources.map(source => source.id), ids);
+    const repoArtifacts = new Set(collections.filter(({ source }) => source.kind === "repository")
+      .flatMap(({ artifacts }) => artifacts.map(item => item.id)));
+    const repoImports = new Set(revisions.flatMap(revision =>
+      revision.import_id && repoArtifacts.has(revision.artifact_id) ? [revision.import_id] : []));
     const chatIds = collections.filter(({ source }) => ["chatgpt", "claude"].includes(source.kind))
       .flatMap(({ artifacts }) => artifacts.flatMap(item => item.current_revision_id ? [item.current_revision_id] : []));
-    const [contexts, digests, learning] = await Promise.all([loadConversationContexts(supabase, chatIds), loadLibraryDigests(supabase, ids),
-      form.get("learning") === "include" ? loadLearningSnapshot(supabase) : undefined]);
+    const [contexts, digests, learning, origins] = await Promise.all([loadConversationContexts(supabase, chatIds), loadLibraryDigests(supabase, ids),
+      form.get("learning") === "include" ? loadLearningSnapshot(supabase) : undefined, loadRepositoryOrigins(supabase, repoImports)]);
+    for (const revision of revisions) {
+      const origin = revision.import_id && origins.get(revision.import_id);
+      if (origin) revision.repository_origin = origin;
+    }
     const manifest = prepareLibraryExport(collections, revisions, contexts, digests, learning);
     const { error } = await supabase.rpc("save_library_export", { p_manifest: manifest });
     if (error) throw new Error(`Could not save the Library snapshot: ${error.message}`);

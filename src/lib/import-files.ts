@@ -119,7 +119,7 @@ export async function readImportFiles(selected: File[], include: (path: string) 
         const raw = file.webkitRelativePath || file.name;
         await queueFile(raw, file.size, async (prefixBytes) => {
           const input = prefixBytes === undefined ? file : file.slice(0, prefixBytes);
-          return new TextDecoder("utf-8", { fatal: true }).decode(await input.arrayBuffer(), { stream: input.size < file.size });
+          return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(await input.arrayBuffer(), { stream: input.size < file.size });
         });
       }
     } catch (error) {

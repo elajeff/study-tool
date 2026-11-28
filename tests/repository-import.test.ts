@@ -46,6 +46,8 @@ test("repository preview can opt in to unfamiliar text without admitting binary 
   assert.deepEqual(result.files.map(file => file.path), ["Model.cs", "App.swift"]);
   assert.equal(shouldImportRepositoryFile("Model.cs"), false);
   assert.equal(shouldImportRepositoryFile("Model.cs", true), "optional");
+  const [file] = previewRepository([{ path: "constructor", hash: "name", body: "Example" }], []);
+  assert.equal(file.status, "New");
 });
 
 test("other text files cannot crowd recognized files out of a full preview", async () => {

@@ -155,5 +155,6 @@ test("large downloads bound UTF-8 bytes, index every item once and never cut sou
   const content = "界".repeat(500000);
   const huge = { ...revision, content, content_hash: createHash("sha256").update(content).digest("hex") };
   const single = prepareLibraryExport([{ source, artifacts: [artifact] }], [huge], new Map());
-  assert.throws(() => buildLibraryFiles(single, [huge]), LibraryFileSizeError);
+  assert.throws(() => buildLibraryFiles(single, [huge]), (error: unknown) =>
+    error instanceof LibraryFileSizeError && /Item R1\/F001 is too large.*Exclude it in Library/.test(error.message));
 });

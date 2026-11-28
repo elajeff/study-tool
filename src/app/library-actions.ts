@@ -5,6 +5,7 @@ import { loadLibrarySources, loadLibraryArtifacts, loadLatestRepositoryItems, se
 import { loadExportManifest, loadExportRevisions, loadRepositoryOrigins } from "@/lib/export-queries";
 import { loadConversationContexts } from "@/lib/conversation-queries";
 import { prepareLibraryExport } from "@/lib/library-pack";
+import { buildLibraryFiles } from "@/lib/library-files";
 import { parseDigest } from "@/lib/library-digest";
 import { revalidatePath } from "next/cache";
 import { loadLibraryDigests } from "@/lib/digest-queries";
@@ -38,6 +39,7 @@ export async function prepareProjectExport(_previous: { error: string } | null, 
       if (origin) revision.repository_origin = origin;
     }
     const manifest = prepareLibraryExport(collections, revisions, contexts, digests, learning);
+    buildLibraryFiles(manifest, revisions);
     const { error } = await supabase.rpc("save_library_export", { p_manifest: manifest });
     if (error) throw new Error(`Could not save the Library snapshot: ${error.message}`);
     exportId = manifest.export_id;

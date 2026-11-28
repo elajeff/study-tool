@@ -2,13 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { NoteMarkdown } from "@/components/NoteMarkdown";
 import { ArrowLeft, BookOpen } from "lucide-react";
-import { loadStudy } from "@/lib/study";
+import { requireAccount } from "@/lib/auth";
+import { loadNoteTopics, loadStudyProfile } from "@/lib/study";
 import { getLesson } from "@/lib/curriculum";
 import { TutorHandoff } from "@/components/TutorHandoff";
 
 export default async function LessonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { profile, lessons, tracks } = await loadStudy();
+  const { supabase, user } = await requireAccount();
+  const [{ lessons, tracks }, profile] = await Promise.all([loadNoteTopics(supabase), loadStudyProfile(supabase, user.id)]);
   const lesson = getLesson(lessons, slug);
   if (!lesson) notFound();
   const track = tracks.find((item) => item.id === lesson.track);
@@ -25,8 +27,12 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           <div className="panel-kicker"><BookOpen size={17} /> Source note</div>
           <div className="markdown-body"><NoteMarkdown body={lesson.sourceBody} /></div>
         </section>
-        <TutorHandoff lesson={lesson} profile={profile!}
+        {profile ? <TutorHandoff lesson={lesson} profile={profile}
           prerequisiteNames={lesson.prerequisites.map((id) => getLesson(lessons, id)?.title ?? id)} />
+          : <section className="panel tutor-panel"><h2>Tutor</h2>
+            <p>Add your learning goals to prepare a tutor request for this note.</p>
+            <Link href="/settings" className="button button-light">Set learning goals</Link>
+          </section>}
       </article>
       <aside className="lesson-aside">
         <section className="panel prerequisites"><h3>Prerequisites</h3>

@@ -1,4 +1,3 @@
-import { requireAccount } from "./auth";
 import { buildCurriculum, type StudyProfile } from "./curriculum";
 import { loadNotes } from "./note-queries";
 import { loadSourceAliases } from "./source-queries";
@@ -11,9 +10,7 @@ export async function loadStudyProfile(supabase: SupabaseClient, userId: string)
   return data;
 }
 
-export async function loadStudy() {
-  const { supabase, user } = await requireAccount();
-  const profile = await loadStudyProfile(supabase, user.id);
+export async function loadNoteTopics(supabase: SupabaseClient) {
   const [notes, aliases] = await Promise.all([loadNotes(supabase), loadSourceAliases(supabase)]);
-  return { supabase, user, profile, ...buildCurriculum(notes, profile, aliases) };
+  return buildCurriculum(notes, aliases);
 }

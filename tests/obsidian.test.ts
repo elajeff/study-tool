@@ -6,6 +6,22 @@ import { previewImport, readMarkdownFiles, type VaultState } from "../src/lib/ob
 const current: VaultState = { artifact_id: "artifact-a", path: "Topic.md", revision_id: "revision-a",
   baseline_hash: "original", note_id: "note-a", note_hash: "original", note_body: "Current note" };
 
+test("loose and archived Markdown preserve the same leading UTF-8 marker", async () => {
+  const body = "\uFEFF# Topic\n";
+  const zip = new JSZip();
+  zip.file("Topic.md", body);
+  const loose = await readMarkdownFiles([new File([body], "Topic.md")]);
+  const archive = await readMarkdownFiles([new File([await zip.generateAsync({ type: "arraybuffer" })], "vault.zip")]);
+  assert.equal(loose.files[0].body, body);
+  assert.equal(loose.files[0].hash, archive.files[0].hash);
+  assert.equal(previewImport(archive.files, [{ ...current, baseline_hash: loose.files[0].hash, note_hash: loose.files[0].hash }])[0].status, "Unchanged");
+
+  const legacy = await readMarkdownFiles([new File([body.slice(1)], "Topic.md")]);
+  const [review] = previewImport(loose.files, [{ ...current, baseline_hash: legacy.files[0].hash, note_hash: "local-edit" }]);
+  assert.equal(review.status, "Conflict");
+  assert.equal(review.decision, "");
+});
+
 test("preview separates accepted source text, local edits, deleted notes, and unconfirmed legacy snapshots", () => {
   const cases = [
     { changes: {}, incoming: "original", status: "Unchanged", decision: "keep" },

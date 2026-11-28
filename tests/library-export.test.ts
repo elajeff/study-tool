@@ -126,6 +126,7 @@ test("downloads retain exact text, safe fences, frozen context and export-bound 
   assert.match(library, /Content warning: Possible credential value kept/);
   assert.ok(library.indexOf("# AUTHORING INSTRUCTIONS") < library.indexOf("# SOURCE LIBRARY"));
   const instructions = projectInstructions(saved);
+  assert.doesNotMatch(instructions, /study-digest\/1/);
   const schema = JSON.parse(instructions.split("\n").find(line => line.startsWith('{"format":"study-course/1"'))!);
   assert.equal(schema.export_id, saved.export_id);
   assert.match(instructions, /retrieve the actual items/);

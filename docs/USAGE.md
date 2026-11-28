@@ -106,7 +106,7 @@ Use **Choose file** in Inbox or on a module without a plan to choose a downloade
 
 ## Source summaries
 
-ChatGPT can return a `study-digest/1` block for source items it opened. Import it under **Import source summaries** on the matching snapshot page. Each entry has an item ID and a one-line summary of at most 200 characters. Saved summaries appear beside Library items only while the revision, path and conversation context match. Corrections append a version; retrying an old summary does not replace a newer correction. Summaries remain unverified navigation aids. Original text and saved snapshots stay unchanged.
+To add descriptions for Library items, open **Source summaries (optional)** on a saved snapshot. Copy the summary request into your ChatGPT Project, then paste the returned JSON into the same panel. Saved summaries appear beside Library items while the revision, path and conversation context match. Study Tool uses them as navigation aids in future snapshots.
 
 New snapshots include matching summaries in their navigation maps. The snapshot records the exact summary versions; later corrections do not change an existing download. Full source text remains included. Summaries help ChatGPT choose items to inspect but do not prove their contents are correct.
 

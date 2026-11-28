@@ -5,6 +5,7 @@ import { loadExportManifest } from "@/lib/export-queries";
 import { DigestImporter } from "@/components/DigestImporter";
 import { CourseLessonCard } from "@/components/CourseLessonCard";
 import { librarySuggestionsPrompt } from "@/lib/library-suggestions";
+import { libraryDigestPrompt } from "@/lib/library-digest";
 
 export default async function ExportPage({ params }: { params: Promise<{ id: string }> }) {
   const { supabase } = await requireAccount();
@@ -31,8 +32,9 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
         <p>Ask ChatGPT to inspect relevant source items and suggest five directions before creating a course.</p>
         <CourseLessonCard text={librarySuggestionsPrompt(manifest.export_id)} />
       </details>
-      <details><summary>Import source summaries</summary>
-        <p>Paste the study-digest block for this snapshot. Summaries are unverified navigation aids; they do not replace source text.</p>
+      <details><summary>Source summaries (optional)</summary>
+        <p>Ask ChatGPT for one-line descriptions to help you browse the Library. Paste the summaries it returns below.</p>
+        <CourseLessonCard label="Copy summary request" text={libraryDigestPrompt(manifest.export_id)} />
         <DigestImporter exportId={manifest.export_id} />
       </details>
     </section>

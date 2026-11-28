@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseDigest, currentLibraryDigests, type LibraryDigest } from "../src/lib/library-digest.ts";
+import { parseDigest, currentLibraryDigests, libraryDigestPrompt, type LibraryDigest } from "../src/lib/library-digest.ts";
 import type { ExportManifest } from "../src/lib/library-pack.ts";
 import type { ConversationContext } from "../src/lib/conversation-context.ts";
 import { parseInbox } from "../src/lib/inbox.ts";
@@ -9,6 +9,13 @@ const artifact = { id: "plant", short_code: "N001", current_revision_id: "rev", 
 const manifest: ExportManifest = { format: "study-export/3", export_id: "X" + "a".repeat(64), sources: [], maps: [],
   items: [{ id: "V1/N001", source_id: "source", artifact_id: "plant", revision_id: "rev", path: artifact.path, content_hash: "fixture" }] };
 const payload = { format: "study-digest/1", export_id: manifest.export_id, items: [{ id: "V1/N001", summary: "Notes about sowing seeds." }] };
+
+test("the optional summary request includes the format and the exact snapshot ID", () => {
+  const prompt = libraryDigestPrompt(manifest.export_id);
+  const example = JSON.parse(prompt.split("\n").find(line => line.startsWith("{"))!);
+  assert.equal(example.format, payload.format);
+  assert.equal(example.export_id, payload.export_id);
+});
 test("digests require exact export identity and distinct real items, not maps or general knowledge", () => {
   assert.equal(parseDigest(JSON.stringify(payload), manifest).items[0].summary, payload.items[0].summary);
   assert.equal(parseDigest(`Prose\n\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``, manifest).items.length, 1);

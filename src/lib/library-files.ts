@@ -17,7 +17,7 @@ export function buildLibraryFiles(manifest: ExportManifest, revisions: ExportRev
   for (const item of items) {
     const bytes = Buffer.byteLength(item.text, "utf8") + 2;
     if (bytes + headerBytes > LIBRARY_FILE_BYTES)
-      throw new LibraryFileSizeError(`Item ${item.id} exceeds the upload-file byte budget. Splitting within a source item is not supported. The saved source is unchanged.`);
+      throw new LibraryFileSizeError(`Item ${item.id} is too large for one upload file. Exclude it in Library and try again.`);
     if (!groups.length || size + bytes > LIBRARY_FILE_BYTES) {
       groups.push([]); size = headerBytes;
     }

@@ -12,6 +12,16 @@ import { GitHubProfilePicker } from "@/components/GitHubProfilePicker";
 
 type Repository = { id: string; name: string };
 type ReviewedFile = ImportFile & ReturnType<typeof inspectRepositoryText>;
+type GitHubSnapshot = { url: string; commit: string };
+type Preview = {
+  files: ReviewedFile[];
+  skipped: string[];
+  savedFiles: RepositoryFile[];
+  destinationId: string;
+  snapshot?: GitHubSnapshot;
+  selected: Set<string>;
+  bindings: Record<string, string>;
+};
 
 async function downloadGitHub(url: string, ref = "") {
   const form = new FormData(); form.set("url", url); form.set("ref", ref);
@@ -25,20 +35,14 @@ async function downloadGitHub(url: string, ref = "") {
 export function RepositoryImporter({ repositories, sourceId }: { repositories: Repository[]; sourceId: string }) {
   const router = useRouter();
   const [url, setUrl] = useState(""), [ref, setRef] = useState("");
-  const [githubSnapshot, setGitHubSnapshot] = useState<{ url: string; commit: string } | null>(null);
   const [name, setName] = useState("");
   const [includeOtherText, setIncludeOtherText] = useState(false);
-  const [files, setFiles] = useState<ReviewedFile[]>([]);
-  const [skipped, setSkipped] = useState<string[]>([]);
-  const [selected, setSelected] = useState(new Set<string>());
-  const [state, setState] = useState<RepositoryFile[]>([]);
-  const [bindings, setBindings] = useState<Record<string, string>>({});
+  const [preview, setPreview] = useState<Preview | null>(null);
   const [renamePath, setRenamePath] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [queue, setQueue] = useState<GitHubPublicRepository[]>([]), [batchSize, setBatchSize] = useState(0);
-  const [destinationId, setDestinationId] = useState(sourceId);
-  const rows = previewRepository(files.filter((file) => selected.has(file.path)), state, bindings);
+  const rows = preview ? previewRepository(preview.files.filter(file => preview.selected.has(file.path)), preview.savedFiles, preview.bindings) : [];
   const rowsByPath = new Map(rows.map(row => [row.file.path, row]));
   const assigned = new Set(rows.map(row => row.previous?.artifact_id));
 
@@ -55,82 +59,82 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
     finally { setBusy(false); }
   }
 
-  async function prepare(file: File | undefined, snapshot?: { url: string; commit: string }, targetSourceId = sourceId) {
-    if (!file) return;
-    setBusy(true); setMessage(`Reading ${file.name}…`); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
+  async function prepare(load: () => Promise<{ file: File; snapshot?: GitHubSnapshot; destinationId: string }>) {
+    setBusy(true);
+    setPreview(null);
+    setRenamePath("");
+    setMessage("");
     try {
+      const { file, snapshot, destinationId } = await load();
+      setMessage(`Reading ${file.name}…`);
       if (!file.name.toLowerCase().endsWith(".zip")) throw new Error("Select a ZIP archive.");
-      if (snapshot && targetSourceId) {
-        const savedUrl = await loadRepositoryGitHubUrl(createClient(), targetSourceId);
+      if (snapshot && destinationId) {
+        const savedUrl = await loadRepositoryGitHubUrl(createClient(), destinationId);
         if (savedUrl && savedUrl.toLowerCase() !== snapshot.url.toLowerCase()) {
           throw new Error("This collection already belongs to another GitHub repository. Choose a different collection.");
         }
       }
       const parsed = await readImportFiles([file], path => shouldImportRepositoryFile(path, includeOtherText), snapshot ? repositoryArchiveRoot : undefined);
       setMessage("Comparing files with the saved repository…");
-      const current = targetSourceId ? await loadRepositoryFiles(createClient(), targetSourceId) : [];
+      const savedFiles = destinationId ? await loadRepositoryFiles(createClient(), destinationId) : [];
       const reviewed = parsed.files.map((file) => ({ ...file, ...inspectRepositoryText(file.body) }));
-      setState(current); setBindings({}); setRenamePath(""); setFiles(reviewed); setSkipped(parsed.skipped);
-      setDestinationId(targetSourceId);
-      setGitHubSnapshot(snapshot ?? null);
-      setSelected(new Set(reviewed.filter((file) => !file.blocked && shouldImportRepositoryFile(file.path)).map((file) => file.path)));
+      const selected = new Set(reviewed.filter(file => !file.blocked && shouldImportRepositoryFile(file.path)).map(file => file.path));
+      setPreview({ files: reviewed, skipped: parsed.skipped, savedFiles, destinationId, snapshot, selected, bindings: {} });
       setMessage(`${reviewed.length} files ready for review. Nothing has been saved yet.`);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the archive."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the repository."); }
     finally { setBusy(false); }
   }
 
   async function prepareGitHub(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setMessage(""); setFiles([]); setSkipped([]); setGitHubSnapshot(null);
-    try {
-      const download = await downloadGitHub(url, ref);
-      await prepare(download.file, download.snapshot);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the repository."); }
-    finally { setBusy(false); }
+    event.preventDefault();
+    await prepare(async () => ({ ...await downloadGitHub(url, ref), destinationId: sourceId }));
   }
 
   async function prepareNext(repository: GitHubPublicRepository) {
-    setBusy(true); setMessage(""); setFiles([]); setSkipped([]); setGitHubSnapshot(null); setDestinationId("");
-    try {
+    await prepare(async () => {
       const download = await downloadGitHub(repository.url);
       const { data, error } = await createClient().from("source_imports").select("source_id")
         .ilike("repository_origin->>url", repository.url.replaceAll("_", "\\_")).order("accepted_at", { ascending: false }).limit(1).maybeSingle();
       if (error) throw new Error("Could not check previous imports of this repository.");
-      await prepare(download.file, download.snapshot, data?.source_id ?? "");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not preview the repository."); }
-    finally { setBusy(false); }
+      return { ...download, destinationId: data?.source_id ?? "" };
+    });
   }
 
   async function advanceQueue() {
     const remaining = queue.slice(1); setQueue(remaining);
     if (remaining.length) await prepareNext(remaining[0]);
-    else { setFiles([]); setSkipped([]); setGitHubSnapshot(null); setMessage("Repository queue finished. Saved repositories are in your Library."); router.refresh(); }
+    else { setPreview(null); setMessage("Repository queue finished. Saved repositories are in your Library."); router.refresh(); }
   }
 
   function toggle(path: string) {
-    const next = new Set(selected);
+    if (!preview) return;
+    const next = new Set(preview.selected);
     if (next.has(path)) next.delete(path); else next.add(path);
     try {
-      previewRepository(files.filter((file) => next.has(file.path)), state, bindings);
-      setSelected(next); setMessage("");
+      previewRepository(preview.files.filter(file => next.has(file.path)), preview.savedFiles, preview.bindings);
+      setPreview({ ...preview, selected: next }); setMessage("");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Review the file identities."); }
   }
 
   function bind(path: string, artifactId: string) {
-    const next = { ...bindings, [path]: artifactId };
+    if (!preview) return;
+    const next = { ...preview.bindings, [path]: artifactId };
     try {
-      previewRepository(files.filter((file) => selected.has(file.path)), state, next);
-      setBindings(next); setMessage("");
+      previewRepository(preview.files.filter(file => preview.selected.has(file.path)), preview.savedFiles, next);
+      setPreview({ ...preview, bindings: next }); setMessage("");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Review the rename choices."); }
   }
 
   async function accept() {
+    if (!preview) return;
+    const { destinationId, snapshot, skipped, files, selected } = preview;
     setBusy(true); setMessage("");
     try {
       if (!rows.length || rows.some((row) => row.identityConflict)) throw new Error("Select files and resolve conflicts before importing.");
       const entries = rows.map((row) => ({ artifact_id: row.previous?.artifact_id ?? null, path: row.file.path, content: row.file.body,
         expected_path: row.previous?.path ?? null, expected_revision_id: row.previous?.revision_id ?? null }));
       if (new Blob([JSON.stringify(entries)]).size > 35 * 1024 * 1024) throw new Error("The import exceeds 35 MiB of JSON. Select fewer files.");
-      const origin: RepositoryOrigin = { format: "study-repository/1", kind: githubSnapshot ? "github" : "archive", url: githubSnapshot?.url ?? null, commit: githubSnapshot?.commit ?? null,
+      const origin: RepositoryOrigin = { format: "study-repository/1", kind: snapshot ? "github" : "archive", url: snapshot?.url ?? null, commit: snapshot?.commit ?? null,
         excluded: [...skipped, ...files.filter(file => !selected.has(file.path)).map(file => file.path)] };
       const client = createClient();
       const { error } = !destinationId && queue.length
@@ -138,29 +142,29 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
         : await client.rpc("accept_repository_import", { p_source_id: destinationId, p_entries: entries, p_origin: origin });
       if (error) throw new Error(error.message);
       if (queue.length) await advanceQueue();
-      else { setFiles([]); setSkipped([]); setGitHubSnapshot(null); setMessage("Import accepted."); router.refresh(); }
+      else { setPreview(null); setMessage("Import accepted."); router.refresh(); }
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import could not be confirmed. Select the ZIP again before retrying."); }
     finally { setBusy(false); }
   }
 
   return <section className="panel vault-import"><h2>Import repository</h2>
-    <label><input type="checkbox" checked={includeOtherText} disabled={busy || files.length > 0}
+    <label><input type="checkbox" checked={includeOtherText} disabled={busy || !!preview}
       onChange={event => setIncludeOtherText(event.target.checked)} /> Show other text files in preview</label>
-    {!queue.length && !files.length && <GitHubProfilePicker disabled={busy} onSelect={items => {
+    {!queue.length && !preview && <GitHubProfilePicker disabled={busy} onSelect={items => {
       setQueue(items); setBatchSize(items.length); void prepareNext(items[0]);
     }} />}
     {!!queue.length && <div className="repository-queue"><h3>Repository {batchSize - queue.length + 1} of {batchSize}: {queue[0].name}</h3>
       <p>Review and save to continue to the next repository. Previous GitHub imports use their existing collection. New collections are named after the repository.</p>
-      <div className="import-actions">{!files.length && !busy && <button className="button button-light" onClick={() => void prepareNext(queue[0])}>Retry download</button>}
+      <div className="import-actions">{!preview && !busy && <button className="button button-light" onClick={() => void prepareNext(queue[0])}>Retry download</button>}
         <button className="button button-light" disabled={busy} onClick={() => void advanceQueue()}>Skip repository</button>
-        <button className="button button-light" disabled={busy} onClick={() => { setQueue([]); setFiles([]); setSkipped([]); setGitHubSnapshot(null); setMessage("Import stopped. Previously saved repositories are kept."); router.refresh(); }}>Stop import</button></div>
+        <button className="button button-light" disabled={busy} onClick={() => { setQueue([]); setPreview(null); setMessage("Import stopped. Previously saved repositories are kept."); router.refresh(); }}>Stop import</button></div>
     </div>}
     <div hidden={!!queue.length}>
     <h3>Import one repository</h3>
     <p>Reuse the same repository when reimporting. ZIP paths are kept as stored, including enclosing folders. Files are never executed.</p>
     <div className="vault-controls"><div><label htmlFor="repository-source">Repository</label>
       <select id="repository-source" className="input" value={sourceId} disabled={busy} onChange={(event) => {
-        setBusy(true); setFiles([]); setSkipped([]); router.push(`/repositories?source=${event.target.value}`);
+        setBusy(true); setPreview(null); router.push(`/repositories?source=${event.target.value}`);
       }}>
         {!sourceId && <option value="" disabled>{repositories.length ? "Choose a repository" : "Create a repository first"}</option>}
         {repositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}{repositories.some((other) => other.id !== repository.id && other.name === repository.name) ? ` (${repository.id})` : ""}</option>)}
@@ -178,28 +182,32 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
     </form>
     <div className="import-actions"><label className={`button button-dark ${busy || !sourceId ? "disabled" : ""}`}>Preview ZIP
       <input className="import-file" type="file" accept=".zip,application/zip" disabled={busy || !sourceId}
-        onChange={(event) => { void prepare(event.target.files?.[0]); event.target.value = ""; }} /></label></div>
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void prepare(async () => ({ file, destinationId: sourceId }));
+          event.target.value = "";
+        }} /></label></div>
     </div>
-    {githubSnapshot && <p>Downloaded {githubSnapshot.url} at commit {githubSnapshot.commit}. Paths use the repository root. Existing ZIP imports may include an outer folder; compare paths before saving.</p>}
+    {preview?.snapshot && <p>Downloaded {preview.snapshot.url} at commit {preview.snapshot.commit}. Paths use the repository root. Existing ZIP imports may include an outer folder; compare paths before saving.</p>}
     {busy && !!queue.length && <p role="status">Working on {queue[0].name}…</p>}
     {message && <p role="status" className="import-message">{message}</p>}
-    {files.length > 0 && <div className="import-preview"><h3>Preview ({files.length})</h3>
+    {preview && <div className="import-preview"><h3>Preview ({preview.files.length})</h3>
       <p>Review the selected files. Other text files start unselected and only fill space left in the preview. Possible credential values stay selected with a warning; private keys and known token patterns are blocked. This check can miss secrets. Missing files are kept. Confirm renames by selecting the saved file.</p>
-      {skipped.length > 0 && <details><summary>Skipped files ({skipped.length})</summary><ul>{skipped.map((path, index) => <li key={index}><code>{path}</code></li>)}</ul></details>}
-      {files.map((file) => {
+      {preview.skipped.length > 0 && <details><summary>Skipped files ({preview.skipped.length})</summary><ul>{preview.skipped.map((path, index) => <li key={index}><code>{path}</code></li>)}</ul></details>}
+      {preview.files.map((file) => {
         const row = rowsByPath.get(file.path);
         return <article className="import-row" key={file.path}>
-          <label className="file-choice"><input type="checkbox" checked={selected.has(file.path)} disabled={busy || !!file.blocked} onChange={() => toggle(file.path)} />
+          <label className="file-choice"><input type="checkbox" checked={preview.selected.has(file.path)} disabled={busy || !!file.blocked} onChange={() => toggle(file.path)} />
             {file.review ? "Include flagged file: " : "Include: "}{file.path}</label>
           <span>{row?.status ?? "Not selected"}{row?.previous?.path !== file.path && row?.previous ? ` · Rename ${row.previous.path}` : ""}</span>
           {(file.blocked || file.review) && <p role="note">{file.blocked ?? file.review}</p>}
-          {row && (!row.previous || row.previous.path !== file.path) && state.length > 0 && <>
+          {row && (!row.previous || row.previous.path !== file.path) && preview.savedFiles.length > 0 && <>
             <button type="button" className="text-link" disabled={busy} aria-expanded={renamePath === file.path}
               onClick={() => setRenamePath(renamePath === file.path ? "" : file.path)}>Match a renamed file</button>
             {renamePath === file.path && <label>Saved file for {file.path}
-              <select className="input" value={bindings[file.path] ?? ""} disabled={busy} onChange={event => bind(file.path, event.target.value)}>
+              <select className="input" value={Object.hasOwn(preview.bindings, file.path) ? preview.bindings[file.path] : ""} disabled={busy} onChange={event => bind(file.path, event.target.value)}>
                 <option value="">New file</option>
-                {state.map(saved => <option value={saved.artifact_id} key={saved.artifact_id}
+                {preview.savedFiles.map(saved => <option value={saved.artifact_id} key={saved.artifact_id}
                   disabled={assigned.has(saved.artifact_id) && row.previous?.artifact_id !== saved.artifact_id}>
                   {saved.path ?? saved.artifact_id}
                 </option>)}
@@ -214,7 +222,7 @@ export function RepositoryImporter({ repositories, sourceId }: { repositories: R
       <div className="import-actions"><button className="button button-dark" disabled={busy || !rows.length || rows.some((row) => row.identityConflict)} onClick={() => void accept()}>
         {queue.length > 1 ? "Save repository and continue" : "Save selected files"} ({rows.length})
       </button>
-        {!queue.length && <button className="button button-light" disabled={busy} onClick={() => { setFiles([]); setSkipped([]); setGitHubSnapshot(null); setMessage(""); }}>Cancel preview</button>}</div>
+        {!queue.length && <button className="button button-light" disabled={busy} onClick={() => { setPreview(null); setMessage(""); }}>Cancel preview</button>}</div>
     </div>}
   </section>;
 }

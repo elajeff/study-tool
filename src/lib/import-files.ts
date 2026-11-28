@@ -145,7 +145,7 @@ export function matchImportFiles<T extends { artifact_id: string; path: string |
   }
   const used = new Set<string>();
   return files.map((file) => {
-    const binding = bindings[file.path];
+    const binding = Object.hasOwn(bindings, file.path) ? bindings[file.path] : undefined;
     const previous = binding ? byId.get(binding) : byPath.get(file.path);
     if (binding && !previous) throw new Error("The selected file is no longer in this source.");
     if (previous && used.has(previous.artifact_id)) throw new Error("Two files cannot use the same artifact. Review the rename choices.");

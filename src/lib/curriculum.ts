@@ -20,7 +20,7 @@ export type Lesson = {
   sourcePath: string;
   sourceBody: string;
   sourceName: string;
-  blocked: boolean;
+  prerequisiteWarning: string | null;
 };
 
 function sourceId(path: string) {
@@ -69,15 +69,15 @@ export function buildCurriculum(notes: SourceNote[], profile: StudyProfile | nul
       tracks.set(track, { id: track, title: folder || source, description: folder ? source : "" });
     }
     const relationships = noteRelationships(note.body);
-    let blocked = false;
+    let prerequisiteWarning = null;
     const links = (kind: "prerequisite" | "recommendation") => [...new Set(relationships.filter((link) => link.kind === kind).flatMap((link) => {
       const result = resolveNoteLink(link.target, scopes.get(note.source_id ?? null) ?? [], aliasScopes.get(note.source_id ?? ""));
       if (result.state !== "resolved") {
         issues.push(`Missing or ambiguous link [[${link.target}]] in ${note.source_name ?? "Notes"}: ${note.path}, line ${link.line}. Review the link within the same vault.`);
-        if (kind === "prerequisite") blocked = true;
+        if (kind === "prerequisite") prerequisiteWarning = "Review missing or ambiguous prerequisites in this note.";
       }
       const target = result.state === "resolved" ? result.note : undefined;
-      return target && target !== note ? [ids.get(target)!] : [];
+      return target && (kind === "prerequisite" || target !== note) ? [ids.get(target)!] : [];
     }))];
     const prerequisites = links("prerequisite");
     const recommendations = links("recommendation");
@@ -85,31 +85,47 @@ export function buildCurriculum(notes: SourceNote[], profile: StudyProfile | nul
       id: ids.get(note)!, track,
       title: note.title || titleFromPath(note.path), sourcePath: note.path, sourceBody: note.body,
       sourceName: note.source_name ?? "Notes",
-      prerequisites, recommendations, blocked,
+      prerequisites, recommendations, prerequisiteWarning,
       summary: summary(note.body),
     };
   });
 
   const byId = new Map(lessons.map((lesson) => [lesson.id, lesson]));
   const sorted: Lesson[] = [];
-  const done = new Set<string>();
+  const visitOrder = new Map<string, number>();
+  const pending: Lesson[] = [];
   const active = new Set<string>();
-  function visit(lesson: Lesson) {
-    if (done.has(lesson.id)) return;
-    if (active.has(lesson.id)) {
-      issues.push(`Circular prerequisites involving ${lesson.sourcePath}. Check the linked prerequisite notes.`);
-      return;
-    }
+  function visit(lesson: Lesson): number {
+    const order = visitOrder.size;
+    visitOrder.set(lesson.id, order);
+    pending.push(lesson);
     active.add(lesson.id);
+    let earliest = order;
     for (const id of lesson.prerequisites) {
-      const previous = byId.get(id);
-      if (previous) visit(previous);
+      const visited = visitOrder.get(id);
+      if (visited === undefined) earliest = Math.min(earliest, visit(byId.get(id)!));
+      else if (active.has(id)) earliest = Math.min(earliest, visited);
     }
-    active.delete(lesson.id);
-    done.add(lesson.id);
+    // When no link leads farther back, the pending group is complete.
+    if (earliest === order) {
+      const group: Lesson[] = [];
+      let member: Lesson;
+      do {
+        member = pending.pop()!;
+        active.delete(member.id);
+        group.push(member);
+      } while (member !== lesson);
+      if (group.length > 1 || lesson.prerequisites.includes(lesson.id)) {
+        for (const item of group) {
+          item.prerequisiteWarning = "This note is part of a circular prerequisite. Check the linked notes.";
+          issues.push(`Circular prerequisites involving ${item.sourceName}: ${item.sourcePath}.`);
+        }
+      }
+    }
     sorted.push(lesson);
+    return earliest;
   }
-  for (const lesson of lessons) visit(lesson);
+  for (const lesson of lessons) if (!visitOrder.has(lesson.id)) visit(lesson);
   return { tracks: [...tracks.values()], lessons: sorted, issues };
 }
 

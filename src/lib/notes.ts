@@ -23,12 +23,12 @@ export function titleFromPath(path: string) {
   return path.split("/").at(-1)!.replace(/\.md$/i, "").slice(0, 160);
 }
 
-export type NoteRelationship = { kind: "link" | "prerequisite" | "recommendation"; target: string; line: number; heading: string | null };
+type NoteRelationship = { kind: "link" | "prerequisite" | "recommendation"; target: string; line: number };
 export type SourceAlias = { source_id: string; artifact_id: string; path: string; current_path: string | null; current_revision_id: string | null };
 
 export function noteRelationships(markdown: string): NoteRelationship[] {
   const links: NoteRelationship[] = [];
-  const headings: { level: number; title: string; kind: NoteRelationship["kind"] }[] = [];
+  const headings: { level: number; kind: NoteRelationship["kind"] }[] = [];
   let fence = "";
   for (const [index, line] of markdown.split(/\r?\n/).entries()) {
     const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
@@ -45,13 +45,13 @@ export function noteRelationships(markdown: string): NoteRelationship[] {
       const kind = /^(required (conceptual )?foundations|required prerequisites|prerequisites|before you start)$/i.test(title) ? "prerequisite"
         : /^(recommended (study )?(preparation|background|reading)|preparation|related (study material|notes|concepts|reading))$/i.test(title) ? "recommendation"
           : headings.at(-1)?.kind ?? "link";
-      headings.push({ level: heading[1].length, title, kind });
+      headings.push({ level: heading[1].length, kind });
     }
     // Inline code examples are not assertions that a connection exists.
     const text = line.replace(/(`+)[\s\S]*?\1/g, "");
     for (const match of text.matchAll(/(?<!!)\[\[([^\]\n]+)\]\]/g)) {
       const target = match[1].split("|")[0].split("#")[0].trim();
-      if (target) links.push({ kind: headings.at(-1)?.kind ?? "link", target, line: index + 1, heading: headings.at(-1)?.title ?? null });
+      if (target) links.push({ kind: headings.at(-1)?.kind ?? "link", target, line: index + 1 });
     }
   }
   return links;

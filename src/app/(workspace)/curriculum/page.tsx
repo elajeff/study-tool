@@ -19,7 +19,7 @@ export default async function CurriculumPage() {
             <Link href={`/curriculum/${lesson.id}`} key={lesson.id} className="lesson-row">
               <span className="lesson-index">{String(i + 1).padStart(2, "0")}</span>
               <div><strong>{lesson.title}</strong><small>{lesson.sourceName} · {lesson.summary}</small></div>
-              <span className="lesson-state">{lesson.blocked && "Check links"}</span><ArrowUpRight size={17} />
+              <span className="lesson-state">{lesson.prerequisiteWarning && "Check links"}</span><ArrowUpRight size={17} />
             </Link>
           )}</div>
         </section>;

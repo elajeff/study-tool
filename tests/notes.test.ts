@@ -33,10 +33,10 @@ test("relationships retain kind and line references while ignoring code and atta
   const body = ["# Topic", "[[Overview|start]]", "## Prerequisites", "[[Basics#Methods]]", "### Practice", "[[Values]]",
     "## Recommended background", "[[Optional]]", "## Notes", "`[[Code]]` and ![[photo.png]]", "~~~md", "## Prerequisites", "[[Not required]]", "~~~still code", "[[Still code]]", "~~~"].join("\r\n");
   assert.deepEqual(noteRelationships(body), [
-    { target: "Overview", kind: "link", line: 2, heading: "Topic" },
-    { target: "Basics", kind: "prerequisite", line: 4, heading: "Prerequisites" },
-    { target: "Values", kind: "prerequisite", line: 6, heading: "Practice" },
-    { target: "Optional", kind: "recommendation", line: 8, heading: "Recommended background" },
+    { target: "Overview", kind: "link", line: 2 },
+    { target: "Basics", kind: "prerequisite", line: 4 },
+    { target: "Values", kind: "prerequisite", line: 6 },
+    { target: "Optional", kind: "recommendation", line: 8 },
   ]);
 });
 

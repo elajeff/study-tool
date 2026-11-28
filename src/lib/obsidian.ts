@@ -20,6 +20,7 @@ type ImportPreview = {
   decision: "keep" | "replace" | "";
   identityConflict: boolean;
 };
+export type NoteImportChoices = Record<string, ImportPreview["decision"]>;
 
 export async function readMarkdownFiles(selected: File[]) {
   const chatReferences: ChatReference[] = [];
@@ -59,4 +60,21 @@ export function previewImport(files: ImportFile[], state: VaultState[], bindings
     else { status = "Conflict"; decision = ""; }
     return { file, previous, status, decision, identityConflict: false };
   });
+}
+
+export function keepReviewedChoices(choices: NoteImportChoices, reviewed: ImportPreview[], refreshed: ImportPreview[]): NoteImportChoices {
+  const reviewedByPath = new Map(reviewed.map(row => [row.file.path, row]));
+  const next: NoteImportChoices = {};
+  for (const row of refreshed) {
+    const path = row.file.path;
+    const before = reviewedByPath.get(path)?.previous;
+    const after = row.previous;
+    if (choices[path] && row.decision === "" && !row.identityConflict && before && after
+      && before.artifact_id === after.artifact_id && before.path === after.path
+      && before.revision_id === after.revision_id && before.baseline_hash === after.baseline_hash
+      && before.note_id === after.note_id && before.note_hash === after.note_hash) {
+      next[path] = choices[path];
+    }
+  }
+  return next;
 }

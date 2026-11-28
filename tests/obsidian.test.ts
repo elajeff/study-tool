@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import JSZip from "jszip";
-import { previewImport, readMarkdownFiles, type VaultState } from "../src/lib/obsidian.ts";
+import { keepReviewedChoices, previewImport, readMarkdownFiles, type VaultState } from "../src/lib/obsidian.ts";
 
 const current: VaultState = { artifact_id: "artifact-a", path: "Topic.md", revision_id: "revision-a",
   baseline_hash: "original", note_id: "note-a", note_hash: "original", note_body: "Current note" };
@@ -47,6 +47,21 @@ test("equal content does not infer a rename; explicit reconciliation keeps the a
     "Renamed.md": current.artifact_id, "Copy.md": current.artifact_id,
   }), /same artifact/);
   assert.equal(previewImport([{ ...file, path: "topic.md" }], [current])[0].identityConflict, true);
+});
+
+test("matching a rename keeps the choice for an unchanged conflict and drops a stale choice", () => {
+  const edited = { ...current, note_hash: "edited" };
+  const oldFile = { ...current, artifact_id: "artifact-b", path: "Old.md" };
+  const files = [
+    { path: current.path!, body: "Incoming", hash: "incoming" },
+    { path: "Renamed.md", body: "Original", hash: "original" },
+  ];
+  const reviewed = previewImport(files, [edited, oldFile]);
+  const choices = { "Topic.md": "keep" } as const;
+  const binding = { "Renamed.md": oldFile.artifact_id };
+  assert.deepEqual(keepReviewedChoices(choices, reviewed, previewImport(files, [edited, oldFile], binding)), choices);
+  assert.deepEqual(keepReviewedChoices(choices, reviewed,
+    previewImport(files, [{ ...edited, note_hash: "edited-again" }, oldFile], binding)), {});
 });
 
 test("ZIP preview finds a marked vault, preserves text, and skips unsafe or private paths", async () => {

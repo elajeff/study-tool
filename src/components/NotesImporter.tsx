@@ -8,7 +8,7 @@ import { Download, FileUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cleanNotePath } from "@/lib/notes";
 import { loadNotes } from "@/lib/note-queries";
-import { previewImport, readMarkdownFiles, type Vault, type VaultState } from "@/lib/obsidian";
+import { keepReviewedChoices, previewImport, readMarkdownFiles, type NoteImportChoices, type Vault, type VaultState } from "@/lib/obsidian";
 
 export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   const router = useRouter();
@@ -20,7 +20,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
   const [vaultState, setVaultState] = useState<VaultState[]>([]);
   const [bindings, setBindings] = useState<Record<string, string>>({});
   const [renamePath, setRenamePath] = useState("");
-  const [choices, setChoices] = useState<Record<string, "keep" | "replace" | "">>({});
+  const [choices, setChoices] = useState<NoteImportChoices>({});
   const [chatMatches, setChatMatches] = useState<ChatReferenceMatch[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -36,7 +36,7 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
     for (let offset = 0; ; offset += 500) {
       const { data, error } = await supabase.rpc("vault_import_state", { p_source_id: sourceId, p_paths: paths })
         .order("artifact_id").range(offset, offset + 499);
-      if (error) throw new Error("Could not preview this vault. Check that migration 004 was applied.");
+      if (error) throw new Error("Could not compare the files with your saved notes. Try the preview again.");
       state.push(...data as VaultState[]);
       if (data.length < 500) return state;
     }
@@ -83,8 +83,8 @@ export function NotesImporter({ vaults: initialVaults }: { vaults: Vault[] }) {
         return previous?.path ? [previous.path] : [];
       })];
       const state = await loadState(paths);
-      previewImport(files, state, next);
-      setVaultState(state); setBindings(next); setChoices({});
+      const updatedRows = previewImport(files, state, next);
+      setVaultState(state); setBindings(next); setChoices(keepReviewedChoices(choices, rows, updatedRows));
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not reconcile this rename."); }
     finally { setBusy(false); }
   }

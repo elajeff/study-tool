@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { parseDigest, currentLibraryDigests, type LibraryDigest } from "../src/lib/library-digest.ts";
 import type { ExportManifest } from "../src/lib/library-pack.ts";
 import type { ConversationContext } from "../src/lib/conversation-context.ts";
+import { parseInbox } from "../src/lib/inbox.ts";
 
 const artifact = { id: "plant", short_code: "N001", current_revision_id: "rev", path: "Seeds/sowing.md", external_id: null };
 const manifest: ExportManifest = { format: "study-export/3", export_id: "X" + "a".repeat(64), sources: [], maps: [],
@@ -17,6 +18,13 @@ test("digests require exact export identity and distinct real items, not maps or
   for (const summary of ["", "x".repeat(201), "first\nsecond", "-----BEGIN PRIVATE KEY-----"])
     assert.throws(() => parseDigest(JSON.stringify({ ...payload, items: [{ id: "V1/N001", summary }] }), manifest), /summary|line|credential/);
   assert.equal(Array.from(parseDigest(JSON.stringify({ ...payload, items: [{ id: "V1/N001", summary: "😀".repeat(200) }] }), manifest).items[0].summary).length, 200);
+});
+
+test("snapshot summaries accept the same JSON as Inbox and reject a mixed response", () => {
+  const response = JSON.stringify(payload).slice(0, -1) + ",}";
+  assert.deepEqual(parseDigest(response, manifest), parseInbox(response).blocks[0].value);
+  const mixed = ["```study-digest", response, "```", "```json", '{"format":"study-course/1"}', "```"].join("\n");
+  assert.throws(() => parseDigest(mixed, manifest), /one complete source summary/);
 });
 
 test("current summaries select the latest matching version and reject changed paths or text", () => {
